@@ -45,18 +45,7 @@ pub struct OverlayConstraints {
     pub visible: Option<fn(u16, u16) -> bool>,
 }
 
-/// A rectangular region on the terminal screen.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Rect {
-    /// Row (y) coordinate.
-    pub row: u16,
-    /// Column (x) coordinate.
-    pub col: u16,
-    /// Width in columns.
-    pub width: u16,
-    /// Height in rows.
-    pub height: u16,
-}
+pub use crate::layout::Rect;
 
 /// A floating component rendered on top of the main UI.
 pub struct Overlay {
@@ -119,8 +108,8 @@ impl Overlay {
         };
 
         Some(Rect {
-            row: (row as i16 + self.constraints.offset_y).max(0) as u16,
-            col: (col as i16 + self.constraints.offset_x).max(0) as u16,
+            y: (row as i16 + self.constraints.offset_y).max(0) as u16,
+            x: (col as i16 + self.constraints.offset_x).max(0) as u16,
             width: w.min(term_w.saturating_sub(col)),
             height: h.min(term_h.saturating_sub(row)),
         })
@@ -275,7 +264,7 @@ impl TUI {
         for overlay in &self.overlays {
             if let Ok(rendered) = overlay.content.render(width) {
                 if let Some(rect) = overlay.compute_position(width, height, rendered.lines.len() as u16, 1) {
-                    rendered.blit_onto(&mut screen, rect.row, rect.col);
+                    rendered.blit_onto(&mut screen, rect.y, rect.x);
                 }
             }
         }
@@ -631,8 +620,8 @@ mod tests {
             },
         };
         let rect = overlay.compute_position(80, 24, 10, 2).unwrap();
-        assert_eq!(rect.row, 5);
-        assert_eq!(rect.col, 10);
+        assert_eq!(rect.y, 5);
+        assert_eq!(rect.x, 10);
     }
 
     #[test]
@@ -650,8 +639,8 @@ mod tests {
             },
         };
         let rect = overlay.compute_position(100, 40, 10, 2).unwrap();
-        assert_eq!(rect.row, 10);
-        assert_eq!(rect.col, 50);
+        assert_eq!(rect.y, 10);
+        assert_eq!(rect.x, 50);
     }
 
     #[test]
@@ -669,8 +658,8 @@ mod tests {
             },
         };
         let rect = overlay.compute_position(100, 40, 10, 2).unwrap();
-        assert_eq!(rect.row, 0);
-        assert_eq!(rect.col, 0);
+        assert_eq!(rect.y, 0);
+        assert_eq!(rect.x, 0);
     }
 
     #[test]
@@ -705,8 +694,8 @@ mod tests {
             },
         };
         let rect = overlay.compute_position(80, 24, 10, 2).unwrap();
-        assert_eq!(rect.row, 7);
-        assert_eq!(rect.col, 15);
+        assert_eq!(rect.y, 7);
+        assert_eq!(rect.x, 15);
     }
 
     #[test]
@@ -724,8 +713,8 @@ mod tests {
             },
         };
         let rect = overlay.compute_position(80, 24, 10, 2).unwrap();
-        assert_eq!(rect.row, 0);
-        assert_eq!(rect.col, 0);
+        assert_eq!(rect.y, 0);
+        assert_eq!(rect.x, 0);
     }
 
     #[test]

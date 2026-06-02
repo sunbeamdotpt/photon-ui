@@ -39,7 +39,7 @@ impl From<Position> for (u16, u16) {
 
 impl From<Rect> for Position {
     fn from(rect: Rect) -> Self {
-        Self::new(rect.col, rect.row)
+        Self::new(rect.x, rect.y)
     }
 }
 
@@ -150,7 +150,7 @@ mod tests {
 
     #[test]
     fn position_from_rect() {
-        let rect = Rect { col: 7, row: 8, width: 10, height: 20 };
+        let rect = Rect { x: 7, y: 8, width: 10, height: 20 };
         let p: Position = rect.into();
         assert_eq!(p, Position::new(7, 8));
     }

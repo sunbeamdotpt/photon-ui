@@ -85,8 +85,8 @@ fn overlay_anchor_center() {
         },
     };
     let rect = overlay.compute_position(80, 24, 20, 3).unwrap();
-    assert_eq!(rect.row, (24 - 3) / 2);
-    assert_eq!(rect.col, (80 - 20) / 2);
+    assert_eq!(rect.y, (24 - 3) / 2);
+    assert_eq!(rect.x, (80 - 20) / 2);
     assert_eq!(rect.width, 20);
     assert_eq!(rect.height, 3);
 }
@@ -106,8 +106,8 @@ fn overlay_anchor_top_left() {
         },
     };
     let rect = overlay.compute_position(80, 24, 10, 3).unwrap();
-    assert_eq!(rect.row, 2);
-    assert_eq!(rect.col, 2);
+    assert_eq!(rect.y, 2);
+    assert_eq!(rect.x, 2);
 }
 
 #[test]
@@ -125,8 +125,8 @@ fn overlay_at_position() {
         },
     };
     let rect = overlay.compute_position(80, 24, 10, 3).unwrap();
-    assert_eq!(rect.row, 5);
-    assert_eq!(rect.col, 10);
+    assert_eq!(rect.y, 5);
+    assert_eq!(rect.x, 10);
 }
 
 #[test]
@@ -144,8 +144,8 @@ fn overlay_percent_position() {
         },
     };
     let rect = overlay.compute_position(100, 100, 10, 10).unwrap();
-    assert_eq!(rect.row, 50);
-    assert_eq!(rect.col, 50);
+    assert_eq!(rect.y, 50);
+    assert_eq!(rect.x, 50);
 }
 
 #[test]
@@ -180,8 +180,8 @@ fn overlay_with_offset() {
         },
     };
     let rect = overlay.compute_position(80, 24, 10, 3).unwrap();
-    assert_eq!(rect.row, 3);
-    assert_eq!(rect.col, 5);
+    assert_eq!(rect.y, 3);
+    assert_eq!(rect.x, 5);
 }
 
 #[test]
