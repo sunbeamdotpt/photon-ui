@@ -5,7 +5,7 @@
 //! cargo run --example demo
 //! ```
 //!
-//! Showcases **every** Photon UI component across five pages:
+//! Showcases **every** Photon UI component across six pages:
 //!
 //! | Page | Components |
 //! |------|-----------|
@@ -14,12 +14,13 @@
 //! | 3    | SelectList, SettingsList |
 //! | 4    | Loader, CancellableLoader, Overlay |
 //! | 5    | Layout primitives (Rect, Position, Margin, blit_into_rect) |
+//! | 6    | Layout engine (Layout::split, Container) |
 //!
 //! # Keybindings
 //!
 //! | Key | Action |
 //! |-----|--------|
-//! | `1`–`5` | Switch demo page |
+//! | `1`–`6` | Switch demo page |
 //! | `Tab` / `Shift+Tab` | Cycle focus |
 //! | `q` | Quit |
 //! | `Ctrl+C` | Quit |
@@ -27,10 +28,11 @@
 //! Page-specific bindings are shown on each page.
 
 use photon_ui::components::{
-    Box as BoxComponent, CancellableLoader, Editor, Input, Loader, Markdown, SelectList,
+    Box as BoxComponent, CancellableLoader, Container, Editor, Input, Loader, Markdown, SelectList,
     SettingsList, Spacer, Text, TruncatedText,
 };
 use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
+use photon_ui::layout::layout::Layout;
 use photon_ui::terminal::ProcessTerminal;
 use photon_ui::{
     Anchor, Event, InputResult, Overlay, OverlayConstraints, OverlayPosition, Rendered,
@@ -252,7 +254,7 @@ impl DemoApp {
 
         // Header with page indicator
         let header = format!(
-            " Photon UI Demo  |  Page {}/5  |  1-5=pages  Tab=focus  q=quit ",
+            " Photon UI Demo  |  Page {}/6  |  1-6=pages  Tab=focus  q=quit ",
             self.page
         );
         self.tui
@@ -265,6 +267,7 @@ impl DemoApp {
             3 => self.load_page_lists(),
             4 => self.load_page_dynamic(),
             5 => self.load_page_primitives(),
+            6 => self.load_page_layout_engine(),
             _ => {}
         }
     }
@@ -433,6 +436,26 @@ impl DemoApp {
         self.tui.mount(std::boxed::Box::new(LayoutDemo));
     }
 
+    fn load_page_layout_engine(&mut self) {
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Layout Engine — Cassowary constraint solver:",
+            0,
+            0,
+        )));
+
+        let mut container = Container::new(
+            Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Min(2),
+                Constraint::Length(3),
+            ])
+        );
+        container.push(Box::new(Text::new("Top panel (Length 3)", 0, 0)));
+        container.push(Box::new(Text::new("Middle panel (Min 2) — expands to fill", 0, 0)));
+        container.push(Box::new(Text::new("Bottom panel (Length 3)", 0, 0)));
+        self.tui.mount(std::boxed::Box::new(container));
+    }
+
     /// Advance animation frames. Call periodically from the event loop.
     fn tick(&mut self) {
         if self.page == 4 {
@@ -468,6 +491,11 @@ impl DemoApp {
                 }
                 KeyCode::Char('5') => {
                     self.page = 5;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('6') => {
+                    self.page = 6;
                     self.load_page();
                     return true;
                 }
