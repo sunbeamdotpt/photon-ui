@@ -53,6 +53,16 @@ pub trait Component {
     /// visible width is ≤ `width`.
     fn render(&self, width: u16) -> Result<Rendered, RenderError>;
 
+    /// Render this component into a specific rectangular area.
+    ///
+    /// The default implementation delegates to [`render`](Component::render)
+    /// with the rect's width, ignoring height bounds. Components that want
+    /// to be layout-aware (e.g. clip to height, scroll, center vertically)
+    /// should override this.
+    fn render_rect(&self, rect: crate::layout::Rect) -> Result<Rendered, RenderError> {
+        self.render(rect.width)
+    }
+
     /// Handle an input event (key press, resize, mouse, etc.).
     ///
     /// The default implementation ignores all events. Override this to add
