@@ -5,7 +5,7 @@
 //! cargo run --example demo
 //! ```
 //!
-//! Showcases **every** Photon UI component across four pages:
+//! Showcases **every** Photon UI component across five pages:
 //!
 //! | Page | Components |
 //! |------|-----------|
@@ -13,12 +13,13 @@
 //! | 2    | Input (Emacs/vim), Editor (Emacs/vim) |
 //! | 3    | SelectList, SettingsList |
 //! | 4    | Loader, CancellableLoader, Overlay |
+//! | 5    | Layout primitives (Rect, Position, Margin, blit_into_rect) |
 //!
 //! # Keybindings
 //!
 //! | Key | Action |
 //! |-----|--------|
-//! | `1`–`4` | Switch demo page |
+//! | `1`–`5` | Switch demo page |
 //! | `Tab` / `Shift+Tab` | Cycle focus |
 //! | `q` | Quit |
 //! | `Ctrl+C` | Quit |
@@ -29,6 +30,7 @@ use photon_ui::components::{
     Box as BoxComponent, CancellableLoader, Editor, Input, Loader, Markdown, SelectList,
     SettingsList, Spacer, Text, TruncatedText,
 };
+use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
 use photon_ui::terminal::ProcessTerminal;
 use photon_ui::{
     Anchor, Event, InputResult, Overlay, OverlayConstraints, OverlayPosition, Rendered,
@@ -66,6 +68,132 @@ impl photon_ui::Component for SharedCancellableLoader {
     }
     fn handle_input(&mut self, event: &Event) -> InputResult {
         self.0.borrow_mut().handle_input(event)
+    }
+}
+
+/// A component that renders a visual demonstration of layout primitives.
+struct LayoutDemo;
+
+impl photon_ui::Component for LayoutDemo {
+    fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let mut screen = Rendered::empty();
+
+        // Fill screen with blank lines up to our demo height
+        let demo_height = 18u16;
+        for _ in 0..demo_height {
+            screen.lines.push("".to_string());
+        }
+
+        // ── Panel 1: Rect grid using blit_into_rect ──────────────────────
+        let grid = Rect::new(0, 0, width / 2, 8);
+        let top_left = Rect::new(grid.x, grid.y, grid.width / 2, grid.height / 2);
+        let top_right = Rect::new(grid.x + grid.width / 2, grid.y, grid.width / 2, grid.height / 2);
+        let bot_left = Rect::new(grid.x, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
+        let bot_right = Rect::new(grid.x + grid.width / 2, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
+
+        let tl = Rendered { lines: vec![" TopLeft ".into(), format!(" {:?} ", top_left)], cursor: None, images: vec![] };
+        tl.blit_into_rect(&mut screen, top_left);
+
+        let tr = Rendered { lines: vec![" TopRight ".into(), format!(" {:?} ", top_right)], cursor: None, images: vec![] };
+        tr.blit_into_rect(&mut screen, top_right);
+
+        let bl = Rendered { lines: vec![" BotLeft ".into(), format!(" w:{} h:{} ", bot_left.width, bot_left.height)], cursor: None, images: vec![] };
+        bl.blit_into_rect(&mut screen, bot_left);
+
+        let br = Rendered { lines: vec![" BotRight ".into(), format!(" area:{} ", bot_right.area())], cursor: None, images: vec![] };
+        br.blit_into_rect(&mut screen, bot_right);
+
+        // ── Panel 2: Margin inner/outer demo ─────────────────────────────
+        let margin_rect = Rect::new(width / 2 + 1, 0, width.saturating_sub(width / 2 + 1), 8);
+        let outer_label = Rendered {
+            lines: vec![" Margin Demo ".into(), format!(" outer: {} ", margin_rect)],
+            cursor: None,
+            images: vec![],
+        };
+        outer_label.blit_into_rect(&mut screen, margin_rect);
+
+        let inner = margin_rect.inner(Margin::new(2, 1));
+        let inner_label = Rendered {
+            lines: vec![" INNER ".into(), format!(" {:?} ", inner)],
+            cursor: None,
+            images: vec![],
+        };
+        inner_label.blit_into_rect(&mut screen, inner);
+
+        // ── Panel 3: Position + Offset ───────────────────────────────────
+        let pos_y = 9u16;
+        let pos_rect = Rect::new(0, pos_y, width / 2, 4);
+        let p = Position::new(5, 2);
+        let o = Offset::new(3, -1);
+        let moved = p + o;
+
+        let pos_text = Rendered {
+            lines: vec![
+                " Position + Offset ".into(),
+                format!(" p = {:?} ", p),
+                format!(" o = {:?} ", o),
+                format!(" p + o = {:?} ", moved),
+            ],
+            cursor: None,
+            images: vec![],
+        };
+        pos_text.blit_into_rect(&mut screen, pos_rect);
+
+        // ── Panel 4: Size + Constraint types ─────────────────────────────
+        let size_y = 9u16;
+        let size_rect = Rect::new(width / 2 + 1, size_y, width.saturating_sub(width / 2 + 1), 4);
+        let s = Size::new(width / 3, 3);
+        let constraints = vec![
+            Constraint::Length(10),
+            Constraint::Min(5),
+            Constraint::Max(20),
+            Constraint::Percentage(50),
+        ];
+
+        let size_text = Rendered {
+            lines: vec![
+                " Size & Constraints ".into(),
+                format!(" size = {} (area={}) ", s, s.area()),
+                format!(" {:?} ", constraints[0]),
+                format!(" {:?} ", constraints[1]),
+            ],
+            cursor: None,
+            images: vec![],
+        };
+        size_text.blit_into_rect(&mut screen, size_rect);
+
+        // ── Panel 5: Direction, Flex, Spacing ────────────────────────────
+        let meta_y = 14u16;
+        let meta_rect = Rect::new(0, meta_y, width, 4);
+        let dir = Direction::Horizontal;
+        let flex = Flex::Start;
+        let spacing = Spacing::Space(2);
+
+        let meta_text = Rendered {
+            lines: vec![
+                " Direction / Flex / Spacing ".into(),
+                format!(
+                    " dir={:?}  perp={:?} | flex={:?} legacy={} | spacing={:?} ",
+                    dir,
+                    dir.perpendicular(),
+                    flex,
+                    flex.is_legacy(),
+                    spacing
+                ),
+                format!(
+                    " Rect rows:{} cols:{} positions:{} ",
+                    grid.rows().count(),
+                    grid.columns().count(),
+                    grid.positions().count()
+                ),
+                " blit_into_rect compositing active → ".into(),
+            ],
+            cursor: None,
+            images: vec![],
+        };
+        meta_text.blit_into_rect(&mut screen, meta_rect);
+
+        Ok(screen)
     }
 }
 
@@ -124,7 +252,7 @@ impl DemoApp {
 
         // Header with page indicator
         let header = format!(
-            " Photon UI Demo  |  Page {}/4  |  1-4=pages  Tab=focus  q=quit ",
+            " Photon UI Demo  |  Page {}/5  |  1-5=pages  Tab=focus  q=quit ",
             self.page
         );
         self.tui
@@ -136,6 +264,7 @@ impl DemoApp {
             2 => self.load_page_input(),
             3 => self.load_page_lists(),
             4 => self.load_page_dynamic(),
+            5 => self.load_page_primitives(),
             _ => {}
         }
     }
@@ -295,6 +424,15 @@ impl DemoApp {
         }
     }
 
+    fn load_page_primitives(&mut self) {
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Layout Primitives — every Phase-1 type rendered with blit_into_rect:",
+            0,
+            0,
+        )));
+        self.tui.mount(std::boxed::Box::new(LayoutDemo));
+    }
+
     /// Advance animation frames. Call periodically from the event loop.
     fn tick(&mut self) {
         if self.page == 4 {
@@ -325,6 +463,11 @@ impl DemoApp {
                 }
                 KeyCode::Char('4') => {
                     self.page = 4;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('5') => {
+                    self.page = 5;
                     self.load_page();
                     return true;
                 }
