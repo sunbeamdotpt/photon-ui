@@ -7,6 +7,8 @@ pub mod position;
 pub mod rect;
 pub mod size;
 pub mod spacing;
+pub mod layout;
+pub mod strengths;
 
 pub use constraint::Constraint;
 pub use direction::Direction;
