@@ -13,6 +13,7 @@ unicode-segmentation = "1.13"
 pulldown-cmark = "0.13"
 base64 = "0.22"
 thiserror = "2"
+kasuari = "0.4"
 
 [dev-dependencies]
 insta = "1.47"
