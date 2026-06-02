@@ -19,6 +19,7 @@
 pub mod autocomplete;
 pub mod components;
 pub mod events;
+pub mod layout;
 pub mod fuzzy;
 pub mod image;
 pub mod keybindings;
