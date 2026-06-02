@@ -76,8 +76,43 @@ impl Rendered {
         }
         target.images.extend(self.images.clone());
     }
+
+    /// Composite this rendered content into a target at the given rect.
+    ///
+    /// Lines are clipped to `rect.height`. Each line is inserted at `rect.x`
+    /// and truncated to `rect.width`. The cursor and images are translated.
+    pub fn blit_into_rect(&self, target: &mut Rendered, rect: Rect) {
+        for (i, line) in self.lines.iter().enumerate().take(rect.height as usize) {
+            let target_row = rect.y as usize + i;
+            if target_row >= target.lines.len() {
+                while target.lines.len() <= target_row {
+                    target.lines.push(String::new());
+                }
+            }
+            let col = rect.x as usize;
+            let target_line = &mut target.lines[target_row];
+            if target_line.len() < col {
+                target_line.push_str(&" ".repeat(col - target_line.len()));
+            }
+            let source = if line.len() > rect.width as usize {
+                &line[..rect.width as usize]
+            } else {
+                line.as_str()
+            };
+            let end = col + source.len();
+            if end > target_line.len() {
+                target_line.push_str(&" ".repeat(end - target_line.len()));
+            }
+            target_line.replace_range(col..end, source);
+        }
+        if let Some((r, c)) = self.cursor {
+            target.cursor = Some((rect.y as usize + r, rect.x as usize + c));
+        }
+        target.images.extend(self.images.clone());
+    }
 }
 
+use crate::layout::Rect;
 use crate::terminal::Terminal;
 use std::io;
 
@@ -400,5 +435,73 @@ mod tests {
         };
         source.blit_onto(&mut target, 0, 6);
         assert_eq!(target.images.len(), 1);
+    }
+
+    #[test]
+    fn blit_into_rect_basic() {
+        let mut target = Rendered {
+            lines: vec!["hello world".into(), "second line".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["XY".into(), "Z".into()],
+            cursor: Some((0, 1)),
+            images: vec![ImageCommand { id: 1, data: "img".into() }],
+        };
+        source.blit_into_rect(&mut target, Rect::new(6, 0, 10, 2));
+        assert_eq!(target.lines[0], "hello XYrld");
+        assert_eq!(target.lines[1], "secondZline");
+        assert_eq!(target.cursor, Some((0, 7)));
+        assert_eq!(target.images.len(), 1);
+    }
+
+    #[test]
+    fn blit_into_rect_clips_height() {
+        let mut target = Rendered {
+            lines: vec!["aaaaaaaaaa".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["1".into(), "2".into(), "3".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        source.blit_into_rect(&mut target, Rect::new(0, 0, 10, 1));
+        assert_eq!(target.lines[0], "1aaaaaaaaa");
+        assert_eq!(target.lines.len(), 1);
+    }
+
+    #[test]
+    fn blit_into_rect_clips_width() {
+        let mut target = Rendered {
+            lines: vec!["aaaaaaaaaa".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["1234567890ABCDEF".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        source.blit_into_rect(&mut target, Rect::new(0, 0, 5, 1));
+        assert_eq!(target.lines[0], "12345aaaaa");
+    }
+
+    #[test]
+    fn blit_into_rect_pads_short_target() {
+        let mut target = Rendered {
+            lines: vec!["hi".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["XY".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        source.blit_into_rect(&mut target, Rect::new(5, 0, 10, 1));
+        assert_eq!(target.lines[0], "hi   XY");
     }
 }
