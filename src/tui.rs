@@ -1,3 +1,4 @@
+use crate::layout::layout::Layout;
 use crate::renderer::{Renderer, Rendered, RenderStrategy};
 use crate::terminal::Terminal;
 use crate::Component;
@@ -142,6 +143,7 @@ pub struct TUI {
     previous_image_ids: std::collections::HashSet<u32>,
     clear_on_shrink: bool,
     hardware_cursor: bool,
+    layout: Option<Layout>,
 }
 
 impl TUI {
@@ -157,6 +159,7 @@ impl TUI {
             previous_image_ids: std::collections::HashSet::new(),
             clear_on_shrink: std::env::var("PHOTON_UI_CLEAR_ON_SHRINK").is_ok(),
             hardware_cursor: std::env::var("PHOTON_UI_HARDWARE_CURSOR").is_ok(),
+            layout: None,
         }
     }
 
@@ -212,6 +215,16 @@ impl TUI {
         self.overlays.clear();
     }
 
+    /// Set a layout for splitting the terminal area among children.
+    pub fn set_layout(&mut self, layout: Layout) {
+        self.layout = Some(layout);
+    }
+
+    /// Clear the layout, reverting to vertical stacking.
+    pub fn clear_layout(&mut self) {
+        self.layout = None;
+    }
+
     /// Restore the terminal (leave alternate screen, disable raw mode, show cursor).
     pub fn stop(&mut self) -> io::Result<()> {
         self.terminal.stop()
@@ -238,19 +251,31 @@ impl TUI {
             self.renderer.set_strategy(RenderStrategy::Diff);
         }
 
-        // Concatenate child lines vertically, matching the original TUI Container behavior.
+        // Render children using layout if set, otherwise stack vertically.
         let mut screen = Rendered::empty();
-        let mut row = 0usize;
-        for child in &self.children {
-            if let Ok(rendered) = child.render(width) {
-                for line in &rendered.lines {
-                    screen.lines.push(line.clone());
+        let term_rect = Rect::new(0, 0, width, height);
+
+        if let Some(layout) = &self.layout {
+            let areas = layout.split(term_rect);
+            for (child, area) in self.children.iter().zip(areas.iter()) {
+                if let Ok(rendered) = child.render_rect(*area) {
+                    rendered.blit_into_rect(&mut screen, *area);
                 }
-                if let Some((r, c)) = rendered.cursor {
-                    screen.cursor = Some((row + r, c));
+            }
+        } else {
+            // Original vertical stacking behavior
+            let mut row = 0usize;
+            for child in &self.children {
+                if let Ok(rendered) = child.render(width) {
+                    for line in &rendered.lines {
+                        screen.lines.push(line.clone());
+                    }
+                    if let Some((r, c)) = rendered.cursor {
+                        screen.cursor = Some((row + r, c));
+                    }
+                    screen.images.extend(rendered.images);
+                    row += rendered.lines.len();
                 }
-                screen.images.extend(rendered.images);
-                row += rendered.lines.len();
             }
         }
 
@@ -294,18 +319,29 @@ impl TUI {
     /// Compute the composite screen buffer without writing to the terminal.
     /// Test-only helper to inspect layout.
     #[cfg(test)]
-    fn compose_screen(&self, width: u16, _height: u16) -> crate::renderer::Rendered {
+    fn compose_screen(&self, width: u16, height: u16) -> crate::renderer::Rendered {
         let mut screen = crate::renderer::Rendered::empty();
-        let mut row = 0usize;
-        for child in &self.children {
-            if let Ok(rendered) = child.render(width) {
-                for line in &rendered.lines {
-                    screen.lines.push(line.clone());
+        let term_rect = Rect::new(0, 0, width, height);
+
+        if let Some(layout) = &self.layout {
+            let areas = layout.split(term_rect);
+            for (child, area) in self.children.iter().zip(areas.iter()) {
+                if let Ok(rendered) = child.render_rect(*area) {
+                    rendered.blit_into_rect(&mut screen, *area);
                 }
-                if let Some((r, c)) = rendered.cursor {
-                    screen.cursor = Some((row + r, c));
+            }
+        } else {
+            let mut row = 0usize;
+            for child in &self.children {
+                if let Ok(rendered) = child.render(width) {
+                    for line in &rendered.lines {
+                        screen.lines.push(line.clone());
+                    }
+                    if let Some((r, c)) = rendered.cursor {
+                        screen.cursor = Some((row + r, c));
+                    }
+                    row += rendered.lines.len();
                 }
-                row += rendered.lines.len();
             }
         }
         screen
