@@ -10,6 +10,7 @@ pub mod settings_list;
 pub mod image_widget;
 pub mod editor;
 pub mod markdown;
+pub mod container;
 
 pub use spacer::Spacer;
 pub use text::Text;
@@ -23,3 +24,4 @@ pub use settings_list::SettingsList;
 pub use image_widget::ImageWidget;
 pub use editor::Editor;
 pub use markdown::Markdown;
+pub use container::Container;
