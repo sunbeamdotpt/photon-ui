@@ -73,6 +73,44 @@ impl photon_ui::Component for SharedCancellableLoader {
     }
 }
 
+/// A panel that fills its assigned rect with a solid background color.
+struct ColoredPanel {
+    label: String,
+    bg: u8, // ANSI background color code (40-47)
+}
+
+impl ColoredPanel {
+    fn new(label: &str, bg: u8) -> Self {
+        Self {
+            label: label.to_string(),
+            bg,
+        }
+    }
+}
+
+impl photon_ui::Component for ColoredPanel {
+    fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let rect = photon_ui::layout::Rect::new(0, 0, width, 1);
+        self.render_rect(rect)
+    }
+
+    fn render_rect(&self, rect: photon_ui::layout::Rect) -> Result<Rendered, RenderError> {
+        let mut lines = Vec::new();
+        let label = format!(" {} ", self.label);
+        let w = rect.width as usize;
+        let first = format!("\x1b[{}m{:width$}\x1b[0m", self.bg, label, width = w);
+        lines.push(first);
+        for _ in 1..rect.height {
+            lines.push(format!("\x1b[{}m{:width$}\x1b[0m", self.bg, "", width = w));
+        }
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
+    }
+}
+
 /// A component that renders a visual demonstration of layout primitives.
 struct LayoutDemo;
 
@@ -438,21 +476,21 @@ impl DemoApp {
 
     fn load_page_layout_engine(&mut self) {
         self.tui.mount(std::boxed::Box::new(Text::new(
-            "Layout Engine — Cassowary constraint solver:",
+            "Layout Engine — Cassowary solver (colored panels = assigned rects):",
             0,
             0,
         )));
 
         let mut container = Container::new(
             Layout::vertical([
-                Constraint::Length(3),
-                Constraint::Min(2),
-                Constraint::Length(3),
+                Constraint::Length(4),
+                Constraint::Min(3),
+                Constraint::Length(4),
             ])
         );
-        container.push(Box::new(Text::new("Top panel (Length 3)", 0, 0)));
-        container.push(Box::new(Text::new("Middle panel (Min 2) — expands to fill", 0, 0)));
-        container.push(Box::new(Text::new("Bottom panel (Length 3)", 0, 0)));
+        container.push(Box::new(ColoredPanel::new("Top panel (Length 4)", 44))); // blue
+        container.push(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42))); // green
+        container.push(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41))); // red
         self.tui.mount(std::boxed::Box::new(container));
     }
 
