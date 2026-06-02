@@ -1,3 +1,4 @@
+pub mod constraint;
 pub mod direction;
 pub mod flex;
 pub mod margin;
@@ -6,6 +7,7 @@ pub mod position;
 pub mod size;
 pub mod spacing;
 
+pub use constraint::Constraint;
 pub use direction::Direction;
 pub use flex::Flex;
 pub use margin::Margin;
