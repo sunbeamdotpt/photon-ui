@@ -1,0 +1,36 @@
+[package]
+name = "photon-ui"
+authors = ["Sienna Meridian Satterwhite <sienna@sunbeam.pt>"]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Blazing fast minimal TUI"
+
+[dependencies]
+crossterm = "0.28"
+unicode-width = "0.2"
+unicode-segmentation = "1.13"
+pulldown-cmark = "0.13"
+base64 = "0.22"
+thiserror = "2"
+
+[dev-dependencies]
+insta = "1.47"
+proptest = "1.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "wrap_text"
+harness = false
+
+[[bench]]
+name = "render_components"
+harness = false
+
+[[bench]]
+name = "frame_loop"
+harness = false
+
+[[bench]]
+name = "event_handling"
+harness = false

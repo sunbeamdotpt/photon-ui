@@ -1,0 +1,423 @@
+use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
+
+/// Compute the visible display width of a string.
+///
+/// ANSI escape sequences and control characters do not contribute to the
+/// width. Full-width characters (e.g. CJK) count as 2 columns.
+pub fn visible_width(s: &str) -> usize {
+    s.width()
+}
+
+/// Truncate a string so its visible width does not exceed `max_width`.
+///
+/// If truncation is necessary, `ellipsis` is appended at the end. The result
+/// always satisfies `visible_width(result) <= max_width`.
+///
+/// # Example
+///
+/// ```
+/// use photon_ui::utils::truncate_to_width;
+///
+/// assert_eq!(truncate_to_width("hello world", 8, "…"), "hello w…");
+/// assert_eq!(truncate_to_width("hello", 10, "…"), "hello");
+/// ```
+pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
+    let max = max_width as usize;
+    let ellip_width = visible_width(ellipsis);
+    let total = visible_width(s);
+    if total <= max {
+        return s.to_string();
+    }
+    let target = max.saturating_sub(ellip_width);
+    let mut result = String::new();
+    let mut w = 0;
+    for ch in s.chars() {
+        let cw = ch.width().unwrap_or(0);
+        if w + cw > target {
+            break;
+        }
+        result.push(ch);
+        w += cw;
+    }
+    result.push_str(ellipsis);
+    result
+}
+
+/// An active OSC 8 hyperlink tracked by [`AnsiCodeTracker`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct ActiveHyperlink {
+    /// Hyperlink parameters (e.g. `id` or empty string).
+    pub params: String,
+    /// The target URL.
+    pub url: String,
+    /// The original terminator sequence (`\x1b\\` or `\x07`).
+    pub terminator: String,
+}
+
+/// Tracks active ANSI SGR and OSC 8 state across line breaks.
+///
+/// When wrapping styled text, styles must be closed at the end of each
+/// physical line and reopened at the start of the next. This struct records
+/// which attributes are currently active and can emit the corresponding
+/// escape sequences.
+///
+/// # Example
+///
+/// ```
+/// use photon_ui::utils::AnsiCodeTracker;
+///
+/// let mut tracker = AnsiCodeTracker::new();
+/// tracker.process("\x1b[1m");    // bold on
+/// tracker.process("\x1b[31m");   // red fg
+/// assert_eq!(tracker.current_codes(), "\x1b[1;31m");
+/// ```
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct AnsiCodeTracker {
+    /// Bold (SGR 1) is active.
+    pub bold: bool,
+    /// Italic (SGR 3) is active.
+    pub italic: bool,
+    /// Underline (SGR 4) is active.
+    pub underline: bool,
+    /// Active foreground color SGR parameter, e.g. `"31"` or `"38;5;240"`.
+    pub fg_color: Option<String>,
+    /// Active background color SGR parameter, e.g. `"41"` or `"48;5;240"`.
+    pub bg_color: Option<String>,
+    /// Active OSC 8 hyperlink, if any.
+    pub hyperlink: Option<ActiveHyperlink>,
+}
+
+impl AnsiCodeTracker {
+    /// Create a tracker with no active codes.
+    pub fn new() -> Self { Self::default() }
+
+    /// Parse an OSC 8 hyperlink sequence.
+    ///
+    /// Returns `Some(Some(link))` on open, `Some(None)` on close, and
+    /// `None` if the sequence is not a valid OSC 8 hyperlink.
+    fn parse_osc8(seq: &str) -> Option<Option<ActiveHyperlink>> {
+        let body = seq.strip_prefix("\x1b]")?;
+        let (body, terminator) = if body.ends_with("\x1b\\") {
+            (&body[..body.len() - 2], "\x1b\\".to_string())
+        } else if body.ends_with('\x07') {
+            (&body[..body.len() - 1], "\x07".to_string())
+        } else {
+            return None;
+        };
+        let rest = body.strip_prefix("8;")?;
+        let sep = rest.find(';')?;
+        let params = rest[..sep].to_string();
+        let url = rest[sep + 1..].to_string();
+        if url.is_empty() {
+            Some(None)
+        } else {
+            Some(Some(ActiveHyperlink { params, url, terminator }))
+        }
+    }
+
+    /// Process an ANSI escape sequence, updating internal state.
+    ///
+    /// Supports:
+    /// - OSC 8 hyperlink open / close (`\x1b]8;;URL\x1b\\`, `\x1b]8;;\x1b\\`)
+    /// - SGR codes (`\x1b[…m`) for bold, italic, underline, and colors
+    pub fn process(&mut self, seq: &str) {
+        if let Some(parsed) = Self::parse_osc8(seq) {
+            self.hyperlink = parsed;
+            return;
+        }
+
+        let body = seq.strip_prefix("\x1b[").unwrap_or(seq);
+        let body = body.strip_suffix('m').unwrap_or(body);
+        for code in body.split(';') {
+            match code {
+                "1" => self.bold = true,
+                "3" => self.italic = true,
+                "4" => self.underline = true,
+                "22" => self.bold = false,
+                "23" => self.italic = false,
+                "24" => self.underline = false,
+                "39" => self.fg_color = None,
+                "49" => self.bg_color = None,
+                c if c.starts_with('3') && c.len() >= 2 => self.fg_color = Some(c.to_string()),
+                c if c.starts_with('4') && c.len() >= 2 => self.bg_color = Some(c.to_string()),
+                _ => {}
+            }
+        }
+    }
+
+    /// Return the escape sequences needed to restore all active codes.
+    ///
+    /// This is used to reopen styles at the beginning of a continuation line.
+    pub fn current_codes(&self) -> String {
+        let mut parts = Vec::new();
+        if self.bold { parts.push("1"); }
+        if self.italic { parts.push("3"); }
+        if self.underline { parts.push("4"); }
+        if let Some(ref fg) = self.fg_color { parts.push(fg.as_str()); }
+        if let Some(ref bg) = self.bg_color { parts.push(bg.as_str()); }
+        let mut result = if parts.is_empty() {
+            String::new()
+        } else {
+            format!("\x1b[{}m", parts.join(";"))
+        };
+        if let Some(ref link) = self.hyperlink {
+            result.push_str(&format!("\x1b]8;{};{}{}", link.params, link.url, link.terminator));
+        }
+        result
+    }
+
+    /// Return the escape sequences needed to close active codes at a line end.
+    ///
+    /// Unlike a full SGR reset, this only closes attributes that would bleed
+    /// into padding or subsequent lines (underline and hyperlinks). The caller
+    /// is responsible for emitting `\x1b[0m` when a full SGR reset is needed.
+    pub fn line_end_reset(&self) -> String {
+        let mut result = String::new();
+        if self.underline {
+            result.push_str("\x1b[24m");
+        }
+        if let Some(ref link) = self.hyperlink {
+            result.push_str(&format!("\x1b]8;;{}", link.terminator));
+        }
+        result
+    }
+
+    /// Returns `true` if any SGR or OSC 8 code is currently active.
+    pub fn has_active_codes(&self) -> bool {
+        self.bold || self.italic || self.underline
+            || self.fg_color.is_some() || self.bg_color.is_some()
+            || self.hyperlink.is_some()
+    }
+}
+
+/// Wrap text into lines that fit within `width` columns, preserving ANSI codes.
+///
+/// ANSI SGR sequences (`\x1b[…m`) and OSC 8 hyperlink sequences (`\x1b]8;…`)
+/// are parsed and carried across line boundaries so that styles remain
+/// continuous. Newlines in the input produce new lines in the output.
+///
+/// # Example
+///
+/// ```
+/// use photon_ui::utils::wrap_text_with_ansi;
+///
+/// let lines = wrap_text_with_ansi("hello world", 6);
+/// assert_eq!(lines, vec!["hello ", "world"]);
+/// ```
+pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
+    let w = width as usize;
+    let mut lines: Vec<String> = Vec::new();
+    let mut current = String::new();
+    let mut current_width = 0;
+    let mut tracker = AnsiCodeTracker::new();
+
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            match chars.peek() {
+                Some(&'[') => {
+                    chars.next();
+                    let mut seq = String::from("\x1b[");
+                    while let Some(&c) = chars.peek() {
+                        seq.push(c);
+                        chars.next();
+                        if c.is_alphabetic() {
+                            break;
+                        }
+                    }
+                    tracker.process(&seq);
+                    current.push_str(&seq);
+                    continue;
+                }
+                Some(&']') => {
+                    chars.next();
+                    let mut seq = String::from("\x1b]");
+                    while let Some(&c) = chars.peek() {
+                        seq.push(c);
+                        chars.next();
+                        if c == '\x07' {
+                            break;
+                        }
+                        if c == '\x1b' {
+                            if let Some(&'\\') = chars.peek() {
+                                seq.push('\\');
+                                chars.next();
+                                break;
+                            }
+                        }
+                    }
+                    tracker.process(&seq);
+                    current.push_str(&seq);
+                    continue;
+                }
+                _ => {}
+            }
+        }
+
+        if ch == '\n' {
+            if tracker.bold || tracker.italic || tracker.underline
+                || tracker.fg_color.is_some() || tracker.bg_color.is_some()
+            {
+                current.push_str("\x1b[0m");
+            }
+            let reset = tracker.line_end_reset();
+            if !reset.is_empty() {
+                current.push_str(&reset);
+            }
+            lines.push(current);
+            current = tracker.current_codes();
+            current_width = 0;
+            continue;
+        }
+
+        let cw = ch.width().unwrap_or(0);
+        if current_width + cw > w && !current.is_empty() {
+            if tracker.bold || tracker.italic || tracker.underline
+                || tracker.fg_color.is_some() || tracker.bg_color.is_some()
+            {
+                current.push_str("\x1b[0m");
+            }
+            let reset = tracker.line_end_reset();
+            if !reset.is_empty() {
+                current.push_str(&reset);
+            }
+            lines.push(current);
+            current = tracker.current_codes();
+            current_width = 0;
+        }
+        current.push(ch);
+        current_width += cw;
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tracker_tracks_hyperlink() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;https://example.com\x1b\\");
+        assert!(tracker.hyperlink.is_some());
+        assert_eq!(tracker.hyperlink.as_ref().unwrap().url, "https://example.com");
+        assert_eq!(tracker.hyperlink.as_ref().unwrap().terminator, "\x1b\\");
+    }
+
+    #[test]
+    fn tracker_hyperlink_bel_terminator() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;https://example.com\x07");
+        assert!(tracker.hyperlink.is_some());
+        assert_eq!(tracker.hyperlink.as_ref().unwrap().terminator, "\x07");
+    }
+
+    #[test]
+    fn tracker_hyperlink_close() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;https://example.com\x1b\\");
+        assert!(tracker.hyperlink.is_some());
+        tracker.process("\x1b]8;;\x1b\\");
+        assert!(tracker.hyperlink.is_none());
+    }
+
+    #[test]
+    fn current_codes_includes_hyperlink() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;https://example.com\x1b\\");
+        let codes = tracker.current_codes();
+        assert!(codes.contains("\x1b]8;;https://example.com\x1b\\"));
+    }
+
+    #[test]
+    fn line_end_reset_closes_hyperlink() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;https://example.com\x1b\\");
+        let reset = tracker.line_end_reset();
+        assert!(reset.contains("\x1b]8;;\x1b\\"));
+    }
+
+    #[test]
+    fn wrap_preserves_hyperlink_across_lines() {
+        let text = "\x1b]8;;https://example.com\x1b\\hello world\x1b]8;;\x1b\\";
+        let lines = wrap_text_with_ansi(text, 6);
+        assert_eq!(lines.len(), 2);
+        // First line should close hyperlink at end
+        assert!(lines[0].contains("\x1b]8;;\x1b\\"));
+        // Second line should reopen hyperlink
+        assert!(lines[1].contains("\x1b]8;;https://example.com\x1b\\"));
+    }
+
+    #[test]
+    fn has_active_codes_with_hyperlink() {
+        let mut tracker = AnsiCodeTracker::new();
+        assert!(!tracker.has_active_codes());
+        tracker.process("\x1b]8;;https://example.com\x1b\\");
+        assert!(tracker.has_active_codes());
+    }
+
+    #[test]
+    fn line_end_reset_with_underline() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[4m");
+        let reset = tracker.line_end_reset();
+        assert!(reset.contains("\x1b[24m"));
+    }
+
+    #[test]
+    fn wrap_hyperlink_bel_terminator() {
+        let text = "\x1b]8;;https://example.com\x07hello world\x1b]8;;\x07";
+        let lines = wrap_text_with_ansi(text, 6);
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("\x1b]8;;\x07"));
+        assert!(lines[1].contains("\x1b]8;;https://example.com\x07"));
+    }
+
+    #[test]
+    fn wrap_newline_with_active_sgr() {
+        let text = "\x1b[31mhello\nworld\x1b[0m";
+        let lines = wrap_text_with_ansi(text, 20);
+        assert_eq!(lines.len(), 2);
+        // First line should have SGR reset and hyperlink reset at end
+        assert!(lines[0].contains("\x1b[0m"));
+        // Second line should reopen the SGR code
+        assert!(lines[1].starts_with("\x1b[31m"));
+    }
+
+    #[test]
+    fn tracker_invalid_osc_ignored() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]8;;url");
+        assert!(tracker.hyperlink.is_none());
+    }
+
+    #[test]
+    fn tracker_invalid_osc_no_prefix() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b]9;;url\x1b\\");
+        assert!(tracker.hyperlink.is_none());
+    }
+
+    #[test]
+    fn has_active_codes_with_sgr() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[1m");
+        assert!(tracker.has_active_codes());
+    }
+
+    #[test]
+    fn truncate_jk_text_demo() {
+        let text = "  j/k = navigate list   Tab = switch focus   i = insert mode   Esc = normal mode   q = quit";
+        let truncated = truncate_to_width(text, 80, "…");
+        let vw = visible_width(&truncated);
+        eprintln!("original vw: {}", visible_width(text));
+        eprintln!("truncated: {:?}", truncated);
+        eprintln!("truncated vw: {}", vw);
+        assert!(vw <= 80, "truncated width {} exceeds 80", vw);
+        assert!(truncated.ends_with("…"));
+    }
+}

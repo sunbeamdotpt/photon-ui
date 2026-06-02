@@ -1,0 +1,413 @@
+//! Photon UI — Comprehensive Multi-Page Demo
+//!
+//! Run with:
+//! ```bash
+//! cargo run --example demo
+//! ```
+//!
+//! Showcases **every** Photon UI component across four pages:
+//!
+//! | Page | Components |
+//! |------|-----------|
+//! | 1    | Text, TruncatedText, Spacer, Box, Markdown |
+//! | 2    | Input (Emacs/vim), Editor (Emacs/vim) |
+//! | 3    | SelectList, SettingsList |
+//! | 4    | Loader, CancellableLoader, Overlay |
+//!
+//! # Keybindings
+//!
+//! | Key | Action |
+//! |-----|--------|
+//! | `1`–`4` | Switch demo page |
+//! | `Tab` / `Shift+Tab` | Cycle focus |
+//! | `q` | Quit |
+//! | `Ctrl+C` | Quit |
+//!
+//! Page-specific bindings are shown on each page.
+
+use photon_ui::components::{
+    Box as BoxComponent, CancellableLoader, Editor, Input, Loader, Markdown, SelectList,
+    SettingsList, Spacer, Text, TruncatedText,
+};
+use photon_ui::terminal::ProcessTerminal;
+use photon_ui::{
+    Anchor, Event, InputResult, Overlay, OverlayConstraints, OverlayPosition, Rendered,
+    RenderError, Terminal, TUI,
+};
+use crossterm::event::{KeyCode, KeyModifiers};
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::time::Duration;
+
+const DEMO_MARKDOWN: &str = r#"# Photon UI
+
+A **Rust** TUI library with:
+
+- *Bold*, *italic*, and `inline code`
+- Headings and paragraphs
+- CommonMark support via pulldown-cmark
+"#;
+
+/// Wrapper that lets us tick a shared Loader while it's mounted in the TUI.
+struct SharedLoader(Rc<RefCell<Loader>>);
+
+impl photon_ui::Component for SharedLoader {
+    fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        self.0.borrow().render(width)
+    }
+}
+
+/// Wrapper that lets us tick a shared CancellableLoader while it's mounted.
+struct SharedCancellableLoader(Rc<RefCell<CancellableLoader>>);
+
+impl photon_ui::Component for SharedCancellableLoader {
+    fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        self.0.borrow().render(width)
+    }
+    fn handle_input(&mut self, event: &Event) -> InputResult {
+        self.0.borrow_mut().handle_input(event)
+    }
+}
+
+struct DemoApp {
+    tui: TUI,
+    page: usize,
+
+    // Page 2: Input / Editor state
+    input_text: String,
+    editor_text: String,
+    input_vim: bool,
+    editor_vim: bool,
+
+    // Page 3: List state
+    list_selected: usize,
+    settings_selected: usize,
+    settings_values: Vec<bool>,
+
+    // Page 4: Loader / Overlay state
+    loader: Rc<RefCell<Loader>>,
+    cancellable: Rc<RefCell<CancellableLoader>>,
+    show_overlay: bool,
+}
+
+impl DemoApp {
+    fn new(tui: TUI) -> Self {
+        let mut app = Self {
+            tui,
+            page: 1,
+            input_text: String::new(),
+            editor_text: "Hello, Photon UI!\nThis is the multi-line editor.".into(),
+            input_vim: false,
+            editor_vim: false,
+            list_selected: 0,
+            settings_selected: 0,
+            settings_values: vec![true, false, true],
+            loader: Rc::new(RefCell::new(Loader::new(
+                "Loading...",
+                Some("\x1b[36m".into()),
+                None,
+            ))),
+            cancellable: Rc::new(RefCell::new(CancellableLoader::new(
+                "Background task running...",
+                Some("\x1b[33m".into()),
+                Some("\x1b[90m".into()),
+            ))),
+            show_overlay: false,
+        };
+        app.load_page();
+        app
+    }
+
+    fn load_page(&mut self) {
+        self.tui.clear_children();
+        self.tui.clear_overlays();
+
+        // Header with page indicator
+        let header = format!(
+            " Photon UI Demo  |  Page {}/4  |  1-4=pages  Tab=focus  q=quit ",
+            self.page
+        );
+        self.tui
+            .mount(std::boxed::Box::new(Text::new(&header, 0, 0)));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        match self.page {
+            1 => self.load_page_layout(),
+            2 => self.load_page_input(),
+            3 => self.load_page_lists(),
+            4 => self.load_page_dynamic(),
+            _ => {}
+        }
+    }
+
+    fn load_page_layout(&mut self) {
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Text component with pad_x=2, pad_y=1:",
+            0,
+            0,
+        )));
+        self.tui
+            .mount(std::boxed::Box::new(Text::new("  Indented content here", 2, 1)));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "TruncatedText (narrow terminal will ellipsis):",
+            0,
+            0,
+        )));
+        self.tui.mount(std::boxed::Box::new(TruncatedText::new(
+            "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",
+            2,
+            0,
+        )));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui
+            .mount(std::boxed::Box::new(Text::new("Box with blue background:", 0, 0)));
+        self.tui.mount(std::boxed::Box::new(
+            BoxComponent::new(2).with_background(|line, _w| {
+                format!("\x1b[44m{}\x1b[0m", line)
+            }),
+        ));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui
+            .mount(std::boxed::Box::new(Text::new("Markdown rendering:", 0, 0)));
+        self.tui
+            .mount(std::boxed::Box::new(Markdown::new(DEMO_MARKDOWN)));
+    }
+
+    fn load_page_input(&mut self) {
+        let help = if self.input_vim {
+            "Input: vim mode (i=insert, Esc=normal, h/l=move, x=delete) | v=toggle mode"
+        } else {
+            "Input: Emacs mode (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill, Ctrl+Y=yank) | v=toggle mode"
+        };
+        self.tui.mount(std::boxed::Box::new(Text::new(help, 0, 0)));
+
+        let mut input = Input::new();
+        input.set_text(&self.input_text);
+        if self.input_vim {
+            input.set_vim_mode_enabled(true);
+        }
+        self.tui.mount(std::boxed::Box::new(input));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        let editor_help = if self.editor_vim {
+            "Editor: vim mode (i=insert, Esc=normal, dd=delete line, yy=yank line) | V=toggle mode"
+        } else {
+            "Editor: Emacs mode (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill line) | V=toggle mode"
+        };
+        self.tui
+            .mount(std::boxed::Box::new(Text::new(editor_help, 0, 0)));
+
+        let mut editor = Editor::new();
+        editor.set_text(&self.editor_text);
+        if self.editor_vim {
+            editor.set_vim_mode_enabled(true);
+        }
+        self.tui.mount(std::boxed::Box::new(editor));
+    }
+
+    fn load_page_lists(&mut self) {
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "SelectList — j/k or arrows to navigate, Enter to select:",
+            0,
+            0,
+        )));
+
+        let mut list = SelectList::new(
+            vec![
+                "Rust programming language".into(),
+                "Python scripting".into(),
+                "TypeScript web dev".into(),
+                "Go systems programming".into(),
+                "Zig low-level".into(),
+                "C++ game engines".into(),
+                "Haskell functional".into(),
+            ],
+            4,
+        );
+        list.set_selected(self.list_selected);
+        self.tui.mount(std::boxed::Box::new(list));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "SettingsList — j/k or arrows, Enter/Space to toggle:",
+            0,
+            0,
+        )));
+
+        let mut settings = SettingsList::new(vec![
+            ("Enable dark mode".into(), self.settings_values[0]),
+            ("Show line numbers".into(), self.settings_values[1]),
+            ("Auto-save on exit".into(), self.settings_values[2]),
+        ]);
+        settings.set_selected(self.settings_selected);
+        self.tui.mount(std::boxed::Box::new(settings));
+    }
+
+    fn load_page_dynamic(&mut self) {
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Loader (auto-ticking spinner):",
+            0,
+            0,
+        )));
+        self.tui
+            .mount(std::boxed::Box::new(SharedLoader(self.loader.clone())));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "CancellableLoader — press Ctrl+C to cancel:",
+            0,
+            0,
+        )));
+        self.tui.mount(std::boxed::Box::new(SharedCancellableLoader(
+            self.cancellable.clone(),
+        )));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        let overlay_hint = if self.show_overlay {
+            "Overlay: ACTIVE  |  Press 'o' to close"
+        } else {
+            "Overlay: hidden  |  Press 'o' to open a centered popup"
+        };
+        self.tui
+            .mount(std::boxed::Box::new(Text::new(overlay_hint, 0, 0)));
+
+        if self.show_overlay {
+            self.tui.add_overlay(Overlay {
+                content: std::boxed::Box::new(Text::new(
+                    "  Overlay Popup! Press 'o' to close  ",
+                    0,
+                    0,
+                )),
+                position: OverlayPosition::Anchor(Anchor::Center),
+                constraints: OverlayConstraints {
+                    min_width: 30,
+                    max_height: 3,
+                    margin: 2,
+                    offset_x: 0,
+                    offset_y: 0,
+                    visible: None,
+                },
+            });
+        }
+    }
+
+    /// Advance animation frames. Call periodically from the event loop.
+    fn tick(&mut self) {
+        if self.page == 4 {
+            self.loader.borrow_mut().tick();
+            self.cancellable.borrow_mut().tick();
+        }
+    }
+
+    /// Handle an input event. Returns `false` when the app should quit.
+    fn handle_input(&mut self, event: &Event) -> bool {
+        // Global navigation
+        if let Event::Key(key) = event {
+            match key.code {
+                KeyCode::Char('1') => {
+                    self.page = 1;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('2') => {
+                    self.page = 2;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('3') => {
+                    self.page = 3;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('4') => {
+                    self.page = 4;
+                    self.load_page();
+                    return true;
+                }
+                KeyCode::Char('q') if key.modifiers.is_empty() => return false,
+                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    return false;
+                }
+                _ => {}
+            }
+        }
+
+        // Page-specific global keys
+        if self.page == 2 {
+            if let Event::Key(key) = event {
+                if key.code == KeyCode::Char('v') && key.modifiers.is_empty() {
+                    self.input_vim = !self.input_vim;
+                    self.load_page();
+                    return true;
+                }
+                if key.code == KeyCode::Char('V')
+                    && key.modifiers.contains(KeyModifiers::SHIFT)
+                {
+                    self.editor_vim = !self.editor_vim;
+                    self.load_page();
+                    return true;
+                }
+            }
+        }
+
+        if self.page == 4 {
+            if let Event::Key(key) = event {
+                if key.code == KeyCode::Char('o') && key.modifiers.is_empty() {
+                    self.show_overlay = !self.show_overlay;
+                    self.load_page();
+                    return true;
+                }
+            }
+        }
+
+        self.tui.handle_input(event);
+        true
+    }
+
+    fn render(&mut self) -> std::io::Result<()> {
+        self.tui.render_frame()
+    }
+}
+
+fn main() -> std::io::Result<()> {
+    let mut term = ProcessTerminal::new();
+    term.start()?;
+
+    let tui = TUI::new(std::boxed::Box::new(term));
+    let mut app = DemoApp::new(tui);
+
+    // Initial render
+    app.render()?;
+
+    // Event loop
+    loop {
+        // Tick animations at ~10 fps
+        app.tick();
+        app.render()?;
+
+        if crossterm::event::poll(Duration::from_millis(100))? {
+            let event = match crossterm::event::read()? {
+                crossterm::event::Event::Key(key) => Event::Key(key),
+                crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
+                crossterm::event::Event::Mouse(m) => Event::Mouse(m),
+                crossterm::event::Event::Paste(p) => Event::Paste(p),
+                crossterm::event::Event::FocusGained => Event::FocusGained,
+                crossterm::event::Event::FocusLost => Event::FocusLost,
+            };
+
+            if !app.handle_input(&event) {
+                break;
+            }
+            app.render()?;
+        }
+    }
+
+    // CRITICAL: restore terminal state (leave alternate screen, disable raw mode, show cursor)
+    app.tui.stop()?;
+
+    Ok(())
+}
