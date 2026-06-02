@@ -4,6 +4,7 @@ pub mod flex;
 pub mod margin;
 pub mod offset;
 pub mod position;
+pub mod rect;
 pub mod size;
 pub mod spacing;
 
@@ -13,5 +14,6 @@ pub use flex::Flex;
 pub use margin::Margin;
 pub use offset::Offset;
 pub use position::Position;
+pub use rect::{Columns, Positions, Rect, Rows};
 pub use size::Size;
 pub use spacing::Spacing;
