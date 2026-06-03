@@ -5,7 +5,7 @@
 //! cargo run --example demo
 //! ```
 //!
-//! Showcases **every** Photon UI component across four pages:
+//! Showcases **every** Photon UI component across five pages:
 //!
 //! | Page | Components |
 //! |------|-----------|
@@ -13,12 +13,13 @@
 //! | 2    | Input, Editor, SelectList, SettingsList |
 //! | 3    | Loader, CancellableLoader, Overlay |
 //! | 4    | Layout engine, Theme + Button, Panel |
+//! | 5    | Header, Tabs, Table, StatusBar |
 //!
 //! # Keybindings
 //!
 //! | Key | Action |
 //! |-----|--------|
-//! | `1`–`4` | Switch demo page |
+//! | `1`–`5` | Switch demo page |
 //! | `Tab` / `Shift+Tab` | Cycle focus |
 //! | `t` | Toggle light/dark theme (on page 4) |
 //! | `q` | Quit |
@@ -28,6 +29,7 @@
 
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::Rc,
     time::Duration,
 };
@@ -52,15 +54,24 @@ use photon_ui::{
         Button,
         CancellableLoader,
         Editor,
+        Header,
         Input,
         Loader,
         Markdown,
         Panel,
+        Segment,
         SelectList,
         SettingsList,
         Spacer,
+        StatusBar,
+        Table,
+        Tabs,
         Text,
         TruncatedText,
+    },
+    components::table::{
+        Column,
+        Row,
     },
     layout::{
         Constraint,
@@ -375,7 +386,7 @@ impl DemoApp {
         // all children)
         if self.page != 4 {
             let header = format!(
-                " Photon UI Demo  |  Page {}/4  |  1-4=pages  Tab=focus  q=quit ",
+                " Photon UI Demo  |  Page {}/5  |  1-5=pages  Tab=focus  q=quit ",
                 self.page
             );
             self.tui
@@ -388,6 +399,7 @@ impl DemoApp {
             | 2 => self.load_page_input_and_lists(),
             | 3 => self.load_page_dynamic(),
             | 4 => self.load_page_design_system(),
+            | 5 => self.load_page_dashboard(),
             | _ => {},
         }
     }
@@ -635,6 +647,49 @@ impl DemoApp {
         }
     }
 
+    fn load_page_dashboard(&mut self) {
+        self.tui.set_layout(Layout::vertical([
+            Constraint::Length(1), // Header
+            Constraint::Length(1), // Tabs
+            Constraint::Min(5),    // Table
+            Constraint::Length(1), // StatusBar
+        ]));
+        self.tui
+            .mount(Box::new(Header::new("Dashboard Demo").action("q:quit")));
+        self.tui
+            .mount(Box::new(Tabs::new(vec!["Overview", "Resources", "Logs"])));
+        let table = Table::new(
+            vec![
+                Column::new("name", "Name").width(15),
+                Column::new("status", "Status").width(10),
+                Column::new("size", "Size").width(8),
+            ],
+            vec![
+                Row::new(HashMap::from([
+                    ("name".to_string(), "src/main.rs".to_string()),
+                    ("status".to_string(), "active".to_string()),
+                    ("size".to_string(), "12.4KB".to_string()),
+                ])),
+                Row::new(HashMap::from([
+                    ("name".to_string(), "Cargo.toml".to_string()),
+                    ("status".to_string(), "active".to_string()),
+                    ("size".to_string(), "1.2KB".to_string()),
+                ])),
+                Row::new(HashMap::from([
+                    ("name".to_string(), "README.md".to_string()),
+                    ("status".to_string(), "idle".to_string()),
+                    ("size".to_string(), "4.5KB".to_string()),
+                ])),
+            ],
+        );
+        self.tui.mount(Box::new(table));
+        self.tui.mount(Box::new(
+            StatusBar::new()
+                .left(Segment::new("MODE: normal"))
+                .right(Segment::new("1-5:pages  q:quit")),
+        ));
+    }
+
     /// Advance animation frames. Call periodically from the event loop.
     fn tick(&mut self) {
         if self.page == 3 {
@@ -665,6 +720,11 @@ impl DemoApp {
                 },
                 | KeyCode::Char('4') => {
                     self.page = 4;
+                    self.load_page();
+                    return true;
+                },
+                | KeyCode::Char('5') => {
+                    self.page = 5;
                     self.load_page();
                     return true;
                 },
