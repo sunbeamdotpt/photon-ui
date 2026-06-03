@@ -157,7 +157,9 @@ pub struct TUI {
     terminal: Box<dyn Terminal>,
     children: Vec<Box<dyn Component>>,
     overlays: Vec<Overlay>,
+    modal: Option<Box<dyn Component>>,
     focused_index: Option<usize>,
+    pre_modal_focus: Option<usize>,
     renderer: Renderer,
     size: (u16, u16),
     previous_image_ids: std::collections::HashSet<u32>,
@@ -172,7 +174,9 @@ impl TUI {
             terminal,
             children: Vec::new(),
             overlays: Vec::new(),
+            modal: None,
             focused_index: None,
+            pre_modal_focus: None,
             renderer: Renderer::new(),
             size: (80, 24),
             previous_image_ids: std::collections::HashSet::new(),
@@ -233,6 +237,42 @@ impl TUI {
         self.overlays.clear();
     }
 
+    /// Show a modal dialog on top of the main UI.
+    ///
+    /// The modal captures all input until it is dismissed. Focus is moved to
+    /// the modal content automatically. When dismissed, focus returns to the
+    /// previously focused component.
+    pub fn show_modal(&mut self, modal: Box<dyn Component>) {
+        self.pre_modal_focus = self.focused_index;
+        self.modal = Some(modal);
+        if let Some(ref mut m) = self.modal {
+            if let Some(f) = m.as_focusable_mut() {
+                f.set_focused(true);
+            }
+        }
+    }
+
+    /// Dismiss the currently open modal, restoring previous focus.
+    pub fn dismiss_modal(&mut self) {
+        if let Some(ref mut m) = self.modal {
+            if let Some(f) = m.as_focusable_mut() {
+                f.set_focused(false);
+            }
+        }
+        self.modal = None;
+        if let Some(idx) = self.pre_modal_focus {
+            if idx < self.children.len() {
+                self.set_focus(idx);
+            }
+        }
+        self.pre_modal_focus = None;
+    }
+
+    /// Returns `true` if a modal is currently open.
+    pub fn modal_active(&self) -> bool {
+        self.modal.is_some()
+    }
+
     /// Set a layout for splitting the terminal area among children.
     pub fn set_layout(&mut self, layout: Layout) {
         self.layout = Some(layout);
@@ -250,7 +290,9 @@ impl TUI {
     pub fn reset(&mut self) {
         self.children.clear();
         self.focused_index = None;
+        self.pre_modal_focus = None;
         self.overlays.clear();
+        self.modal = None;
         self.layout = None;
         self.renderer
             .set_strategy(crate::renderer::RenderStrategy::FullRedraw);
@@ -329,6 +371,17 @@ impl TUI {
             }
         }
 
+        // Render modal centered on top of everything.
+        if let Some(ref modal) = self.modal {
+            if let Ok(rendered) = modal.render(width) {
+                let modal_h = rendered.lines.len() as u16;
+                let modal_w = crate::utils::visible_width(rendered.lines.first().unwrap_or(&String::new())) as u16;
+                let row = (height.saturating_sub(modal_h)) / 2;
+                let col = (width.saturating_sub(modal_w)) / 2;
+                rendered.blit_onto(&mut screen, row, col);
+            }
+        }
+
         let current_ids: std::collections::HashSet<u32> =
             screen.images.iter().map(|i| i.id).collect();
         for id in &self.previous_image_ids {
@@ -389,6 +442,19 @@ impl TUI {
     ///
     /// Also handles `Tab` to cycle focus between focusable children.
     pub fn handle_input(&mut self, event: &crate::events::Event) {
+        // Modal capture: when a modal is open, Esc dismisses it and all other
+        // input is routed to the modal content.
+        if let Some(ref mut modal) = self.modal {
+            if let crate::events::Event::Key(key) = event {
+                if key.code == crossterm::event::KeyCode::Esc {
+                    self.dismiss_modal();
+                    return;
+                }
+            }
+            modal.handle_input(event);
+            return;
+        }
+
         // Handle Tab to cycle focus. Try the focused child first so nested
         // containers (e.g. Div) can manage their own focus cycling.
         if let crate::events::Event::Key(key) = event {
@@ -984,6 +1050,50 @@ mod tests {
 
         // render_frame should not panic after reset (FullRedraw is scheduled
         // internally)
+        tui.render_frame().unwrap();
+    }
+
+    #[test]
+    fn tui_show_modal_captures_input() {
+        let term = TestTerminal::new(80, 24);
+        let mut tui = TUI::new(Box::new(term));
+        tui.mount(Box::new(Text::new("background", 0, 0)));
+        tui.set_focus(0);
+
+        let modal_content = Text::new("modal text", 0, 0);
+        tui.show_modal(Box::new(modal_content));
+        assert!(tui.modal_active());
+
+        // Esc should dismiss the modal
+        tui.handle_input(&crate::events::Event::Key(crossterm::event::KeyEvent::new(
+            crossterm::event::KeyCode::Esc,
+            crossterm::event::KeyModifiers::empty(),
+        )));
+        assert!(!tui.modal_active());
+    }
+
+    #[test]
+    fn tui_modal_restores_focus_on_dismiss() {
+        let term = TestTerminal::new(80, 24);
+        let mut tui = TUI::new(Box::new(term));
+        let list = crate::components::SelectList::new(vec!["x".into()], 1);
+        tui.mount(Box::new(list));
+        assert_eq!(tui.focused_index, Some(0));
+
+        tui.show_modal(Box::new(Text::new("modal", 0, 0)));
+        tui.dismiss_modal();
+        assert_eq!(tui.focused_index, Some(0));
+    }
+
+    #[test]
+    fn tui_modal_renders_without_panic() {
+        let term = TestTerminal::new(80, 24);
+        let mut tui = TUI::new(Box::new(term));
+        tui.mount(Box::new(Text::new("background", 0, 0)));
+
+        let modal_content = crate::components::Modal::new(Box::new(Text::new("hello", 0, 0)));
+        tui.show_modal(Box::new(modal_content));
+        // render_frame should not panic with an active modal
         tui.render_frame().unwrap();
     }
 }
