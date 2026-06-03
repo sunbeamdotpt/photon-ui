@@ -1,5 +1,5 @@
 use crate::{Component, Rendered, RenderError, Event, InputResult, Focusable};
-use crossterm::event::KeyCode;
+use crossterm::event::{KeyCode, KeyModifiers};
 
 /// A scrollable list of toggleable settings rendered as checkboxes.
 ///
@@ -63,6 +63,14 @@ impl Component for SettingsList {
                     InputResult::Handled
                 }
                 KeyCode::Up => {
+                    if self.selected > 0 { self.selected -= 1; }
+                    InputResult::Handled
+                }
+                KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    if self.selected + 1 < self.items.len() { self.selected += 1; }
+                    InputResult::Handled
+                }
+                KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if self.selected > 0 { self.selected -= 1; }
                     InputResult::Handled
                 }
