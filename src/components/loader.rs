@@ -43,7 +43,17 @@ impl Loader {
 impl Component for Loader {
     fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
         let spinner = SPINNER_FRAMES[self.frame];
-        let line = format!("{} {}", spinner, self.message);
+        let spinner_styled = self
+            .spinner_color
+            .as_ref()
+            .map(|c| format!("{}{}\x1b[0m", c, spinner))
+            .unwrap_or_else(|| spinner.to_string());
+        let message_styled = self
+            .message_color
+            .as_ref()
+            .map(|c| format!("{}{}\x1b[0m", c, self.message))
+            .unwrap_or_else(|| self.message.clone());
+        let line = format!("{} {}", spinner_styled, message_styled);
         Ok(Rendered {
             lines: vec![line],
             cursor: None,
