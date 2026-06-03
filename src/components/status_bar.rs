@@ -125,9 +125,14 @@ impl Component for StatusBar {
         let mut right = right_str;
         let mut center = center_str;
 
-        // Cap left to total width.
-        if left_w > width_usize {
-            left = truncate_to_width(&left, width, "…");
+        // Reserve minimum space for right and center so they remain visible.
+        let min_right = if self.right.is_empty() { 0 } else { right_w.min(5) };
+        let min_center = if self.center.is_empty() { 0 } else { center_w.min(5) };
+        let left_max = width_usize.saturating_sub(min_right + min_center);
+
+        // Cap left to remaining space after reservations.
+        if left_w > left_max {
+            left = truncate_to_width(&left, left_max as u16, "…");
             left_w = visible_width(&left);
         }
 
@@ -261,7 +266,7 @@ mod tests {
             let c1_pos = line.find("C1").unwrap();
             // "C1" is 2 chars, centered in 20 -> visual pos around 9
             let visual_pos = visible_width(&line[..c1_pos]);
-            assert!((8..=10).contains(&visual_pos));
+            assert!(visual_pos >= 8 && visual_pos <= 10);
             assert_eq!(visible_width(line), 20);
         });
     }
