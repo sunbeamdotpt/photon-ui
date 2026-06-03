@@ -682,22 +682,24 @@ impl DemoApp {
         dashboard_body.push(Box::new(sidebar));
 
         // ── MainContent (vertical) with Dividers ──
+        // Total = 24 lines. Each component gets exactly the height it needs
+        // so nothing is clipped.
         let mut main_content = Div::new(Layout::vertical([
             Constraint::Length(1), // Tabs
             Constraint::Length(1), // Divider
             Constraint::Length(1), // ProgressBar row
             Constraint::Length(1), // Divider
-            Constraint::Length(4), // DataRow
+            Constraint::Length(4), // DataRow  (Table 2 rows + header + sep = 4)
             Constraint::Length(1), // Divider
             Constraint::Length(2), // FormsRow
             Constraint::Length(1), // Divider
-            Constraint::Length(3), // ListsRow
+            Constraint::Length(3), // ListsRow (SelectList 3 visible)
             Constraint::Length(1), // Divider
             Constraint::Length(1), // ButtonsRow
             Constraint::Length(1), // Divider
-            Constraint::Length(3), // ContentRow
+            Constraint::Length(5), // ContentRow (Panel top + 3 lines + bottom = 5)
             Constraint::Length(1), // Divider
-            Constraint::Length(2), // SystemRow
+            Constraint::Length(1), // SystemRow
         ]));
 
         main_content.push(Box::new(Tabs::new(vec!["Overview", "Resources", "Logs"])));
@@ -734,11 +736,6 @@ impl DemoApp {
                     ("name".to_string(), "Cargo.toml".to_string()),
                     ("status".to_string(), "active".to_string()),
                     ("size".to_string(), "1.2KB".to_string()),
-                ])),
-                Row::new(HashMap::from([
-                    ("name".to_string(), "README.md".to_string()),
-                    ("status".to_string(), "idle".to_string()),
-                    ("size".to_string(), "4.5KB".to_string()),
                 ])),
             ],
         );
@@ -779,9 +776,8 @@ impl DemoApp {
                 "TypeScript".into(),
                 "Go".into(),
                 "Zig".into(),
-                "Haskell".into(),
             ],
-            4,
+            3,
         );
         select_list.set_selected(1);
         lists_row.push(Box::new(select_list));
@@ -819,20 +815,20 @@ impl DemoApp {
             Panel::new()
                 .title("Info")
                 .lines(vec![
-                    "Photon UI v0.1.0".into(),
+                    "\x1b[1m\x1b[97mPhoton UI v0.1.0\x1b[0m".into(),
                     "A Rust TUI library".into(),
-                    "Built with ♥".into(),
+                    "\x1b[31mBuilt with ♥\x1b[0m".into(),
                 ]),
         ));
         main_content.push(Box::new(content_row));
         main_content.push(Box::new(Divider::horizontal().labeled("System")));
 
-        // SystemRow: Loader + CancellableLoader + ImageWidget + Box + TruncatedText
+        // SystemRow: Loader + CancellableLoader + ImageWidget + Status + TruncatedText
         let mut system_row = Div::new(Layout::horizontal([
             Constraint::Length(14),
             Constraint::Length(20),
             Constraint::Length(10),
-            Constraint::Length(8),
+            Constraint::Length(12),
             Constraint::Min(5),
         ]));
         system_row.push(Box::new(SharedLoader(self.loader.clone())));
@@ -842,10 +838,11 @@ impl DemoApp {
             "image/png",
             Some("[image]".to_string()),
         )));
-        system_row.push(Box::new(
-            BoxComponent::new(1)
-                .with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
-        ));
+        system_row.push(Box::new(Text::new(
+            "\x1b[32m●\x1b[0m online",
+            0,
+            0,
+        )));
         system_row.push(Box::new(TruncatedText::new(
             "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",
             0,
