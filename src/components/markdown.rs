@@ -149,7 +149,7 @@ impl Component for Markdown {
 
         let mut wrapped = Vec::new();
         for line in lines {
-            if line.len() > width as usize {
+            if crate::utils::visible_width(&line) > width as usize {
                 wrapped.extend(crate::utils::wrap_text_with_ansi(&line, width));
             } else {
                 wrapped.push(line);
@@ -268,5 +268,26 @@ mod tests {
         let bold_line = r.lines.iter().find(|l| l.contains("bold")).unwrap();
         assert!(bold_line.contains("- "), "expected bullet: {}", bold_line);
         assert!(bold_line.contains("\x1b[1m"));
+    }
+
+    #[test]
+    fn markdown_no_unnecessary_wrapping_for_wide_chars() {
+        // "中文" is 6 bytes but only 4 visible columns wide.
+        // A byte-length check would trigger unnecessary wrapping at width 5.
+        let md = Markdown::new("中文");
+        let r = md.render(5).unwrap();
+        // Markdown paragraphs produce a text line followed by an empty line.
+        let text_lines: Vec<&String> = r.lines.iter().filter(|l| !l.is_empty()).collect();
+        assert_eq!(
+            text_lines.len(),
+            1,
+            "CJK text with visible_width 4 should fit in width 5: {:?}",
+            r.lines
+        );
+        assert!(
+            text_lines[0].contains("中文"),
+            "text should be intact: {:?}",
+            text_lines
+        );
     }
 }
