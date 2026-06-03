@@ -52,7 +52,16 @@ impl Component for Container {
 
         for (child, area) in self.children.iter().zip(areas.iter()) {
             if let Ok(rendered) = child.render_rect(*area) {
-                rendered.blit_into_rect(&mut screen, *area);
+                // Blit into the local buffer using coordinates relative to this container's origin.
+                // `layout.split()` returns areas in terminal coordinates (they include
+                // rect.x/y), but `screen` is a fresh local buffer whose origin is (0, 0).
+                let rel_area = Rect::new(
+                    area.x.saturating_sub(rect.x),
+                    area.y.saturating_sub(rect.y),
+                    area.width,
+                    area.height,
+                );
+                rendered.blit_into_rect(&mut screen, rel_area);
             }
         }
 
@@ -106,5 +115,34 @@ mod tests {
         assert_eq!(rendered.lines.len(), 2);
         assert!(rendered.lines[0].contains("top"));
         assert!(rendered.lines[1].contains("bottom"));
+    }
+
+    /// Regression test: nested containers with non-zero rect coordinates must
+    /// not double-offset content.
+    #[test]
+    fn container_nonzero_rect_no_double_offset() {
+        let mut outer = Container::new(Layout::horizontal([
+            Constraint::Length(10),
+            Constraint::Length(10),
+        ]));
+
+        let mut inner = Container::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]));
+        inner.push(Box::new(Text::new("a", 0, 0)));
+        inner.push(Box::new(Text::new("b", 0, 0)));
+
+        outer.push(Box::new(Text::new("left", 0, 0)));
+        outer.push(Box::new(inner));
+
+        // Outer rect starts at (0, 2). Inner container gets y = 2 from the layout.
+        let rendered = outer.render_rect(Rect::new(0, 2, 20, 2)).unwrap();
+        // The inner container's content should be at local rows 0 and 1,
+        // NOT shifted down by 2 due to double-offsetting.
+        assert_eq!(rendered.lines.len(), 2, "expected 2 lines, got {}", rendered.lines.len());
+        assert!(rendered.lines[0].contains("left"));
+        assert!(rendered.lines[0].contains("a"));
+        assert!(rendered.lines[1].contains("b"));
     }
 }
