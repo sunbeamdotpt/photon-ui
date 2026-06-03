@@ -1,9 +1,14 @@
-use crate::{Component, Rendered, RenderError};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// A rectangular box filled with spaces, optionally with a background color.
 ///
 /// The box renders `pad_y` rows of spaces at the requested width. A background
-/// function can be applied to each line via [`with_background`](Box::with_background).
+/// function can be applied to each line via
+/// [`with_background`](Box::with_background).
 pub struct Box {
     pad_y: u16,
     bg_fn: Option<fn(&str, u16) -> String>,
@@ -35,7 +40,11 @@ impl Component for Box {
         if let Some(bg) = self.bg_fn {
             lines = lines.into_iter().map(|l| bg(&l, width)).collect();
         }
-        Ok(Rendered { lines, cursor: None, images: Vec::new() })
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
     }
 }
 

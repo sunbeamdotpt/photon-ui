@@ -1,6 +1,8 @@
-use crate::events::Key;
 use std::collections::HashMap;
+
 use thiserror::Error;
+
+use crate::events::Key;
 
 /// Error returned when a keybinding conflicts with an existing binding.
 #[derive(Error, Debug, Clone, PartialEq)]
@@ -88,7 +90,9 @@ impl Default for KeybindingsManager {
 
 impl KeybindingsManager {
     /// Create a manager pre-populated with [`default_bindings`].
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Look up the key bound to an action.
     pub fn get(&self, action: &str) -> Option<&Key> {

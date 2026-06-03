@@ -1,4 +1,8 @@
-use crate::{Component, Rendered, RenderError};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// Braille spinner frames used by [`Loader`].
 const SPINNER_FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -17,8 +21,17 @@ pub struct Loader {
 
 impl Loader {
     /// Create a new loader with the given message and optional color codes.
-    pub fn new(message: impl Into<String>, spinner_color: Option<String>, message_color: Option<String>) -> Self {
-        Self { message: message.into(), frame: 0, spinner_color, message_color }
+    pub fn new(
+        message: impl Into<String>,
+        spinner_color: Option<String>,
+        message_color: Option<String>,
+    ) -> Self {
+        Self {
+            message: message.into(),
+            frame: 0,
+            spinner_color,
+            message_color,
+        }
     }
 
     /// Advance to the next spinner frame.

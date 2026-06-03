@@ -1,4 +1,9 @@
-use photon_ui::layout::{Margin, Offset, Position, Rect};
+use photon_ui::layout::{
+    Margin,
+    Offset,
+    Position,
+    Rect,
+};
 use proptest::prelude::*;
 
 proptest! {
@@ -68,13 +73,11 @@ proptest! {
 }
 
 fn rect_strategy() -> impl Strategy<Value = Rect> {
-    (0u16..200, 0u16..200, 0u16..100, 0u16..100)
-        .prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
+    (0u16..200, 0u16..200, 0u16..100, 0u16..100).prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
 }
 
 fn non_empty_rect_strategy() -> impl Strategy<Value = Rect> {
-    (0u16..200, 0u16..200, 1u16..100, 1u16..100)
-        .prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
+    (0u16..200, 0u16..200, 1u16..100, 1u16..100).prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
 }
 
 fn margin_strategy() -> impl Strategy<Value = Margin> {

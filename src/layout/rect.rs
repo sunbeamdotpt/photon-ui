@@ -1,7 +1,17 @@
-use std::cmp::{max, min};
-use std::fmt;
+use std::{
+    cmp::{
+        max,
+        min,
+    },
+    fmt,
+};
 
-use super::{Margin, Offset, Position, Size};
+use super::{
+    Margin,
+    Offset,
+    Position,
+    Size,
+};
 
 /// A rectangular area in the terminal.
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
@@ -13,14 +23,19 @@ pub struct Rect {
 }
 
 impl Rect {
-    pub const ZERO: Self = Self::new(0, 0, 0, 0);
-    pub const MIN: Self = Self::ZERO;
     pub const MAX: Self = Self::new(0, 0, u16::MAX, u16::MAX);
+    pub const MIN: Self = Self::ZERO;
+    pub const ZERO: Self = Self::new(0, 0, 0, 0);
 
     pub const fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         let width = x.saturating_add(width).saturating_sub(x);
         let height = y.saturating_add(height).saturating_sub(y);
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub const fn area(self) -> u32 {
@@ -73,9 +88,20 @@ impl Rect {
     pub const fn outer(self, margin: Margin) -> Self {
         let x = self.x.saturating_sub(margin.horizontal);
         let y = self.y.saturating_sub(margin.vertical);
-        let width = self.right().saturating_add(margin.horizontal).saturating_sub(x);
-        let height = self.bottom().saturating_add(margin.vertical).saturating_sub(y);
-        Self { x, y, width, height }
+        let width = self
+            .right()
+            .saturating_add(margin.horizontal)
+            .saturating_sub(x);
+        let height = self
+            .bottom()
+            .saturating_add(margin.vertical)
+            .saturating_sub(y);
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     pub fn offset(self, offset: Offset) -> Self {
@@ -117,17 +143,17 @@ impl Rect {
     }
 
     pub const fn intersects(self, other: Self) -> bool {
-        self.x < other.right()
-            && self.right() > other.x
-            && self.y < other.bottom()
-            && self.bottom() > other.y
+        self.x < other.right() &&
+            self.right() > other.x &&
+            self.y < other.bottom() &&
+            self.bottom() > other.y
     }
 
     pub const fn contains(self, position: Position) -> bool {
-        position.x >= self.x
-            && position.x < self.right()
-            && position.y >= self.y
-            && position.y < self.bottom()
+        position.x >= self.x &&
+            position.x < self.right() &&
+            position.y >= self.y &&
+            position.y < self.bottom()
     }
 
     pub fn clamp(self, other: Self) -> Self {
@@ -151,7 +177,10 @@ impl Rect {
     }
 
     pub const fn as_position(self) -> Position {
-        Position { x: self.x, y: self.y }
+        Position {
+            x: self.x,
+            y: self.y,
+        }
     }
 
     pub const fn as_size(self) -> Size {
@@ -192,20 +221,30 @@ impl From<Size> for Rect {
 
 impl std::ops::Add<Offset> for Rect {
     type Output = Self;
+
     fn add(self, offset: Offset) -> Self::Output {
         let max = i32::from(u16::MAX);
-        let x = i32::from(self.x).saturating_add(i32::from(offset.x)).clamp(0, max) as u16;
-        let y = i32::from(self.y).saturating_add(i32::from(offset.y)).clamp(0, max) as u16;
+        let x = i32::from(self.x)
+            .saturating_add(i32::from(offset.x))
+            .clamp(0, max) as u16;
+        let y = i32::from(self.y)
+            .saturating_add(i32::from(offset.y))
+            .clamp(0, max) as u16;
         Self { x, y, ..self }
     }
 }
 
 impl std::ops::Sub<Offset> for Rect {
     type Output = Self;
+
     fn sub(self, offset: Offset) -> Self::Output {
         let max = i32::from(u16::MAX);
-        let x = i32::from(self.x).saturating_sub(i32::from(offset.x)).clamp(0, max) as u16;
-        let y = i32::from(self.y).saturating_sub(i32::from(offset.y)).clamp(0, max) as u16;
+        let x = i32::from(self.x)
+            .saturating_sub(i32::from(offset.x))
+            .clamp(0, max) as u16;
+        let y = i32::from(self.y)
+            .saturating_sub(i32::from(offset.y))
+            .clamp(0, max) as u16;
         Self { x, y, ..self }
     }
 }
@@ -225,6 +264,7 @@ impl Rows {
 
 impl Iterator for Rows {
     type Item = Rect;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.rect.height {
             return None;
@@ -255,6 +295,7 @@ impl Columns {
 
 impl Iterator for Columns {
     type Item = Rect;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.rect.width {
             return None;
@@ -285,6 +326,7 @@ impl Positions {
 
 impl Iterator for Positions {
     type Item = Position;
+
     fn next(&mut self) -> Option<Self::Item> {
         let area = self.rect.area();
         if self.current as u32 >= area {

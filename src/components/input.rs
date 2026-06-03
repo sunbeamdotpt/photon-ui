@@ -1,9 +1,18 @@
-use crate::{Component, Rendered, RenderError, Event, InputResult, Focusable};
-use crate::kill_ring::KillRing;
-use crate::undo_stack::UndoStack;
-use unicode_segmentation::UnicodeSegmentation;
-use crossterm::event::KeyCode;
 use std::cell::Cell;
+
+use crossterm::event::KeyCode;
+use unicode_segmentation::UnicodeSegmentation;
+
+use crate::{
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+    kill_ring::KillRing,
+    undo_stack::UndoStack,
+};
 
 /// Snapshot of input state for undo/redo.
 #[derive(Clone)]
@@ -58,7 +67,9 @@ impl Input {
     }
 
     /// Returns `true` if vim modal editing is enabled.
-    pub fn vim_mode_enabled(&self) -> bool { self.vim_mode_enabled }
+    pub fn vim_mode_enabled(&self) -> bool {
+        self.vim_mode_enabled
+    }
 
     /// Enable or disable vim modal editing.
     ///
@@ -71,19 +82,29 @@ impl Input {
     }
 
     /// Current vim mode (only meaningful when vim mode is enabled).
-    pub fn mode(&self) -> InputVimMode { self.mode }
+    pub fn mode(&self) -> InputVimMode {
+        self.mode
+    }
 
     /// Switch to the given vim mode.
-    pub fn set_mode(&mut self, mode: InputVimMode) { self.mode = mode; }
+    pub fn set_mode(&mut self, mode: InputVimMode) {
+        self.mode = mode;
+    }
 
     /// Borrow the current text content.
-    pub fn text(&self) -> &str { &self.text }
+    pub fn text(&self) -> &str {
+        &self.text
+    }
 
     /// Current cursor position in grapheme indices.
-    pub fn cursor(&self) -> usize { self.cursor }
+    pub fn cursor(&self) -> usize {
+        self.cursor
+    }
 
     /// Current horizontal scroll offset in grapheme indices.
-    pub fn scroll(&self) -> usize { self.scroll.get() }
+    pub fn scroll(&self) -> usize {
+        self.scroll.get()
+    }
 
     /// Replace the entire text buffer and move the cursor to the end.
     pub fn set_text(&mut self, text: impl Into<String>) {
@@ -94,7 +115,10 @@ impl Input {
     }
 
     fn save_undo(&mut self) {
-        self.undo_stack.push(EditAction { text: self.text.clone(), cursor: self.cursor });
+        self.undo_stack.push(EditAction {
+            text: self.text.clone(),
+            cursor: self.cursor,
+        });
     }
 
     fn graphemes(&self) -> Vec<&str> {
@@ -102,7 +126,8 @@ impl Input {
     }
 
     fn byte_index(&self, grapheme_idx: usize) -> usize {
-        self.text.grapheme_indices(true)
+        self.text
+            .grapheme_indices(true)
             .nth(grapheme_idx)
             .map(|(i, _)| i)
             .unwrap_or(self.text.len())
@@ -133,11 +158,15 @@ impl Input {
     }
 
     fn move_cursor_left(&mut self) {
-        if self.cursor > 0 { self.cursor -= 1; }
+        if self.cursor > 0 {
+            self.cursor -= 1;
+        }
     }
 
     fn move_cursor_right(&mut self) {
-        if self.cursor < self.graphemes().len() { self.cursor += 1; }
+        if self.cursor < self.graphemes().len() {
+            self.cursor += 1;
+        }
     }
 
     fn move_cursor_home(&mut self) {
@@ -165,12 +194,19 @@ impl Input {
 }
 
 impl Default for Input {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Focusable for Input {
-    fn focused(&self) -> bool { self.focused }
-    fn set_focused(&mut self, focused: bool) { self.focused = focused; }
+    fn focused(&self) -> bool {
+        self.focused
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
 }
 
 impl Input {
@@ -178,63 +214,111 @@ impl Input {
         use crossterm::event::KeyModifiers;
         self.save_undo();
         match key.code {
-            KeyCode::Char(c) => {
+            | KeyCode::Char(c) => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     match c {
-                        'a' => self.move_cursor_home(),
-                        'e' => self.move_cursor_end(),
-                        'b' => self.move_cursor_left(),
-                        'f' => self.move_cursor_right(),
-                        'd' => self.delete_forward(),
-                        'h' => self.delete_backward(),
-                        'k' => {
+                        | 'a' => self.move_cursor_home(),
+                        | 'e' => self.move_cursor_end(),
+                        | 'b' => self.move_cursor_left(),
+                        | 'f' => self.move_cursor_right(),
+                        | 'd' => self.delete_forward(),
+                        | 'h' => self.delete_backward(),
+                        | 'k' => {
                             let idx = self.byte_index(self.cursor);
                             let killed = self.text.split_off(idx);
                             self.kill_ring.push(killed);
-                        }
-                        'y' => self.yank(),
-                        '-' | '_' => self.undo(),
-                        _ => return InputResult::Ignored,
+                        },
+                        | 'y' => self.yank(),
+                        | '-' | '_' => self.undo(),
+                        | _ => return InputResult::Ignored,
                     }
                 } else {
                     self.insert_char(c);
                 }
                 InputResult::Handled
-            }
-            KeyCode::Left => { self.move_cursor_left(); InputResult::Handled }
-            KeyCode::Right => { self.move_cursor_right(); InputResult::Handled }
-            KeyCode::Home => { self.move_cursor_home(); InputResult::Handled }
-            KeyCode::End => { self.move_cursor_end(); InputResult::Handled }
-            KeyCode::Backspace => { self.delete_backward(); InputResult::Handled }
-            KeyCode::Delete => { self.delete_forward(); InputResult::Handled }
-            KeyCode::Esc => { self.mode = InputVimMode::Normal; InputResult::Handled }
-            _ => InputResult::Ignored,
+            },
+            | KeyCode::Left => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | KeyCode::Right => {
+                self.move_cursor_right();
+                InputResult::Handled
+            },
+            | KeyCode::Home => {
+                self.move_cursor_home();
+                InputResult::Handled
+            },
+            | KeyCode::End => {
+                self.move_cursor_end();
+                InputResult::Handled
+            },
+            | KeyCode::Backspace => {
+                self.delete_backward();
+                InputResult::Handled
+            },
+            | KeyCode::Delete => {
+                self.delete_forward();
+                InputResult::Handled
+            },
+            | KeyCode::Esc => {
+                self.mode = InputVimMode::Normal;
+                InputResult::Handled
+            },
+            | _ => InputResult::Ignored,
         }
     }
 
     fn handle_normal_mode(&mut self, key: &crossterm::event::KeyEvent) -> InputResult {
         match key.code {
-            KeyCode::Char(c) => {
+            | KeyCode::Char(c) => {
                 match c {
-                    'h' => self.move_cursor_left(),
-                    'l' => self.move_cursor_right(),
-                    'x' => { self.save_undo(); self.delete_forward(); }
-                    '0' => self.move_cursor_home(),
-                    '$' => self.move_cursor_end(),
-                    'i' => self.mode = InputVimMode::Insert,
-                    'a' => { self.move_cursor_right(); self.mode = InputVimMode::Insert; }
-                    'p' => { self.save_undo(); self.yank(); }
-                    'u' => { self.save_undo(); self.undo(); }
-                    _ => return InputResult::Ignored,
+                    | 'h' => self.move_cursor_left(),
+                    | 'l' => self.move_cursor_right(),
+                    | 'x' => {
+                        self.save_undo();
+                        self.delete_forward();
+                    },
+                    | '0' => self.move_cursor_home(),
+                    | '$' => self.move_cursor_end(),
+                    | 'i' => self.mode = InputVimMode::Insert,
+                    | 'a' => {
+                        self.move_cursor_right();
+                        self.mode = InputVimMode::Insert;
+                    },
+                    | 'p' => {
+                        self.save_undo();
+                        self.yank();
+                    },
+                    | 'u' => {
+                        self.save_undo();
+                        self.undo();
+                    },
+                    | _ => return InputResult::Ignored,
                 }
                 InputResult::Handled
-            }
-            KeyCode::Left => { self.move_cursor_left(); InputResult::Handled }
-            KeyCode::Right => { self.move_cursor_right(); InputResult::Handled }
-            KeyCode::Home => { self.move_cursor_home(); InputResult::Handled }
-            KeyCode::End => { self.move_cursor_end(); InputResult::Handled }
-            KeyCode::Backspace => { self.move_cursor_left(); InputResult::Handled }
-            _ => InputResult::Ignored,
+            },
+            | KeyCode::Left => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | KeyCode::Right => {
+                self.move_cursor_right();
+                InputResult::Handled
+            },
+            | KeyCode::Home => {
+                self.move_cursor_home();
+                InputResult::Handled
+            },
+            | KeyCode::End => {
+                self.move_cursor_end();
+                InputResult::Handled
+            },
+            | KeyCode::Backspace => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | _ => InputResult::Ignored,
         }
     }
 }
@@ -250,7 +334,13 @@ impl Component for Input {
         }
         self.scroll.set(scroll);
 
-        let visible = self.graphemes().iter().skip(scroll).take(w).copied().collect::<String>();
+        let visible = self
+            .graphemes()
+            .iter()
+            .skip(scroll)
+            .take(w)
+            .copied()
+            .collect::<String>();
         let mut line = visible;
         if line.len() < w {
             line.push_str(&" ".repeat(w.saturating_sub(line.len())));
@@ -258,7 +348,11 @@ impl Component for Input {
         let cursor_col = self.cursor.saturating_sub(scroll);
         Ok(Rendered {
             lines: vec![line],
-            cursor: if self.focused { Some((0, cursor_col)) } else { None },
+            cursor: if self.focused {
+                Some((0, cursor_col))
+            } else {
+                None
+            },
             images: Vec::new(),
         })
     }
@@ -267,8 +361,8 @@ impl Component for Input {
         if let Event::Key(key) = event {
             if self.vim_mode_enabled {
                 match self.mode {
-                    InputVimMode::Insert => self.handle_insert_mode(key),
-                    InputVimMode::Normal => self.handle_normal_mode(key),
+                    | InputVimMode::Insert => self.handle_insert_mode(key),
+                    | InputVimMode::Normal => self.handle_normal_mode(key),
                 }
             } else {
                 self.handle_insert_mode(key)
@@ -278,14 +372,24 @@ impl Component for Input {
         }
     }
 
-    fn as_focusable(&self) -> Option<&dyn Focusable> { Some(self) }
-    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> { Some(self) }
+    fn as_focusable(&self) -> Option<&dyn Focusable> {
+        Some(self)
+    }
+
+    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
+        Some(self)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::{
+        KeyCode,
+        KeyEvent,
+        KeyModifiers,
+    };
+
     use super::*;
-    use crossterm::event::{KeyCode, KeyModifiers, KeyEvent};
 
     fn key_event(code: KeyCode) -> Event {
         Event::Key(code.into())
@@ -441,9 +545,15 @@ mod tests {
         input.insert_char('a');
         input.insert_char('b');
         input.set_mode(InputVimMode::Normal);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('h'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.cursor(), 1);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('l'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.cursor(), 2);
     }
 
@@ -451,7 +561,10 @@ mod tests {
     fn vim_input_i_enters_insert() {
         let mut input = Input::new();
         input.set_vim_mode_enabled(true);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('i'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.mode(), InputVimMode::Insert);
         input.handle_input(&key_event(KeyCode::Char('x')));
         assert_eq!(input.text(), "x");
@@ -475,7 +588,10 @@ mod tests {
         input.insert_char('b');
         input.set_mode(InputVimMode::Normal);
         input.move_cursor_home();
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('x'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.text(), "b");
     }
 
@@ -487,7 +603,10 @@ mod tests {
         input.insert_char('a');
         input.set_mode(InputVimMode::Normal);
         input.move_cursor_home();
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('a'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.mode(), InputVimMode::Insert);
         input.handle_input(&key_event(KeyCode::Char('b')));
         assert_eq!(input.text(), "ab");
@@ -502,9 +621,15 @@ mod tests {
         input.insert_char('b');
         input.set_mode(InputVimMode::Normal);
         input.move_cursor_end();
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('0'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('0'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.cursor(), 0);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('$'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('$'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.cursor(), 2);
     }
 
@@ -519,7 +644,10 @@ mod tests {
         input.handle_input(&ctrl_event('k'));
         assert_eq!(input.text(), "");
         input.set_mode(InputVimMode::Normal);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('p'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.text(), "ab");
     }
 
@@ -531,7 +659,10 @@ mod tests {
         input.handle_input(&key_event(KeyCode::Char('a')));
         input.handle_input(&key_event(KeyCode::Char('b')));
         input.set_mode(InputVimMode::Normal);
-        input.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::empty())));
+        input.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('u'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(input.text(), "a");
     }
 }

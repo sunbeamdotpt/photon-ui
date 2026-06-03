@@ -1,5 +1,16 @@
-use crate::{Component, Rendered, RenderError, Event, InputResult, Focusable};
-use crossterm::event::{KeyCode, KeyModifiers};
+use crossterm::event::{
+    KeyCode,
+    KeyModifiers,
+};
+
+use crate::{
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+};
 
 /// A scrollable list of toggleable settings rendered as checkboxes.
 ///
@@ -16,7 +27,12 @@ pub struct SettingsList {
 impl SettingsList {
     /// Create a new settings list from `(name, value)` pairs.
     pub fn new(items: Vec<(String, bool)>) -> Self {
-        Self { items: items, selected: 0, focused: false, on_change: None }
+        Self {
+            items: items,
+            selected: 0,
+            focused: false,
+            on_change: None,
+        }
     }
 
     /// Attach a callback invoked when an item is toggled.
@@ -39,8 +55,13 @@ impl SettingsList {
 }
 
 impl Focusable for SettingsList {
-    fn focused(&self) -> bool { self.focused }
-    fn set_focused(&mut self, focused: bool) { self.focused = focused; }
+    fn focused(&self) -> bool {
+        self.focused
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
 }
 
 impl Component for SettingsList {
@@ -52,29 +73,41 @@ impl Component for SettingsList {
             let line = format!("{}{} {}", prefix, check, name);
             lines.push(crate::utils::truncate_to_width(&line, width, "…"));
         }
-        Ok(Rendered { lines, cursor: None, images: Vec::new() })
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
     }
 
     fn handle_input(&mut self, event: &Event) -> InputResult {
         if let Event::Key(key) = event {
             match key.code {
-                KeyCode::Down => {
-                    if self.selected + 1 < self.items.len() { self.selected += 1; }
+                | KeyCode::Down => {
+                    if self.selected + 1 < self.items.len() {
+                        self.selected += 1;
+                    }
                     InputResult::Handled
-                }
-                KeyCode::Up => {
-                    if self.selected > 0 { self.selected -= 1; }
+                },
+                | KeyCode::Up => {
+                    if self.selected > 0 {
+                        self.selected -= 1;
+                    }
                     InputResult::Handled
-                }
-                KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    if self.selected + 1 < self.items.len() { self.selected += 1; }
+                },
+                | KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    if self.selected + 1 < self.items.len() {
+                        self.selected += 1;
+                    }
                     InputResult::Handled
-                }
-                KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    if self.selected > 0 { self.selected -= 1; }
+                },
+                | KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    if self.selected > 0 {
+                        self.selected -= 1;
+                    }
                     InputResult::Handled
-                }
-                KeyCode::Enter | KeyCode::Char(' ') => {
+                },
+                | KeyCode::Enter | KeyCode::Char(' ') => {
                     if let Some((_, value)) = self.items.get_mut(self.selected) {
                         *value = !*value;
                         if let Some(cb) = self.on_change {
@@ -82,14 +115,19 @@ impl Component for SettingsList {
                         }
                     }
                     InputResult::Handled
-                }
-                _ => InputResult::Ignored,
+                },
+                | _ => InputResult::Ignored,
             }
         } else {
             InputResult::Ignored
         }
     }
 
-    fn as_focusable(&self) -> Option<&dyn Focusable> { Some(self) }
-    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> { Some(self) }
+    fn as_focusable(&self) -> Option<&dyn Focusable> {
+        Some(self)
+    }
+
+    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
+        Some(self)
+    }
 }

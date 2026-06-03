@@ -1,4 +1,7 @@
-use base64::{Engine as _, engine::general_purpose::STANDARD};
+use base64::{
+    Engine as _,
+    engine::general_purpose::STANDARD,
+};
 
 /// Encode image data for the Kitty graphics protocol.
 ///
@@ -44,7 +47,7 @@ pub fn get_png_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 pub fn get_jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
     let mut i = 2;
     while i < data.len().saturating_sub(9) {
-        if data[i] == 0xFF && (data[i + 1] == 0xC0 || data[i + 1] == 0xC2) {
+        if data[i] == 0xff && (data[i + 1] == 0xc0 || data[i + 1] == 0xc2) {
             let h = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
             let w = u16::from_be_bytes([data[i + 7], data[i + 8]]) as u32;
             return Some((w, h));
@@ -56,7 +59,9 @@ pub fn get_jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 
 /// Parse width and height from GIF logical screen descriptor.
 pub fn get_gif_dimensions(data: &[u8]) -> Option<(u32, u32)> {
-    if data.len() < 10 { return None; }
+    if data.len() < 10 {
+        return None;
+    }
     let w = u16::from_le_bytes([data[6], data[7]]) as u32;
     let h = u16::from_le_bytes([data[8], data[9]]) as u32;
     Some((w, h))
@@ -84,9 +89,9 @@ mod tests {
 
     #[test]
     fn jpeg_dimensions_valid() {
-        let mut data = vec![0xFF, 0xD8];
-        data.extend_from_slice(&[0xFF, 0xC0]);
-        data.extend_from_slice(&[0x00, 0x0B]);
+        let mut data = vec![0xff, 0xd8];
+        data.extend_from_slice(&[0xff, 0xc0]);
+        data.extend_from_slice(&[0x00, 0x0b]);
         data.extend_from_slice(&[0x08]);
         data.extend_from_slice(&[0x00, 0x10]);
         data.extend_from_slice(&[0x00, 0x20]);
@@ -96,9 +101,9 @@ mod tests {
 
     #[test]
     fn jpeg_dimensions_sof2() {
-        let mut data = vec![0xFF, 0xD8];
-        data.extend_from_slice(&[0xFF, 0xC2]);
-        data.extend_from_slice(&[0x00, 0x0B]);
+        let mut data = vec![0xff, 0xd8];
+        data.extend_from_slice(&[0xff, 0xc2]);
+        data.extend_from_slice(&[0x00, 0x0b]);
         data.extend_from_slice(&[0x08]);
         data.extend_from_slice(&[0x00, 0x20]);
         data.extend_from_slice(&[0x00, 0x10]);

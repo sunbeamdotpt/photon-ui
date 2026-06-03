@@ -2,9 +2,9 @@ use std::io;
 
 /// Abstraction over a terminal device.
 ///
-/// Both real terminals ([`ProcessTerminal`]) and test doubles ([`TestTerminal`])
-/// implement this trait so the rest of the framework remains agnostic to the
-/// underlying I/O mechanism.
+/// Both real terminals ([`ProcessTerminal`]) and test doubles
+/// ([`TestTerminal`]) implement this trait so the rest of the framework remains
+/// agnostic to the underlying I/O mechanism.
 pub trait Terminal {
     /// Enter raw mode, alternate screen, and hide the cursor.
     fn start(&mut self) -> io::Result<()>;
@@ -47,31 +47,49 @@ impl TestTerminal {
     }
 
     /// All strings written via [`Terminal::write`] since creation.
-    pub fn written(&self) -> &Vec<String> { &self.buffer }
+    pub fn written(&self) -> &Vec<String> {
+        &self.buffer
+    }
+
     /// All cursor positions passed to [`Terminal::move_cursor`] since creation.
-    pub fn cursor_moves(&self) -> &Vec<(u16, u16)> { &self.cursor_moves }
+    pub fn cursor_moves(&self) -> &Vec<(u16, u16)> {
+        &self.cursor_moves
+    }
+
     /// Whether the cursor was most recently hidden.
-    pub fn is_cursor_hidden(&self) -> bool { self.cursor_hidden }
+    pub fn is_cursor_hidden(&self) -> bool {
+        self.cursor_hidden
+    }
 }
 
 impl Terminal for TestTerminal {
-    fn start(&mut self) -> io::Result<()> { Ok(()) }
-    fn stop(&mut self) -> io::Result<()> { Ok(()) }
+    fn start(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+
+    fn stop(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+
     fn write(&mut self, data: &str) -> io::Result<()> {
         self.buffer.push(data.to_string());
         Ok(())
     }
+
     fn size(&self) -> io::Result<(u16, u16)> {
         Ok((self.cols, self.rows))
     }
+
     fn move_cursor(&mut self, row: u16, col: u16) -> io::Result<()> {
         self.cursor_moves.push((row, col));
         Ok(())
     }
+
     fn hide_cursor(&mut self) -> io::Result<()> {
         self.cursor_hidden = true;
         Ok(())
     }
+
     fn show_cursor(&mut self) -> io::Result<()> {
         self.cursor_hidden = false;
         Ok(())
@@ -81,8 +99,8 @@ impl Terminal for TestTerminal {
 /// Real terminal backed by stdout.
 ///
 /// Uses [`crossterm`] for raw-mode management, alternate screen, and cursor
-/// control. When constructed via `new_test` (available under `#[cfg(test)]`), it
-/// writes to an in-memory buffer and reports a fixed size of 80×24, which is
+/// control. When constructed via `new_test` (available under `#[cfg(test)]`),
+/// it writes to an in-memory buffer and reports a fixed size of 80×24, which is
 /// useful for unit-testing code paths that require a [`Terminal`] but do not
 /// need a real TTY.
 pub struct ProcessTerminal {
@@ -107,7 +125,6 @@ impl ProcessTerminal {
             is_tty: false,
         }
     }
-
 }
 
 impl Terminal for ProcessTerminal {

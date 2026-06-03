@@ -1,8 +1,14 @@
-use photon_ui::components::Editor;
-use photon_ui::components::editor::VimMode;
-use photon_ui::events::Event;
-use photon_ui::{Component, InputResult, Focusable};
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Component,
+    Focusable,
+    InputResult,
+    components::{
+        Editor,
+        editor::VimMode,
+    },
+    events::Event,
+};
 
 fn key_event(code: KeyCode) -> Event {
     Event::Key(code.into())

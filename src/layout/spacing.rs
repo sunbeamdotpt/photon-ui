@@ -60,7 +60,10 @@ mod tests {
     #[test]
     fn spacing_from_i32_clamped() {
         assert_eq!(Spacing::from(i32::MAX), Spacing::Space(i16::MAX as u16));
-        assert_eq!(Spacing::from(i32::MIN), Spacing::Overlap(i16::MAX as u16 + 1));
+        assert_eq!(
+            Spacing::from(i32::MIN),
+            Spacing::Overlap(i16::MAX as u16 + 1)
+        );
     }
 
     #[test]

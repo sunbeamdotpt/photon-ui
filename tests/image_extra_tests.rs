@@ -1,4 +1,9 @@
-use photon_ui::image::{get_webp_dimensions, get_png_dimensions, get_jpeg_dimensions, get_gif_dimensions};
+use photon_ui::image::{
+    get_gif_dimensions,
+    get_jpeg_dimensions,
+    get_png_dimensions,
+    get_webp_dimensions,
+};
 
 #[test]
 fn webp_dimensions_vp8x() {

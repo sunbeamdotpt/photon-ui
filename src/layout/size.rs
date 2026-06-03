@@ -8,9 +8,9 @@ pub struct Size {
 }
 
 impl Size {
-    pub const ZERO: Self = Self::new(0, 0);
-    pub const MIN: Self = Self::ZERO;
     pub const MAX: Self = Self::new(u16::MAX, u16::MAX);
+    pub const MIN: Self = Self::ZERO;
+    pub const ZERO: Self = Self::new(0, 0);
 
     pub const fn new(width: u16, height: u16) -> Self {
         Self { width, height }

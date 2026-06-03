@@ -1,13 +1,22 @@
-use photon_ui::{
-    TUI, Rendered, Component, Focusable,
-    terminal::TestTerminal,
-    components::{Input, Editor},
-    components::input::InputVimMode,
-    components::editor::VimMode,
-    events::Event,
-    renderer::{Renderer, RenderStrategy},
-};
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Component,
+    Focusable,
+    Rendered,
+    TUI,
+    components::{
+        Editor,
+        Input,
+        editor::VimMode,
+        input::InputVimMode,
+    },
+    events::Event,
+    renderer::{
+        RenderStrategy,
+        Renderer,
+    },
+    terminal::TestTerminal,
+};
 
 #[test]
 fn full_render_pipeline() {
@@ -50,7 +59,7 @@ fn renderer_diff_only_draws_changed() {
     };
     renderer.render(&mut term, &second).unwrap();
     let after = term.written().len();
-    
+
     // Should have written additional content (diff)
     assert!(after > before);
 }

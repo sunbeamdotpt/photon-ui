@@ -4,8 +4,9 @@
 //! `text.primary`) to concrete [`Color`] values. The [`Theme`] enum
 //! implements this trait for the built-in Light and Dark variants.
 
-use super::Color;
 use std::cell::RefCell;
+
+use super::Color;
 
 // ── Thread-local active theme ─────────────────────────────────────
 
@@ -73,50 +74,50 @@ pub trait Palette {
 impl Palette for Theme {
     fn bg_page(&self) -> Color {
         match self {
-            Theme::Light => Color::WARM_IVORY,
-            Theme::Dark => Color::SUNBEAM_BLACK,
+            | Theme::Light => Color::WARM_IVORY,
+            | Theme::Dark => Color::SUNBEAM_BLACK,
         }
     }
 
     fn bg_card(&self) -> Color {
         match self {
-            Theme::Light => Color::CREAM,
-            Theme::Dark => Color::CARD_DARK,
+            | Theme::Light => Color::CREAM,
+            | Theme::Dark => Color::CARD_DARK,
         }
     }
 
     fn bg_nav(&self) -> Color {
         match self {
-            Theme::Light => Color::CREAM,
-            Theme::Dark => Color::CARD_DARK,
+            | Theme::Light => Color::CREAM,
+            | Theme::Dark => Color::CARD_DARK,
         }
     }
 
     fn bg_input(&self) -> Color {
         match self {
-            Theme::Light => Color::WHITE,
-            Theme::Dark => Color::CARD_DARK,
+            | Theme::Light => Color::WHITE,
+            | Theme::Dark => Color::CARD_DARK,
         }
     }
 
     fn text_primary(&self) -> Color {
         match self {
-            Theme::Light => Color::SUNBEAM_BLACK,
-            Theme::Dark => Color::WHITE,
+            | Theme::Light => Color::SUNBEAM_BLACK,
+            | Theme::Dark => Color::WHITE,
         }
     }
 
     fn text_secondary(&self) -> Color {
         match self {
-            Theme::Light => Color(0x66, 0x66, 0x66),
-            Theme::Dark => Color(0xbb, 0xbb, 0xbb),
+            | Theme::Light => Color(0x66, 0x66, 0x66),
+            | Theme::Dark => Color(0xbb, 0xbb, 0xbb),
         }
     }
 
     fn text_muted(&self) -> Color {
         match self {
-            Theme::Light => Color(0x7f, 0x63, 0x15),
-            Theme::Dark => Color(0x99, 0x99, 0x99),
+            | Theme::Light => Color(0x7f, 0x63, 0x15),
+            | Theme::Dark => Color(0x99, 0x99, 0x99),
         }
     }
 
@@ -134,22 +135,22 @@ impl Palette for Theme {
 
     fn section_label(&self) -> Color {
         match self {
-            Theme::Light => Color::SUNBEAM_ORANGE,
-            Theme::Dark => Color::SUNSHINE_700,
+            | Theme::Light => Color::SUNBEAM_ORANGE,
+            | Theme::Dark => Color::SUNSHINE_700,
         }
     }
 
     fn border_default(&self) -> Color {
         match self {
-            Theme::Light => Color(0x7f, 0x63, 0x15),
-            Theme::Dark => Color(0x55, 0x55, 0x55),
+            | Theme::Light => Color(0x7f, 0x63, 0x15),
+            | Theme::Dark => Color(0x55, 0x55, 0x55),
         }
     }
 
     fn border_subtle(&self) -> Color {
         match self {
-            Theme::Light => Color(0xdd, 0xcc, 0xaa),
-            Theme::Dark => Color(0x44, 0x44, 0x44),
+            | Theme::Light => Color(0xdd, 0xcc, 0xaa),
+            | Theme::Dark => Color(0x44, 0x44, 0x44),
         }
     }
 

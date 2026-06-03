@@ -4,7 +4,11 @@
 //! attributes (bold, italic, underline, dim) into a single unit that
 //! can be applied to strings via [`stylize`].
 
-use super::{ansi, Color, ColorMode};
+use super::{
+    Color,
+    ColorMode,
+    ansi,
+};
 
 /// A terminal text style: colors + attributes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]

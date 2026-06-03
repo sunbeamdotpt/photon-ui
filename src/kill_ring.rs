@@ -11,7 +11,9 @@ pub struct KillRing {
 
 impl KillRing {
     /// Create an empty kill ring.
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Add text to the kill ring.
     ///

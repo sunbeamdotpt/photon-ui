@@ -1,4 +1,8 @@
-use crate::{Component, Rendered, RenderError};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// Static text with optional horizontal and vertical padding.
 ///
@@ -15,7 +19,11 @@ pub struct Text {
 impl Text {
     /// Create a new text component.
     pub fn new(text: impl Into<String>, pad_x: u16, pad_y: u16) -> Self {
-        Self { text: text.into(), pad_x, pad_y }
+        Self {
+            text: text.into(),
+            pad_x,
+            pad_y,
+        }
     }
 }
 
@@ -40,7 +48,11 @@ impl Component for Text {
         for _ in 0..self.pad_y {
             lines.push(empty_line.clone());
         }
-        Ok(Rendered { lines, cursor: None, images: Vec::new() })
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
     }
 }
 

@@ -1,10 +1,23 @@
-use std::hash::{Hash, Hasher};
+use std::hash::{
+    Hash,
+    Hasher,
+};
 
-use kasuari::{Solver, Variable};
-use kasuari::WeightedRelation::*;
+use kasuari::{
+    Solver,
+    Variable,
+    WeightedRelation::*,
+};
 
-use super::{Constraint, Direction, Flex, Margin, Rect, Spacing};
-use super::strengths;
+use super::{
+    Constraint,
+    Direction,
+    Flex,
+    Margin,
+    Rect,
+    Spacing,
+    strengths,
+};
 
 const FLOAT_PRECISION_MULTIPLIER: f64 = 100.0;
 
@@ -22,8 +35,7 @@ impl Layout {
     pub fn new<I>(direction: Direction, constraints: I) -> Self
     where
         I: IntoIterator,
-        I::Item: Into<Constraint>,
-    {
+        I::Item: Into<Constraint>, {
         Self {
             direction,
             constraints: constraints.into_iter().map(Into::into).collect(),
@@ -36,16 +48,14 @@ impl Layout {
     pub fn vertical<I>(constraints: I) -> Self
     where
         I: IntoIterator,
-        I::Item: Into<Constraint>,
-    {
+        I::Item: Into<Constraint>, {
         Self::new(Direction::Vertical, constraints)
     }
 
     pub fn horizontal<I>(constraints: I) -> Self
     where
         I: IntoIterator,
-        I::Item: Into<Constraint>,
-    {
+        I::Item: Into<Constraint>, {
         Self::new(Direction::Horizontal, constraints)
     }
 
@@ -57,8 +67,7 @@ impl Layout {
     pub fn constraints<I>(mut self, constraints: I) -> Self
     where
         I: IntoIterator,
-        I::Item: Into<Constraint>,
-    {
+        I::Item: Into<Constraint>, {
         self.constraints = constraints.into_iter().map(Into::into).collect();
         self
     }
@@ -135,14 +144,16 @@ impl Layout {
         let spacer_vars: Vec<Variable> = (0..spacer_count).map(|_| Variable::new()).collect();
 
         let total_size = match self.direction {
-            Direction::Horizontal => inner.width,
-            Direction::Vertical => inner.height,
+            | Direction::Horizontal => inner.width,
+            | Direction::Vertical => inner.height,
         };
         let total = (total_size as f64 * FLOAT_PRECISION_MULTIPLIER) as i64;
 
         // All segment variables must be non-negative.
         for &var in &segment_vars {
-            solver.add_constraint(var | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+            solver
+                .add_constraint(var | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0)
+                .ok()?;
         }
 
         // Sum of all segments and spacers equals the total available space.
@@ -150,139 +161,264 @@ impl Layout {
         for &var in segment_vars.iter().chain(spacer_vars.iter()) {
             sum_expr += var;
         }
-        solver.add_constraint(sum_expr | EQ(kasuari::Strength::new(strengths::REQUIRED)) | total as f64).ok()?;
+        solver
+            .add_constraint(
+                sum_expr | EQ(kasuari::Strength::new(strengths::REQUIRED)) | total as f64,
+            )
+            .ok()?;
 
         // Apply per-segment constraints.
         for (i, constraint) in self.constraints.iter().enumerate() {
             let var = segment_vars[i];
             match constraint {
-                Constraint::Length(n) => {
+                | Constraint::Length(n) => {
                     let target = *n as f64 * FLOAT_PRECISION_MULTIPLIER;
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::LENGTH_SIZE_EQ)) | target).ok()?;
-                }
-                Constraint::Percentage(p) => {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::LENGTH_SIZE_EQ)) | target,
+                        )
+                        .ok()?;
+                },
+                | Constraint::Percentage(p) => {
                     let target = total as f64 * (*p as f64) / 100.0;
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::PERCENTAGE_SIZE_EQ)) | target).ok()?;
-                }
-                Constraint::Ratio(n, d) => {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::PERCENTAGE_SIZE_EQ)) |
+                                target,
+                        )
+                        .ok()?;
+                },
+                | Constraint::Ratio(n, d) => {
                     let target = total as f64 * (*n as f64) / (*d as f64);
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::RATIO_SIZE_EQ)) | target).ok()?;
-                }
-                Constraint::Min(m) => {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::RATIO_SIZE_EQ)) | target,
+                        )
+                        .ok()?;
+                },
+                | Constraint::Min(m) => {
                     let target = *m as f64 * FLOAT_PRECISION_MULTIPLIER;
-                    solver.add_constraint(var | GE(kasuari::Strength::new(strengths::MIN_SIZE_GE)) | target).ok()?;
-                }
-                Constraint::Max(m) => {
+                    solver
+                        .add_constraint(
+                            var | GE(kasuari::Strength::new(strengths::MIN_SIZE_GE)) | target,
+                        )
+                        .ok()?;
+                },
+                | Constraint::Max(m) => {
                     let target = *m as f64 * FLOAT_PRECISION_MULTIPLIER;
-                    solver.add_constraint(var | LE(kasuari::Strength::new(strengths::MAX_SIZE_LE)) | target).ok()?;
-                }
-                Constraint::Fill(_) => {
+                    solver
+                        .add_constraint(
+                            var | LE(kasuari::Strength::new(strengths::MAX_SIZE_LE)) | target,
+                        )
+                        .ok()?;
+                },
+                | Constraint::Fill(_) => {
                     // Fill is handled by the flex/grow constraints below.
-                }
+                },
             }
         }
 
         // Configure spacers based on flex and spacing.
         let spacing_value = match self.spacing {
-            Spacing::Space(v) => v as f64 * FLOAT_PRECISION_MULTIPLIER,
-            Spacing::Overlap(v) => -(v as f64) * FLOAT_PRECISION_MULTIPLIER,
+            | Spacing::Space(v) => v as f64 * FLOAT_PRECISION_MULTIPLIER,
+            | Spacing::Overlap(v) => -(v as f64) * FLOAT_PRECISION_MULTIPLIER,
         };
 
         match self.flex {
-            Flex::Legacy => {
+            | Flex::Legacy => {
                 // In legacy mode all spacers are zero; excess space stays in segments.
                 for &var in &spacer_vars {
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(var | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0)
+                        .ok()?;
                 }
-            }
-            Flex::Start => {
+            },
+            | Flex::Start => {
                 if let Some(&first) = spacer_vars.first() {
-                    solver.add_constraint(first | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            first | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
-                for &var in spacer_vars.iter().skip(1).take(spacer_count.saturating_sub(2)) {
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | spacing_value).ok()?;
+                for &var in spacer_vars
+                    .iter()
+                    .skip(1)
+                    .take(spacer_count.saturating_sub(2))
+                {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                spacing_value,
+                        )
+                        .ok()?;
                 }
                 if let Some(&last) = spacer_vars.last() {
-                    solver.add_constraint(last | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            last | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
-            }
-            Flex::End => {
+            },
+            | Flex::End => {
                 if let Some(&last) = spacer_vars.last() {
-                    solver.add_constraint(last | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            last | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
-                for &var in spacer_vars.iter().skip(1).take(spacer_count.saturating_sub(2)) {
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | spacing_value).ok()?;
+                for &var in spacer_vars
+                    .iter()
+                    .skip(1)
+                    .take(spacer_count.saturating_sub(2))
+                {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                spacing_value,
+                        )
+                        .ok()?;
                 }
                 if let Some(&first) = spacer_vars.first() {
-                    solver.add_constraint(first | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            first | GE(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
-            }
-            Flex::Center => {
-                for &var in spacer_vars.iter().skip(1).take(spacer_count.saturating_sub(2)) {
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | spacing_value).ok()?;
+            },
+            | Flex::Center => {
+                for &var in spacer_vars
+                    .iter()
+                    .skip(1)
+                    .take(spacer_count.saturating_sub(2))
+                {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                spacing_value,
+                        )
+                        .ok()?;
                 }
                 if spacer_count >= 2 {
                     let first = spacer_vars[0];
                     let last = spacer_vars[spacer_count - 1];
-                    solver.add_constraint((first - last) | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            (first - last) | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
-            }
-            Flex::SpaceBetween => {
+            },
+            | Flex::SpaceBetween => {
                 if let Some(&first) = spacer_vars.first() {
-                    solver.add_constraint(first | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            first | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
                 if let Some(&last) = spacer_vars.last() {
-                    solver.add_constraint(last | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            last | EQ(kasuari::Strength::new(strengths::REQUIRED)) | 0.0,
+                        )
+                        .ok()?;
                 }
                 if spacer_count >= 3 {
                     let first_internal = spacer_vars[1];
                     for &var in spacer_vars.iter().skip(2).take(spacer_count - 3) {
-                        solver.add_constraint((var - first_internal) | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | 0.0).ok()?;
+                        solver
+                            .add_constraint(
+                                (var - first_internal) |
+                                    EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                    0.0,
+                            )
+                            .ok()?;
                     }
                 }
-            }
-            Flex::SpaceAround => {
+            },
+            | Flex::SpaceAround => {
                 if spacer_count >= 3 {
                     let first = spacer_vars[0];
                     let last = spacer_vars[spacer_count - 1];
                     let first_internal = spacer_vars[1];
-                    solver.add_constraint((first * 2.0 - first_internal) | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | 0.0).ok()?;
-                    solver.add_constraint((last * 2.0 - first_internal) | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | 0.0).ok()?;
+                    solver
+                        .add_constraint(
+                            (first * 2.0 - first_internal) |
+                                EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                0.0,
+                        )
+                        .ok()?;
+                    solver
+                        .add_constraint(
+                            (last * 2.0 - first_internal) |
+                                EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                0.0,
+                        )
+                        .ok()?;
                     for &var in spacer_vars.iter().skip(2).take(spacer_count - 3) {
-                        solver.add_constraint((var - first_internal) | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | 0.0).ok()?;
+                        solver
+                            .add_constraint(
+                                (var - first_internal) |
+                                    EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                    0.0,
+                            )
+                            .ok()?;
                     }
                 }
-            }
-            Flex::SpaceEvenly => {
+            },
+            | Flex::SpaceEvenly => {
                 if spacer_count >= 2 {
                     let first = spacer_vars[0];
                     for &var in spacer_vars.iter().skip(1) {
-                        solver.add_constraint((var - first) | EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) | 0.0).ok()?;
+                        solver
+                            .add_constraint(
+                                (var - first) |
+                                    EQ(kasuari::Strength::new(strengths::SPACER_SIZE_EQ)) |
+                                    0.0,
+                            )
+                            .ok()?;
                     }
                 }
-            }
+            },
         }
 
         // Grow constraints for Fill and Min segments.
-        // Weak EQ(total) pushes Cassowary to expand these segments to fill available space.
+        // Weak EQ(total) pushes Cassowary to expand these segments to fill available
+        // space.
         for (i, constraint) in self.constraints.iter().enumerate() {
             let var = segment_vars[i];
             match constraint {
-                Constraint::Fill(priority) => {
-                    let strength = kasuari::Strength::new(strengths::FILL_GROW * (*priority as f64));
-                    solver.add_constraint(var | EQ(strength) | total as f64).ok()?;
-                }
-                Constraint::Min(_) => {
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::GROW)) | total as f64).ok()?;
-                }
-                _ => {}
+                | Constraint::Fill(priority) => {
+                    let strength =
+                        kasuari::Strength::new(strengths::FILL_GROW * (*priority as f64));
+                    solver
+                        .add_constraint(var | EQ(strength) | total as f64)
+                        .ok()?;
+                },
+                | Constraint::Min(_) => {
+                    solver
+                        .add_constraint(
+                            var | EQ(kasuari::Strength::new(strengths::GROW)) | total as f64,
+                        )
+                        .ok()?;
+                },
+                | _ => {},
             }
         }
 
         // Weak grow for all segments so non-fixed ones can expand.
         if self.flex != Flex::Legacy {
             for &var in &segment_vars {
-                solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::ALL_SEGMENT_GROW)) | total as f64).ok()?;
+                solver
+                    .add_constraint(
+                        var | EQ(kasuari::Strength::new(strengths::ALL_SEGMENT_GROW)) |
+                            total as f64,
+                    )
+                    .ok()?;
             }
         }
 
@@ -293,24 +429,20 @@ impl Layout {
         let mut current: u16 = 0;
 
         for i in 0..segment_count {
-            let spacer = (solver.get_value(spacer_vars[i]) / FLOAT_PRECISION_MULTIPLIER).round() as u16;
+            let spacer =
+                (solver.get_value(spacer_vars[i]) / FLOAT_PRECISION_MULTIPLIER).round() as u16;
             current = current.saturating_add(spacer);
 
-            let size = (solver.get_value(segment_vars[i]) / FLOAT_PRECISION_MULTIPLIER).round() as u16;
+            let size =
+                (solver.get_value(segment_vars[i]) / FLOAT_PRECISION_MULTIPLIER).round() as u16;
 
             let rect = match self.direction {
-                Direction::Horizontal => Rect::new(
-                    inner.x.saturating_add(current),
-                    inner.y,
-                    size,
-                    inner.height,
-                ),
-                Direction::Vertical => Rect::new(
-                    inner.x,
-                    inner.y.saturating_add(current),
-                    inner.width,
-                    size,
-                ),
+                | Direction::Horizontal => {
+                    Rect::new(inner.x.saturating_add(current), inner.y, size, inner.height)
+                },
+                | Direction::Vertical => {
+                    Rect::new(inner.x, inner.y.saturating_add(current), inner.width, size)
+                },
             };
             rects.push(rect);
 
@@ -345,8 +477,7 @@ mod tests {
 
     #[test]
     fn layout_split_with_margin() {
-        let layout = Layout::vertical([Constraint::Length(5), Constraint::Length(5)])
-            .margin(1);
+        let layout = Layout::vertical([Constraint::Length(5), Constraint::Length(5)]).margin(1);
         let rects = layout.split(Rect::new(0, 0, 10, 10));
         assert_eq!(rects.len(), 2);
         assert_eq!(rects[0].y, 1);

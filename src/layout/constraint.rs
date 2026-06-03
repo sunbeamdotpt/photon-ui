@@ -14,43 +14,37 @@ pub enum Constraint {
 impl Constraint {
     pub fn from_lengths<T>(lengths: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = u16>,
-    {
+        T: IntoIterator<Item = u16>, {
         lengths.into_iter().map(Self::Length).collect()
     }
 
     pub fn from_ratios<T>(ratios: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = (u32, u32)>,
-    {
+        T: IntoIterator<Item = (u32, u32)>, {
         ratios.into_iter().map(|(n, d)| Self::Ratio(n, d)).collect()
     }
 
     pub fn from_percentages<T>(percentages: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = u16>,
-    {
+        T: IntoIterator<Item = u16>, {
         percentages.into_iter().map(Self::Percentage).collect()
     }
 
     pub fn from_mins<T>(mins: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = u16>,
-    {
+        T: IntoIterator<Item = u16>, {
         mins.into_iter().map(Self::Min).collect()
     }
 
     pub fn from_maxes<T>(maxes: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = u16>,
-    {
+        T: IntoIterator<Item = u16>, {
         maxes.into_iter().map(Self::Max).collect()
     }
 
     pub fn from_fills<T>(fills: T) -> Vec<Self>
     where
-        T: IntoIterator<Item = u16>,
-    {
+        T: IntoIterator<Item = u16>, {
         fills.into_iter().map(Self::Fill).collect()
     }
 }
@@ -82,12 +76,12 @@ impl Default for Constraint {
 impl fmt::Display for Constraint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Percentage(p) => write!(f, "Percentage({p})"),
-            Self::Ratio(n, d) => write!(f, "Ratio({n}, {d})"),
-            Self::Length(l) => write!(f, "Length({l})"),
-            Self::Fill(l) => write!(f, "Fill({l})"),
-            Self::Max(m) => write!(f, "Max({m})"),
-            Self::Min(m) => write!(f, "Min({m})"),
+            | Self::Percentage(p) => write!(f, "Percentage({p})"),
+            | Self::Ratio(n, d) => write!(f, "Ratio({n}, {d})"),
+            | Self::Length(l) => write!(f, "Length({l})"),
+            | Self::Fill(l) => write!(f, "Fill({l})"),
+            | Self::Max(m) => write!(f, "Max({m})"),
+            | Self::Min(m) => write!(f, "Min({m})"),
         }
     }
 }
@@ -132,7 +126,14 @@ mod tests {
     #[test]
     fn constraint_from_lengths() {
         let c = Constraint::from_lengths([1, 2, 3]);
-        assert_eq!(c, vec![Constraint::Length(1), Constraint::Length(2), Constraint::Length(3)]);
+        assert_eq!(
+            c,
+            vec![
+                Constraint::Length(1),
+                Constraint::Length(2),
+                Constraint::Length(3)
+            ]
+        );
     }
 
     #[test]
@@ -144,7 +145,10 @@ mod tests {
     #[test]
     fn constraint_from_percentages() {
         let c = Constraint::from_percentages([25, 50]);
-        assert_eq!(c, vec![Constraint::Percentage(25), Constraint::Percentage(50)]);
+        assert_eq!(
+            c,
+            vec![Constraint::Percentage(25), Constraint::Percentage(50)]
+        );
     }
 
     #[test]
@@ -162,6 +166,13 @@ mod tests {
     #[test]
     fn constraint_from_fills() {
         let c = Constraint::from_fills([1, 2, 3]);
-        assert_eq!(c, vec![Constraint::Fill(1), Constraint::Fill(2), Constraint::Fill(3)]);
+        assert_eq!(
+            c,
+            vec![
+                Constraint::Fill(1),
+                Constraint::Fill(2),
+                Constraint::Fill(3)
+            ]
+        );
     }
 }

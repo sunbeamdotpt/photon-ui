@@ -1,11 +1,17 @@
-use photon_ui::terminal::{TestTerminal, Terminal};
+use photon_ui::terminal::{
+    Terminal,
+    TestTerminal,
+};
 
 #[test]
 fn test_terminal_records_writes() {
     let mut term = TestTerminal::new(80, 24);
     term.write("hello").unwrap();
     term.write("world").unwrap();
-    assert_eq!(term.written(), &vec!["hello".to_string(), "world".to_string()]);
+    assert_eq!(
+        term.written(),
+        &vec!["hello".to_string(), "world".to_string()]
+    );
 }
 
 #[test]

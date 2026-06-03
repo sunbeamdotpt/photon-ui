@@ -1,8 +1,15 @@
-use crate::layout::layout::Layout;
-use crate::renderer::{Renderer, Rendered, RenderStrategy};
-use crate::terminal::Terminal;
-use crate::Component;
 use std::io;
+
+use crate::{
+    Component,
+    layout::layout::Layout,
+    renderer::{
+        RenderStrategy,
+        Rendered,
+        Renderer,
+    },
+    terminal::Terminal,
+};
 
 /// Anchor point for positioning an overlay on the terminal screen.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -63,7 +70,13 @@ impl Overlay {
     /// and the content's natural dimensions.
     ///
     /// Returns `None` if the overlay's visibility predicate returns `false`.
-    pub fn compute_position(&self, term_w: u16, term_h: u16, content_w: u16, content_h: u16) -> Option<Rect> {
+    pub fn compute_position(
+        &self,
+        term_w: u16,
+        term_h: u16,
+        content_w: u16,
+        content_h: u16,
+    ) -> Option<Rect> {
         let w = content_w.max(self.constraints.min_width);
         let h = content_h.min(self.constraints.max_height).max(1);
 
@@ -74,29 +87,33 @@ impl Overlay {
         }
 
         let (row, col) = match &self.position {
-            OverlayPosition::Anchor(anchor) => {
+            | OverlayPosition::Anchor(anchor) => {
                 let r = match anchor {
-                    Anchor::Center | Anchor::LeftCenter | Anchor::RightCenter => {
+                    | Anchor::Center | Anchor::LeftCenter | Anchor::RightCenter => {
                         (term_h.saturating_sub(h)) / 2
-                    }
-                    Anchor::TopLeft | Anchor::TopRight | Anchor::TopCenter => self.constraints.margin,
-                    Anchor::BottomLeft | Anchor::BottomRight | Anchor::BottomCenter => {
+                    },
+                    | Anchor::TopLeft | Anchor::TopRight | Anchor::TopCenter => {
+                        self.constraints.margin
+                    },
+                    | Anchor::BottomLeft | Anchor::BottomRight | Anchor::BottomCenter => {
                         term_h.saturating_sub(h + self.constraints.margin)
-                    }
+                    },
                 };
                 let c = match anchor {
-                    Anchor::Center | Anchor::TopCenter | Anchor::BottomCenter => {
+                    | Anchor::Center | Anchor::TopCenter | Anchor::BottomCenter => {
                         (term_w.saturating_sub(w)) / 2
-                    }
-                    Anchor::TopLeft | Anchor::BottomLeft | Anchor::LeftCenter => self.constraints.margin,
-                    Anchor::TopRight | Anchor::BottomRight | Anchor::RightCenter => {
+                    },
+                    | Anchor::TopLeft | Anchor::BottomLeft | Anchor::LeftCenter => {
+                        self.constraints.margin
+                    },
+                    | Anchor::TopRight | Anchor::BottomRight | Anchor::RightCenter => {
                         term_w.saturating_sub(w + self.constraints.margin)
-                    }
+                    },
                 };
                 (r, c)
-            }
-            OverlayPosition::At(r, c) => (*r, *c),
-            OverlayPosition::Percent(px, py) => {
+            },
+            | OverlayPosition::At(r, c) => (*r, *c),
+            | OverlayPosition::Percent(px, py) => {
                 let parse_pct = |s: &str| -> u16 {
                     s.trim_end_matches('%').parse::<f64>().unwrap_or(0.0) as u16
                 };
@@ -105,7 +122,7 @@ impl Overlay {
                 let r = (term_h as f64 * pct_y as f64 / 100.0) as u16;
                 let c = (term_w as f64 * pct_x as f64 / 100.0) as u16;
                 (r, c)
-            }
+            },
         };
 
         Some(Rect {
@@ -126,8 +143,11 @@ impl Overlay {
 /// # Example
 ///
 /// ```no_run
-/// use photon_ui::{TUI, TestTerminal};
-/// use photon_ui::components::Text;
+/// use photon_ui::{
+///     TUI,
+///     TestTerminal,
+///     components::Text,
+/// };
 ///
 /// let mut tui = TUI::new(Box::new(TestTerminal::new(80, 24)));
 /// tui.mount(Box::new(Text::new("Hello", 0, 0)));
@@ -234,10 +254,12 @@ impl TUI {
         self.focused_index = None;
         self.overlays.clear();
         self.layout = None;
-        self.renderer.set_strategy(crate::renderer::RenderStrategy::FullRedraw);
+        self.renderer
+            .set_strategy(crate::renderer::RenderStrategy::FullRedraw);
     }
 
-    /// Restore the terminal (leave alternate screen, disable raw mode, show cursor).
+    /// Restore the terminal (leave alternate screen, disable raw mode, show
+    /// cursor).
     pub fn stop(&mut self) -> io::Result<()> {
         self.terminal.stop()
     }
@@ -245,7 +267,8 @@ impl TUI {
     /// Render one frame to the terminal.
     ///
     /// 1. Queries terminal size.
-    /// 2. Decides [`RenderStrategy`] (first render, full redraw on resize, or diff).
+    /// 2. Decides [`RenderStrategy`] (first render, full redraw on resize, or
+    ///    diff).
     /// 3. Renders all children and overlays into a composite screen buffer.
     /// 4. Deletes stale terminal images.
     /// 5. Writes the result through the [`Renderer`].
@@ -300,16 +323,20 @@ impl TUI {
 
         for overlay in &self.overlays {
             if let Ok(rendered) = overlay.content.render(width) {
-                if let Some(rect) = overlay.compute_position(width, height, rendered.lines.len() as u16, 1) {
+                if let Some(rect) =
+                    overlay.compute_position(width, height, rendered.lines.len() as u16, 1)
+                {
                     rendered.blit_onto(&mut screen, rect.y, rect.x);
                 }
             }
         }
 
-        let current_ids: std::collections::HashSet<u32> = screen.images.iter().map(|i| i.id).collect();
+        let current_ids: std::collections::HashSet<u32> =
+            screen.images.iter().map(|i| i.id).collect();
         for id in &self.previous_image_ids {
             if !current_ids.contains(id) {
-                self.terminal.write(&format!("\x1b_Ga=d,d=I,i={}\x1b\\", id))?;
+                self.terminal
+                    .write(&format!("\x1b_Ga=d,d=I,i={}\x1b\\", id))?;
             }
         }
         self.previous_image_ids = current_ids;
@@ -400,20 +427,26 @@ impl TUI {
 
     /// Move focus to the next (or previous) focusable component.
     fn cycle_focus(&mut self, delta: isize) {
-        let focusable: Vec<usize> = self.children.iter().enumerate()
+        let focusable: Vec<usize> = self
+            .children
+            .iter()
+            .enumerate()
             .filter(|(_, c)| c.as_focusable().is_some())
             .map(|(i, _)| i)
             .collect();
-        if focusable.is_empty() { return; }
+        if focusable.is_empty() {
+            return;
+        }
 
-        let current = match self.focused_index.and_then(|idx| {
-            focusable.iter().position(|&i| i == idx)
-        }) {
-            Some(pos) => pos,
-            None => {
+        let current = match self
+            .focused_index
+            .and_then(|idx| focusable.iter().position(|&i| i == idx))
+        {
+            | Some(pos) => pos,
+            | None => {
                 self.set_focus(focusable[0]);
                 return;
-            }
+            },
         };
 
         let new_pos = if delta >= 0 {
@@ -429,8 +462,10 @@ impl TUI {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::Text;
-    use crate::TestTerminal;
+    use crate::{
+        TestTerminal,
+        components::Text,
+    };
 
     #[test]
     fn tui_set_focus_invalid_index() {
@@ -486,7 +521,10 @@ mod tests {
             Ok(Rendered {
                 lines: vec!["img".into()],
                 cursor: None,
-                images: vec![crate::renderer::ImageCommand { id: 1, data: "data".into() }],
+                images: vec![crate::renderer::ImageCommand {
+                    id: 1,
+                    data: "data".into(),
+                }],
             })
         }
     }
@@ -782,7 +820,8 @@ mod tests {
         let rect = overlay.compute_position(80, 24, 20, 10).unwrap();
         // width should be min(term_w - col, w) = min(80-20, 20) = 20
         assert_eq!(rect.width, 20);
-        // height: h = 10.min(3).max(1) = 3, then min(3, 24.saturating_sub(70)) = min(3, 0) = 0
+        // height: h = 10.min(3).max(1) = 3, then min(3, 24.saturating_sub(70)) = min(3,
+        // 0) = 0
         assert_eq!(rect.height, 0);
     }
 
@@ -815,13 +854,16 @@ mod tests {
             "j/k = navigate list   Tab = switch focus   i = insert mode   Esc = normal mode   q = quit",
             2, 0,
         )));
-        let list = crate::components::SelectList::new(vec![
-            "Option 1: Hello world".into(),
-            "Option 2: Foo bar baz".into(),
-            "Option 3: Lorem ipsum".into(),
-            "Option 4: Vim bindings".into(),
-            "Option 5: Blazing fast".into(),
-        ], 3);
+        let list = crate::components::SelectList::new(
+            vec![
+                "Option 1: Hello world".into(),
+                "Option 2: Foo bar baz".into(),
+                "Option 3: Lorem ipsum".into(),
+                "Option 4: Vim bindings".into(),
+                "Option 5: Blazing fast".into(),
+            ],
+            3,
+        );
         tui.mount(Box::new(list));
         let input = crate::components::Input::new();
         tui.mount(Box::new(input));
@@ -838,15 +880,52 @@ mod tests {
         // 5: second list item
         // 6: third list item
         // 7: input line
-        assert_eq!(screen.lines.len(), 8, "expected 8 content lines, got {}", screen.lines.len());
-        assert_eq!(screen.lines[0].trim_end(), "", "row 0 should be blank from Text1 pad_y");
-        assert!(screen.lines[1].contains("Photon UI Demo"), "row 1 should contain header: got {:?}", screen.lines[1]);
-        assert_eq!(screen.lines[2].trim_end(), "", "row 2 should be blank from Text1 pad_y");
-        assert!(screen.lines[3].contains("j/k = navigate"), "row 3 should contain keybindings: got {:?}", screen.lines[3]);
-        assert!(screen.lines[4].starts_with("> Option 1"), "row 4 should be selected list item: got {:?}", screen.lines[4]);
-        assert!(screen.lines[5].starts_with("  Option 2"), "row 5 should be unselected list item: got {:?}", screen.lines[5]);
-        assert!(screen.lines[6].starts_with("  Option 3"), "row 6 should be unselected list item: got {:?}", screen.lines[6]);
-        assert_eq!(screen.lines[7].trim_end(), "", "row 7 should be empty input line");
+        assert_eq!(
+            screen.lines.len(),
+            8,
+            "expected 8 content lines, got {}",
+            screen.lines.len()
+        );
+        assert_eq!(
+            screen.lines[0].trim_end(),
+            "",
+            "row 0 should be blank from Text1 pad_y"
+        );
+        assert!(
+            screen.lines[1].contains("Photon UI Demo"),
+            "row 1 should contain header: got {:?}",
+            screen.lines[1]
+        );
+        assert_eq!(
+            screen.lines[2].trim_end(),
+            "",
+            "row 2 should be blank from Text1 pad_y"
+        );
+        assert!(
+            screen.lines[3].contains("j/k = navigate"),
+            "row 3 should contain keybindings: got {:?}",
+            screen.lines[3]
+        );
+        assert!(
+            screen.lines[4].starts_with("> Option 1"),
+            "row 4 should be selected list item: got {:?}",
+            screen.lines[4]
+        );
+        assert!(
+            screen.lines[5].starts_with("  Option 2"),
+            "row 5 should be unselected list item: got {:?}",
+            screen.lines[5]
+        );
+        assert!(
+            screen.lines[6].starts_with("  Option 3"),
+            "row 6 should be unselected list item: got {:?}",
+            screen.lines[6]
+        );
+        assert_eq!(
+            screen.lines[7].trim_end(),
+            "",
+            "row 7 should be empty input line"
+        );
     }
 
     /// Regression: reset() must clear children, overlays, layout, focus,
@@ -877,7 +956,10 @@ mod tests {
 
         // Verify preconditions: screen has content
         let screen_before = tui.compose_screen(80, 24);
-        assert!(!screen_before.lines.is_empty(), "precondition: screen should have content");
+        assert!(
+            !screen_before.lines.is_empty(),
+            "precondition: screen should have content"
+        );
 
         tui.reset();
 
@@ -885,8 +967,8 @@ mod tests {
         let screen = tui.compose_screen(80, 24);
         assert!(screen.lines.is_empty(), "reset should clear all children");
 
-        // render_frame should not panic after reset (FullRedraw is scheduled internally)
+        // render_frame should not panic after reset (FullRedraw is scheduled
+        // internally)
         tui.render_frame().unwrap();
     }
-
 }

@@ -1,6 +1,13 @@
-use crate::components::Loader;
-use crate::{Component, Rendered, RenderError, Event, InputResult};
 use std::sync::Arc;
+
+use crate::{
+    Component,
+    Event,
+    InputResult,
+    RenderError,
+    Rendered,
+    components::Loader,
+};
 
 /// A [`Loader`] that can be cancelled via Ctrl-C.
 ///
@@ -15,7 +22,11 @@ pub struct CancellableLoader {
 
 impl CancellableLoader {
     /// Create a new cancellable loader with the given message.
-    pub fn new(message: impl Into<String>, spinner_color: Option<String>, message_color: Option<String>) -> Self {
+    pub fn new(
+        message: impl Into<String>,
+        spinner_color: Option<String>,
+        message_color: Option<String>,
+    ) -> Self {
         Self {
             loader: Loader::new(message, spinner_color, message_color),
             signal: Arc::new(std::sync::atomic::AtomicBool::new(false)),
@@ -24,7 +35,8 @@ impl CancellableLoader {
 
     /// Set the cancellation flag.
     pub fn cancel(&self) {
-        self.signal.store(true, std::sync::atomic::Ordering::Relaxed);
+        self.signal
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 
     /// Returns `true` if cancellation has been requested.
@@ -42,6 +54,7 @@ impl Component for CancellableLoader {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
         self.loader.render(width)
     }
+
     fn handle_input(&mut self, event: &Event) -> InputResult {
         use crate::events::matches_key;
         if matches_key(event, &crate::events::Key::ctrl('c')) {
@@ -55,8 +68,13 @@ impl Component for CancellableLoader {
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::{
+        KeyCode,
+        KeyEvent,
+        KeyModifiers,
+    };
+
     use super::*;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     #[test]
     fn render_delegates() {
@@ -68,7 +86,10 @@ mod tests {
     #[test]
     fn ignored_key() {
         let mut cl = CancellableLoader::new("test", None, None);
-        let result = cl.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::empty())));
+        let result = cl.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('x'),
+            KeyModifiers::empty(),
+        )));
         assert!(matches!(result, InputResult::Ignored));
         assert!(!cl.is_cancelled());
     }

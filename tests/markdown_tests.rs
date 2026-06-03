@@ -1,5 +1,7 @@
-use photon_ui::components::Markdown;
-use photon_ui::Component;
+use photon_ui::{
+    Component,
+    components::Markdown,
+};
 
 #[test]
 fn markdown_renders_heading() {
@@ -7,9 +9,21 @@ fn markdown_renders_heading() {
     let r = md.render(80).unwrap();
     // Heading should be bold + underline, no # prefix
     let heading = r.lines.iter().find(|l| l.contains("Hello")).unwrap();
-    assert!(!heading.contains("# Hello"), "heading should not have # prefix: {}", heading);
-    assert!(heading.contains("\x1b[1m"), "heading should be bold: {}", heading);
-    assert!(heading.contains("\x1b[4m"), "heading should be underlined: {}", heading);
+    assert!(
+        !heading.contains("# Hello"),
+        "heading should not have # prefix: {}",
+        heading
+    );
+    assert!(
+        heading.contains("\x1b[1m"),
+        "heading should be bold: {}",
+        heading
+    );
+    assert!(
+        heading.contains("\x1b[4m"),
+        "heading should be underlined: {}",
+        heading
+    );
     assert!(r.lines.iter().any(|l| l.contains("World")));
 }
 
@@ -33,7 +47,9 @@ fn markdown_renders_list() {
 
 #[test]
 fn markdown_long_line_wraps() {
-    let md = Markdown::new("This is a very long paragraph that should definitely wrap when rendered with a narrow width constraint.");
+    let md = Markdown::new(
+        "This is a very long paragraph that should definitely wrap when rendered with a narrow width constraint.",
+    );
     let r = md.render(20).unwrap();
     assert!(r.lines.len() > 1);
 }

@@ -26,22 +26,60 @@
 //!
 //! Page-specific bindings are shown on each page.
 
-use photon_ui::components::{
-    Box as BoxComponent, Button, CancellableLoader, Editor, Input, Loader, Markdown, Panel,
-    SelectList, SettingsList, Spacer, Text, TruncatedText,
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::Duration,
 };
-use photon_ui::theme::{Theme, Palette};
-use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
-use photon_ui::layout::layout::Layout;
-use photon_ui::terminal::ProcessTerminal;
+
+use crossterm::event::{
+    KeyCode,
+    KeyModifiers,
+};
 use photon_ui::{
-    Anchor, Event, InputResult, Overlay, OverlayConstraints, OverlayPosition, Rendered,
-    RenderError, Terminal, TUI,
+    Anchor,
+    Event,
+    InputResult,
+    Overlay,
+    OverlayConstraints,
+    OverlayPosition,
+    RenderError,
+    Rendered,
+    TUI,
+    Terminal,
+    components::{
+        Box as BoxComponent,
+        Button,
+        CancellableLoader,
+        Editor,
+        Input,
+        Loader,
+        Markdown,
+        Panel,
+        SelectList,
+        SettingsList,
+        Spacer,
+        Text,
+        TruncatedText,
+    },
+    layout::{
+        Constraint,
+        Direction,
+        Flex,
+        Margin,
+        Offset,
+        Position,
+        Rect,
+        Size,
+        Spacing,
+        layout::Layout,
+    },
+    terminal::ProcessTerminal,
+    theme::{
+        Palette,
+        Theme,
+    },
 };
-use crossterm::event::{KeyCode, KeyModifiers};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::time::Duration;
 
 const DEMO_MARKDOWN: &str = r#"# Photon UI
 
@@ -68,6 +106,7 @@ impl photon_ui::Component for SharedCancellableLoader {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
         self.0.borrow().render(width)
     }
+
     fn handle_input(&mut self, event: &Event) -> InputResult {
         self.0.borrow_mut().handle_input(event)
     }
@@ -127,20 +166,54 @@ impl photon_ui::Component for LayoutDemo {
         // ── Panel 1: Rect grid using blit_into_rect ──────────────────────
         let grid = Rect::new(0, 0, width / 2, 8);
         let top_left = Rect::new(grid.x, grid.y, grid.width / 2, grid.height / 2);
-        let top_right = Rect::new(grid.x + grid.width / 2, grid.y, grid.width / 2, grid.height / 2);
-        let bot_left = Rect::new(grid.x, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
-        let bot_right = Rect::new(grid.x + grid.width / 2, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
+        let top_right = Rect::new(
+            grid.x + grid.width / 2,
+            grid.y,
+            grid.width / 2,
+            grid.height / 2,
+        );
+        let bot_left = Rect::new(
+            grid.x,
+            grid.y + grid.height / 2,
+            grid.width / 2,
+            grid.height / 2,
+        );
+        let bot_right = Rect::new(
+            grid.x + grid.width / 2,
+            grid.y + grid.height / 2,
+            grid.width / 2,
+            grid.height / 2,
+        );
 
-        let tl = Rendered { lines: vec![" TopLeft ".into(), format!(" {:?} ", top_left)], cursor: None, images: vec![] };
+        let tl = Rendered {
+            lines: vec![" TopLeft ".into(), format!(" {:?} ", top_left)],
+            cursor: None,
+            images: vec![],
+        };
         tl.blit_into_rect(&mut screen, top_left);
 
-        let tr = Rendered { lines: vec![" TopRight ".into(), format!(" {:?} ", top_right)], cursor: None, images: vec![] };
+        let tr = Rendered {
+            lines: vec![" TopRight ".into(), format!(" {:?} ", top_right)],
+            cursor: None,
+            images: vec![],
+        };
         tr.blit_into_rect(&mut screen, top_right);
 
-        let bl = Rendered { lines: vec![" BotLeft ".into(), format!(" w:{} h:{} ", bot_left.width, bot_left.height)], cursor: None, images: vec![] };
+        let bl = Rendered {
+            lines: vec![
+                " BotLeft ".into(),
+                format!(" w:{} h:{} ", bot_left.width, bot_left.height),
+            ],
+            cursor: None,
+            images: vec![],
+        };
         bl.blit_into_rect(&mut screen, bot_left);
 
-        let br = Rendered { lines: vec![" BotRight ".into(), format!(" area:{} ", bot_right.area())], cursor: None, images: vec![] };
+        let br = Rendered {
+            lines: vec![" BotRight ".into(), format!(" area:{} ", bot_right.area())],
+            cursor: None,
+            images: vec![],
+        };
         br.blit_into_rect(&mut screen, bot_right);
 
         // ── Panel 2: Margin inner/outer demo ─────────────────────────────
@@ -181,7 +254,12 @@ impl photon_ui::Component for LayoutDemo {
 
         // ── Panel 4: Size + Constraint types ─────────────────────────────
         let size_y = 9u16;
-        let size_rect = Rect::new(width / 2 + 1, size_y, width.saturating_sub(width / 2 + 1), 4);
+        let size_rect = Rect::new(
+            width / 2 + 1,
+            size_y,
+            width.saturating_sub(width / 2 + 1),
+            4,
+        );
         let s = Size::new(width / 3, 3);
         let constraints = vec![
             Constraint::Length(10),
@@ -293,7 +371,8 @@ impl DemoApp {
     fn load_page(&mut self) {
         self.tui.reset();
 
-        // Header with page indicator (skip on page 4 layout section where layout owns all children)
+        // Header with page indicator (skip on page 4 layout section where layout owns
+        // all children)
         if self.page != 4 {
             let header = format!(
                 " Photon UI Demo  |  Page {}/4  |  1-4=pages  Tab=focus  q=quit ",
@@ -305,11 +384,11 @@ impl DemoApp {
         }
 
         match self.page {
-            1 => self.load_page_basics(),
-            2 => self.load_page_input_and_lists(),
-            3 => self.load_page_dynamic(),
-            4 => self.load_page_design_system(),
-            _ => {}
+            | 1 => self.load_page_basics(),
+            | 2 => self.load_page_input_and_lists(),
+            | 3 => self.load_page_dynamic(),
+            | 4 => self.load_page_design_system(),
+            | _ => {},
         }
     }
 
@@ -320,8 +399,11 @@ impl DemoApp {
             0,
             0,
         )));
-        self.tui
-            .mount(std::boxed::Box::new(Text::new("  Indented content here", 2, 1)));
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "  Indented content here",
+            2,
+            1,
+        )));
         self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
         self.tui.mount(std::boxed::Box::new(Text::new(
@@ -336,12 +418,13 @@ impl DemoApp {
         )));
         self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
-        self.tui
-            .mount(std::boxed::Box::new(Text::new("Box with blue background:", 0, 0)));
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Box with blue background:",
+            0,
+            0,
+        )));
         self.tui.mount(std::boxed::Box::new(
-            BoxComponent::new(2).with_background(|line, _w| {
-                format!("\x1b[44m{}\x1b[0m", line)
-            }),
+            BoxComponent::new(2).with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
         ));
         self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
@@ -490,18 +573,23 @@ impl DemoApp {
                 "Photon UI Demo  |  Page 4/4  |  l=toggle  Tab=focus  q=quit",
                 44,
             )));
-            self.tui
-                .mount(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42)));
+            self.tui.mount(Box::new(ColoredPanel::new(
+                "Middle (Min 3) — fills remaining",
+                42,
+            )));
             self.tui
                 .mount(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41)));
         } else {
             // ── Buttons ──
             let theme_name = match Theme::current() {
-                Theme::Light => "Light",
-                Theme::Dark => "Dark",
+                | Theme::Light => "Light",
+                | Theme::Dark => "Dark",
             };
             self.tui.mount(Box::new(Text::new(
-                &format!("Beam Design System  |  Theme: {}  |  Press 't' to toggle, 'l' for layout demo", theme_name),
+                &format!(
+                    "Beam Design System  |  Theme: {}  |  Press 't' to toggle, 'l' for layout demo",
+                    theme_name
+                ),
                 0,
                 0,
             )));
@@ -528,21 +616,22 @@ impl DemoApp {
             self.tui.mount(Box::new(Spacer::new(1)));
 
             // ── Panels ──
-            self.tui.mount(Box::new(Panel::new()
-                .title("Rounded")
-                .lines(vec![
-                    "Default rounded corners".into(),
-                    "╭─╮ │ │ ╰─╯".into(),
-                ])));
+            self.tui.mount(Box::new(
+                Panel::new()
+                    .title("Rounded")
+                    .lines(vec!["Default rounded corners".into(), "╭─╮ │ │ ╰─╯".into()]),
+            ));
             self.tui.mount(Box::new(Spacer::new(1)));
 
-            self.tui.mount(Box::new(Panel::new()
-                .border(photon_ui::layout::Border::THIN)
-                .title("Thin")
-                .lines(vec![
-                    "Sharp corners with thin lines".into(),
-                    "┌─┐ │ │ └─┘".into(),
-                ])));
+            self.tui.mount(Box::new(
+                Panel::new()
+                    .border(photon_ui::layout::Border::THIN)
+                    .title("Thin")
+                    .lines(vec![
+                        "Sharp corners with thin lines".into(),
+                        "┌─┐ │ │ └─┘".into(),
+                    ]),
+            ));
         }
     }
 
@@ -559,31 +648,31 @@ impl DemoApp {
         // Global navigation
         if let Event::Key(key) = event {
             match key.code {
-                KeyCode::Char('1') => {
+                | KeyCode::Char('1') => {
                     self.page = 1;
                     self.load_page();
                     return true;
-                }
-                KeyCode::Char('2') => {
+                },
+                | KeyCode::Char('2') => {
                     self.page = 2;
                     self.load_page();
                     return true;
-                }
-                KeyCode::Char('3') => {
+                },
+                | KeyCode::Char('3') => {
                     self.page = 3;
                     self.load_page();
                     return true;
-                }
-                KeyCode::Char('4') => {
+                },
+                | KeyCode::Char('4') => {
                     self.page = 4;
                     self.load_page();
                     return true;
-                }
-                KeyCode::Char('q') if key.modifiers.is_empty() => return false,
-                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                },
+                | KeyCode::Char('q') if key.modifiers.is_empty() => return false,
+                | KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     return false;
-                }
-                _ => {}
+                },
+                | _ => {},
             }
         }
 
@@ -595,9 +684,7 @@ impl DemoApp {
                     self.load_page();
                     return true;
                 }
-                if key.code == KeyCode::Char('V')
-                    && key.modifiers.contains(KeyModifiers::SHIFT)
-                {
+                if key.code == KeyCode::Char('V') && key.modifiers.contains(KeyModifiers::SHIFT) {
                     self.editor_vim = !self.editor_vim;
                     self.load_page();
                     return true;
@@ -619,8 +706,8 @@ impl DemoApp {
             if let Event::Key(key) = event {
                 if key.code == KeyCode::Char('t') && key.modifiers.is_empty() {
                     let next = match Theme::current() {
-                        Theme::Light => Theme::Dark,
-                        Theme::Dark => Theme::Light,
+                        | Theme::Light => Theme::Dark,
+                        | Theme::Dark => Theme::Light,
                     };
                     Theme::set(next);
                     self.load_page();
@@ -661,12 +748,12 @@ fn main() -> std::io::Result<()> {
 
         if crossterm::event::poll(Duration::from_millis(100))? {
             let event = match crossterm::event::read()? {
-                crossterm::event::Event::Key(key) => Event::Key(key),
-                crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
-                crossterm::event::Event::Mouse(m) => Event::Mouse(m),
-                crossterm::event::Event::Paste(p) => Event::Paste(p),
-                crossterm::event::Event::FocusGained => Event::FocusGained,
-                crossterm::event::Event::FocusLost => Event::FocusLost,
+                | crossterm::event::Event::Key(key) => Event::Key(key),
+                | crossterm::event::Event::Resize(w, h) => Event::Resize(w, h),
+                | crossterm::event::Event::Mouse(m) => Event::Mouse(m),
+                | crossterm::event::Event::Paste(p) => Event::Paste(p),
+                | crossterm::event::Event::FocusGained => Event::FocusGained,
+                | crossterm::event::Event::FocusLost => Event::FocusLost,
             };
 
             if !app.handle_input(&event) {
@@ -676,7 +763,8 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    // CRITICAL: restore terminal state (leave alternate screen, disable raw mode, show cursor)
+    // CRITICAL: restore terminal state (leave alternate screen, disable raw mode,
+    // show cursor)
     app.tui.stop()?;
 
     Ok(())

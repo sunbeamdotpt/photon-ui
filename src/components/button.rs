@@ -4,10 +4,21 @@
 //! Each variant maps to semantic palette colors and renders as a single
 //! line of styled text with appropriate foreground/background colors.
 
-use crate::events::Event;
-use crate::layout::Rect;
-use crate::theme::{stylize_padded, Color, Palette, Style, Theme};
-use crate::{Component, InputResult, RenderError, Rendered};
+use crate::{
+    Component,
+    InputResult,
+    RenderError,
+    Rendered,
+    events::Event,
+    layout::Rect,
+    theme::{
+        Color,
+        Palette,
+        Style,
+        Theme,
+        stylize_padded,
+    },
+};
 
 /// Visual variant of a button.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -80,27 +91,23 @@ impl Button {
     fn build_style(&self) -> Style {
         let theme = Theme::current();
         match self.variant {
-            ButtonVariant::Primary => Style::new()
-                .fg(Color::WHITE)
-                .bg(theme.accent())
-                .bold(),
+            | ButtonVariant::Primary => Style::new().fg(Color::WHITE).bg(theme.accent()).bold(),
             // Dark is a fixed visual style: near-black bg, white text.
             // In dark mode use CARD_DARK so it's visible against the black page.
-            ButtonVariant::Dark => match theme {
-                Theme::Light => Style::new().fg(Color::WHITE).bg(Color::SUNBEAM_BLACK).bold(),
-                Theme::Dark => Style::new().fg(Color::WHITE).bg(Color::CARD_DARK).bold(),
+            | ButtonVariant::Dark => match theme {
+                | Theme::Light => Style::new()
+                    .fg(Color::WHITE)
+                    .bg(Color::SUNBEAM_BLACK)
+                    .bold(),
+                | Theme::Dark => Style::new().fg(Color::WHITE).bg(Color::CARD_DARK).bold(),
             },
             // Cream is always cream bg + dark text, regardless of theme.
-            ButtonVariant::Cream => Style::new()
+            | ButtonVariant::Cream => Style::new()
                 .fg(Color::SUNBEAM_BLACK)
                 .bg(Color::CREAM)
                 .bold(),
-            ButtonVariant::Ghost => Style::new()
-                .fg(theme.accent())
-                .bold(),
-            ButtonVariant::Text => Style::new()
-                .fg(theme.accent())
-                .underline(),
+            | ButtonVariant::Ghost => Style::new().fg(theme.accent()).bold(),
+            | ButtonVariant::Text => Style::new().fg(theme.accent()).underline(),
         }
     }
 }
@@ -110,7 +117,7 @@ impl Component for Button {
         let style = self.build_style();
 
         let line = match self.variant {
-            ButtonVariant::Ghost => {
+            | ButtonVariant::Ghost => {
                 // Ghost: [ label ] with brackets in muted color
                 let theme = Theme::current();
                 let bracket_style = Style::new().fg(theme.border_default());
@@ -118,8 +125,8 @@ impl Component for Button {
                 let bracket_close = crate::theme::stylize("]", &bracket_style);
                 let inner = stylize_padded(&self.label, &style, self.pad);
                 format!("{}{}{}", bracket_open, inner, bracket_close)
-            }
-            _ => stylize_padded(&self.label, &style, self.pad),
+            },
+            | _ => stylize_padded(&self.label, &style, self.pad),
         };
 
         Ok(Rendered {
@@ -155,7 +162,10 @@ impl Component for Button {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theme::{Color, Theme};
+    use crate::theme::{
+        Color,
+        Theme,
+    };
 
     #[test]
     fn primary_button_renders() {
@@ -278,12 +288,18 @@ mod tests {
 
         // Cream bg: #fff0c2 = (255, 240, 194)
         let cream_bg = "\x1b[48;2;255;240;194m";
-        assert!(light_line.contains(cream_bg), "Cream button bg in light mode");
+        assert!(
+            light_line.contains(cream_bg),
+            "Cream button bg in light mode"
+        );
         assert!(dark_line.contains(cream_bg), "Cream button bg in dark mode");
 
         // Dark text: SUNBEAM_BLACK #1f1f1f = (31, 31, 31)
         let dark_fg = "\x1b[38;2;31;31;31m";
-        assert!(light_line.contains(dark_fg), "Cream button fg in light mode");
+        assert!(
+            light_line.contains(dark_fg),
+            "Cream button fg in light mode"
+        );
         assert!(dark_line.contains(dark_fg), "Cream button fg in dark mode");
     }
 }

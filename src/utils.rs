@@ -1,4 +1,7 @@
-use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
+use unicode_width::{
+    UnicodeWidthChar,
+    UnicodeWidthStr,
+};
 
 /// Compute the visible display width of a string.
 ///
@@ -10,7 +13,7 @@ pub fn visible_width(s: &str) -> usize {
     while let Some(ch) = chars.next() {
         if ch == '\x1b' {
             match chars.peek() {
-                Some(&'[') => {
+                | Some(&'[') => {
                     chars.next();
                     while let Some(&c) = chars.peek() {
                         chars.next();
@@ -19,8 +22,8 @@ pub fn visible_width(s: &str) -> usize {
                         }
                     }
                     continue;
-                }
-                Some(&']') => {
+                },
+                | Some(&']') => {
                     chars.next();
                     while let Some(&c) = chars.peek() {
                         chars.next();
@@ -35,8 +38,8 @@ pub fn visible_width(s: &str) -> usize {
                         }
                     }
                     continue;
-                }
-                _ => {}
+                },
+                | _ => {},
             }
         }
         width += ch.width().unwrap_or(0);
@@ -103,8 +106,8 @@ pub struct ActiveHyperlink {
 /// use photon_ui::utils::AnsiCodeTracker;
 ///
 /// let mut tracker = AnsiCodeTracker::new();
-/// tracker.process("\x1b[1m");    // bold on
-/// tracker.process("\x1b[31m");   // red fg
+/// tracker.process("\x1b[1m"); // bold on
+/// tracker.process("\x1b[31m"); // red fg
 /// assert_eq!(tracker.current_codes(), "\x1b[1;31m");
 /// ```
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -125,7 +128,9 @@ pub struct AnsiCodeTracker {
 
 impl AnsiCodeTracker {
     /// Create a tracker with no active codes.
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     /// Parse an OSC 8 hyperlink sequence.
     ///
@@ -147,7 +152,11 @@ impl AnsiCodeTracker {
         if url.is_empty() {
             Some(None)
         } else {
-            Some(Some(ActiveHyperlink { params, url, terminator }))
+            Some(Some(ActiveHyperlink {
+                params,
+                url,
+                terminator,
+            }))
         }
     }
 
@@ -166,17 +175,17 @@ impl AnsiCodeTracker {
         let body = body.strip_suffix('m').unwrap_or(body);
         for code in body.split(';') {
             match code {
-                "1" => self.bold = true,
-                "3" => self.italic = true,
-                "4" => self.underline = true,
-                "22" => self.bold = false,
-                "23" => self.italic = false,
-                "24" => self.underline = false,
-                "39" => self.fg_color = None,
-                "49" => self.bg_color = None,
-                c if c.starts_with('3') && c.len() >= 2 => self.fg_color = Some(c.to_string()),
-                c if c.starts_with('4') && c.len() >= 2 => self.bg_color = Some(c.to_string()),
-                _ => {}
+                | "1" => self.bold = true,
+                | "3" => self.italic = true,
+                | "4" => self.underline = true,
+                | "22" => self.bold = false,
+                | "23" => self.italic = false,
+                | "24" => self.underline = false,
+                | "39" => self.fg_color = None,
+                | "49" => self.bg_color = None,
+                | c if c.starts_with('3') && c.len() >= 2 => self.fg_color = Some(c.to_string()),
+                | c if c.starts_with('4') && c.len() >= 2 => self.bg_color = Some(c.to_string()),
+                | _ => {},
             }
         }
     }
@@ -186,18 +195,31 @@ impl AnsiCodeTracker {
     /// This is used to reopen styles at the beginning of a continuation line.
     pub fn current_codes(&self) -> String {
         let mut parts = Vec::new();
-        if self.bold { parts.push("1"); }
-        if self.italic { parts.push("3"); }
-        if self.underline { parts.push("4"); }
-        if let Some(ref fg) = self.fg_color { parts.push(fg.as_str()); }
-        if let Some(ref bg) = self.bg_color { parts.push(bg.as_str()); }
+        if self.bold {
+            parts.push("1");
+        }
+        if self.italic {
+            parts.push("3");
+        }
+        if self.underline {
+            parts.push("4");
+        }
+        if let Some(ref fg) = self.fg_color {
+            parts.push(fg.as_str());
+        }
+        if let Some(ref bg) = self.bg_color {
+            parts.push(bg.as_str());
+        }
         let mut result = if parts.is_empty() {
             String::new()
         } else {
             format!("\x1b[{}m", parts.join(";"))
         };
         if let Some(ref link) = self.hyperlink {
-            result.push_str(&format!("\x1b]8;{};{}{}", link.params, link.url, link.terminator));
+            result.push_str(&format!(
+                "\x1b]8;{};{}{}",
+                link.params, link.url, link.terminator
+            ));
         }
         result
     }
@@ -220,9 +242,12 @@ impl AnsiCodeTracker {
 
     /// Returns `true` if any SGR or OSC 8 code is currently active.
     pub fn has_active_codes(&self) -> bool {
-        self.bold || self.italic || self.underline
-            || self.fg_color.is_some() || self.bg_color.is_some()
-            || self.hyperlink.is_some()
+        self.bold ||
+            self.italic ||
+            self.underline ||
+            self.fg_color.is_some() ||
+            self.bg_color.is_some() ||
+            self.hyperlink.is_some()
     }
 }
 
@@ -251,7 +276,7 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
     while let Some(ch) = chars.next() {
         if ch == '\x1b' {
             match chars.peek() {
-                Some(&'[') => {
+                | Some(&'[') => {
                     chars.next();
                     let mut seq = String::from("\x1b[");
                     while let Some(&c) = chars.peek() {
@@ -264,8 +289,8 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
                     tracker.process(&seq);
                     current.push_str(&seq);
                     continue;
-                }
-                Some(&']') => {
+                },
+                | Some(&']') => {
                     chars.next();
                     let mut seq = String::from("\x1b]");
                     while let Some(&c) = chars.peek() {
@@ -285,14 +310,17 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
                     tracker.process(&seq);
                     current.push_str(&seq);
                     continue;
-                }
-                _ => {}
+                },
+                | _ => {},
             }
         }
 
         if ch == '\n' {
-            if tracker.bold || tracker.italic || tracker.underline
-                || tracker.fg_color.is_some() || tracker.bg_color.is_some()
+            if tracker.bold ||
+                tracker.italic ||
+                tracker.underline ||
+                tracker.fg_color.is_some() ||
+                tracker.bg_color.is_some()
             {
                 current.push_str("\x1b[0m");
             }
@@ -308,8 +336,11 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
 
         let cw = ch.width().unwrap_or(0);
         if current_width + cw > w && !current.is_empty() {
-            if tracker.bold || tracker.italic || tracker.underline
-                || tracker.fg_color.is_some() || tracker.bg_color.is_some()
+            if tracker.bold ||
+                tracker.italic ||
+                tracker.underline ||
+                tracker.fg_color.is_some() ||
+                tracker.bg_color.is_some()
             {
                 current.push_str("\x1b[0m");
             }
@@ -340,7 +371,10 @@ mod tests {
         let mut tracker = AnsiCodeTracker::new();
         tracker.process("\x1b]8;;https://example.com\x1b\\");
         assert!(tracker.hyperlink.is_some());
-        assert_eq!(tracker.hyperlink.as_ref().unwrap().url, "https://example.com");
+        assert_eq!(
+            tracker.hyperlink.as_ref().unwrap().url,
+            "https://example.com"
+        );
         assert_eq!(tracker.hyperlink.as_ref().unwrap().terminator, "\x1b\\");
     }
 

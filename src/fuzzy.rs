@@ -20,22 +20,24 @@ pub fn fuzzy_match(query: &str, text: &str) -> i32 {
     let mut score = 0;
     let mut qi = 0;
     let query_chars: Vec<char> = query_lower.chars().collect();
-    
+
     for (ti, tc) in text_lower.chars().enumerate() {
         if qi < query_chars.len() && tc == query_chars[qi] {
             score += 10;
-            if ti == 0 || !text_lower.chars().nth(ti.saturating_sub(1)).unwrap_or(' ').is_alphanumeric() {
+            if ti == 0 ||
+                !text_lower
+                    .chars()
+                    .nth(ti.saturating_sub(1))
+                    .unwrap_or(' ')
+                    .is_alphanumeric()
+            {
                 score += 5;
             }
             qi += 1;
         }
     }
-    
-    if qi < query_chars.len() {
-        0
-    } else {
-        score
-    }
+
+    if qi < query_chars.len() { 0 } else { score }
 }
 
 /// Filter and rank a slice of items by fuzzy match against a query.
@@ -52,7 +54,8 @@ pub fn fuzzy_match(query: &str, text: &str) -> i32 {
 /// assert_eq!(results.len(), 2); // "hello" and "help"
 /// ```
 pub fn fuzzy_filter<'a, T>(items: &'a [T], query: &str, get_text: fn(&T) -> &str) -> Vec<&'a T> {
-    let mut scored: Vec<(i32, &T)> = items.iter()
+    let mut scored: Vec<(i32, &T)> = items
+        .iter()
         .map(|item| {
             let text = get_text(item);
             let score = fuzzy_match(query, text);

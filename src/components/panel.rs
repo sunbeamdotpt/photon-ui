@@ -3,9 +3,18 @@
 //! Renders a rectangular frame with rounded corners (╭─╮││╰─╯) around
 //! optional content lines. Supports titles, custom borders, and theming.
 
-use crate::layout::Border;
-use crate::theme::{ColorMode, Palette, Style, Theme};
-use crate::{Component, RenderError, Rendered};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+    layout::Border,
+    theme::{
+        ColorMode,
+        Palette,
+        Style,
+        Theme,
+    },
+};
 
 /// A panel with a border around optional content.
 pub struct Panel {
@@ -56,8 +65,12 @@ impl Panel {
     /// border (top/bottom rows) plus content lines.
     pub fn height(&self) -> u16 {
         let mut h = self.lines.len() as u16;
-        if self.border.top != ' ' { h += 1; }
-        if self.border.bottom != ' ' { h += 1; }
+        if self.border.top != ' ' {
+            h += 1;
+        }
+        if self.border.bottom != ' ' {
+            h += 1;
+        }
         h.max(1)
     }
 
@@ -97,7 +110,11 @@ impl Component for Panel {
             let available = total_width;
             let title_text = self.title.as_ref().map(|t| {
                 let max_title = available.saturating_sub(2);
-                let t = if t.len() > max_title { &t[..max_title] } else { t };
+                let t = if t.len() > max_title {
+                    &t[..max_title]
+                } else {
+                    t
+                };
                 format!(" {} ", t)
             });
 
@@ -172,14 +189,18 @@ impl Component for Panel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theme::{Color, Theme};
-    use crate::utils::visible_width;
+    use crate::{
+        theme::{
+            Color,
+            Theme,
+        },
+        utils::visible_width,
+    };
 
     #[test]
     fn panel_renders_rounded_border() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .lines(vec!["Hello".into()]);
+            let panel = Panel::new().lines(vec!["Hello".into()]);
             let rendered = panel.render(9).unwrap();
             assert_eq!(rendered.lines.len(), 3);
             assert!(rendered.lines[0].contains('╭'));
@@ -193,9 +214,7 @@ mod tests {
     #[test]
     fn panel_renders_thin_border() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .border(Border::THIN)
-                .lines(vec!["Hi".into()]);
+            let panel = Panel::new().border(Border::THIN).lines(vec!["Hi".into()]);
             let rendered = panel.render(6).unwrap();
             assert!(rendered.lines[0].contains('┌'));
             assert!(rendered.lines[0].contains('┐'));
@@ -207,9 +226,7 @@ mod tests {
     #[test]
     fn panel_renders_thick_border() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .border(Border::THICK)
-                .lines(vec!["X".into()]);
+            let panel = Panel::new().border(Border::THICK).lines(vec!["X".into()]);
             let rendered = panel.render(5).unwrap();
             assert!(rendered.lines[0].contains('┏'));
             assert!(rendered.lines[0].contains('┓'));
@@ -221,9 +238,7 @@ mod tests {
     #[test]
     fn panel_renders_double_border() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .border(Border::DOUBLE)
-                .lines(vec!["X".into()]);
+            let panel = Panel::new().border(Border::DOUBLE).lines(vec!["X".into()]);
             let rendered = panel.render(5).unwrap();
             assert!(rendered.lines[0].contains('╔'));
             assert!(rendered.lines[0].contains('╗'));
@@ -235,9 +250,7 @@ mod tests {
     #[test]
     fn panel_with_title() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .title("Test")
-                .lines(vec!["Content".into()]);
+            let panel = Panel::new().title("Test").lines(vec!["Content".into()]);
             let rendered = panel.render(15).unwrap();
             // Title should appear in top line
             assert!(rendered.lines[0].contains("Test"));
@@ -249,8 +262,7 @@ mod tests {
     #[test]
     fn panel_content_is_inside_border() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .lines(vec!["A".into()]);
+            let panel = Panel::new().lines(vec!["A".into()]);
             let rendered = panel.render(5).unwrap();
             // 5 cols: ╭ A ╮  → row 1 should have A between borders
             let row1 = &rendered.lines[1];
@@ -262,9 +274,7 @@ mod tests {
     #[test]
     fn panel_with_padding() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .pad(2)
-                .lines(vec!["X".into()]);
+            let panel = Panel::new().pad(2).lines(vec!["X".into()]);
             let rendered = panel.render(7).unwrap();
             // Padding is horizontal only; height = top border + content + bottom border = 3
             assert_eq!(rendered.lines.len(), 3);
@@ -287,8 +297,7 @@ mod tests {
     #[test]
     fn panel_trims_long_content() {
         Theme::with(Theme::Light, || {
-            let panel = Panel::new()
-                .lines(vec!["This is way too long".into()]);
+            let panel = Panel::new().lines(vec!["This is way too long".into()]);
             let rendered = panel.render(10).unwrap();
             // Inner width = 10 - 2*1 (border) - 2*1 (pad) = 6
             // Content should be truncated

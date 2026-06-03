@@ -1,4 +1,8 @@
-use crate::{Component, Rendered, RenderError};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// A component that renders empty lines for layout spacing.
 pub struct Spacer {
@@ -7,7 +11,9 @@ pub struct Spacer {
 
 impl Spacer {
     /// Create a spacer that renders `lines` empty rows.
-    pub fn new(lines: usize) -> Self { Self { lines } }
+    pub fn new(lines: usize) -> Self {
+        Self { lines }
+    }
 }
 
 impl Component for Spacer {

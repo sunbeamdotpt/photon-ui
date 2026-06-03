@@ -1,5 +1,19 @@
-use photon_ui::{Component, Rendered, RenderError};
-use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
+use photon_ui::{
+    Component,
+    RenderError,
+    Rendered,
+    layout::{
+        Constraint,
+        Direction,
+        Flex,
+        Margin,
+        Offset,
+        Position,
+        Rect,
+        Size,
+        Spacing,
+    },
+};
 
 /// A component that renders a visual demonstration of layout primitives.
 struct LayoutDemo;
@@ -15,20 +29,54 @@ impl photon_ui::Component for LayoutDemo {
 
         let grid = Rect::new(0, 0, width / 2, 8);
         let top_left = Rect::new(grid.x, grid.y, grid.width / 2, grid.height / 2);
-        let top_right = Rect::new(grid.x + grid.width / 2, grid.y, grid.width / 2, grid.height / 2);
-        let bot_left = Rect::new(grid.x, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
-        let bot_right = Rect::new(grid.x + grid.width / 2, grid.y + grid.height / 2, grid.width / 2, grid.height / 2);
+        let top_right = Rect::new(
+            grid.x + grid.width / 2,
+            grid.y,
+            grid.width / 2,
+            grid.height / 2,
+        );
+        let bot_left = Rect::new(
+            grid.x,
+            grid.y + grid.height / 2,
+            grid.width / 2,
+            grid.height / 2,
+        );
+        let bot_right = Rect::new(
+            grid.x + grid.width / 2,
+            grid.y + grid.height / 2,
+            grid.width / 2,
+            grid.height / 2,
+        );
 
-        let tl = Rendered { lines: vec![" TopLeft ".into(), format!(" {:?} ", top_left)], cursor: None, images: vec![] };
+        let tl = Rendered {
+            lines: vec![" TopLeft ".into(), format!(" {:?} ", top_left)],
+            cursor: None,
+            images: vec![],
+        };
         tl.blit_into_rect(&mut screen, top_left);
 
-        let tr = Rendered { lines: vec![" TopRight ".into(), format!(" {:?} ", top_right)], cursor: None, images: vec![] };
+        let tr = Rendered {
+            lines: vec![" TopRight ".into(), format!(" {:?} ", top_right)],
+            cursor: None,
+            images: vec![],
+        };
         tr.blit_into_rect(&mut screen, top_right);
 
-        let bl = Rendered { lines: vec![" BotLeft ".into(), format!(" w:{} h:{} ", bot_left.width, bot_left.height)], cursor: None, images: vec![] };
+        let bl = Rendered {
+            lines: vec![
+                " BotLeft ".into(),
+                format!(" w:{} h:{} ", bot_left.width, bot_left.height),
+            ],
+            cursor: None,
+            images: vec![],
+        };
         bl.blit_into_rect(&mut screen, bot_left);
 
-        let br = Rendered { lines: vec![" BotRight ".into(), format!(" area:{} ", bot_right.area())], cursor: None, images: vec![] };
+        let br = Rendered {
+            lines: vec![" BotRight ".into(), format!(" area:{} ", bot_right.area())],
+            cursor: None,
+            images: vec![],
+        };
         br.blit_into_rect(&mut screen, bot_right);
 
         let margin_rect = Rect::new(width / 2 + 1, 0, width.saturating_sub(width / 2 + 1), 8);
@@ -66,7 +114,12 @@ impl photon_ui::Component for LayoutDemo {
         pos_text.blit_into_rect(&mut screen, pos_rect);
 
         let size_y = 9u16;
-        let size_rect = Rect::new(width / 2 + 1, size_y, width.saturating_sub(width / 2 + 1), 4);
+        let size_rect = Rect::new(
+            width / 2 + 1,
+            size_y,
+            width.saturating_sub(width / 2 + 1),
+            4,
+        );
         let s = Size::new(width / 3, 3);
         let constraints = vec![
             Constraint::Length(10),

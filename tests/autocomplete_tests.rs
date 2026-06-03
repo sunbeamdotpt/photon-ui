@@ -1,4 +1,8 @@
-use photon_ui::autocomplete::{AutocompleteProvider, SimpleAutocomplete, CombinedAutocompleteProvider};
+use photon_ui::autocomplete::{
+    AutocompleteProvider,
+    CombinedAutocompleteProvider,
+    SimpleAutocomplete,
+};
 
 #[test]
 fn simple_autocomplete_suggests() {
@@ -11,10 +15,7 @@ fn simple_autocomplete_suggests() {
 
 #[test]
 fn combined_slash_commands() {
-    let provider = CombinedAutocompleteProvider::new(
-        vec!["open".into(), "close".into()],
-        "/tmp"
-    );
+    let provider = CombinedAutocompleteProvider::new(vec!["open".into(), "close".into()], "/tmp");
     let suggestions = provider.suggest("/op");
     assert!(suggestions.contains(&"/open".to_string()));
 }

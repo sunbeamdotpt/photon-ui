@@ -1,10 +1,21 @@
-use crate::{Component, Rendered, RenderError, Event, InputResult, Focusable};
-use crate::kill_ring::KillRing;
-use crate::undo_stack::UndoStack;
-use crate::word_navigation::{find_word_forward, find_word_backward};
+use crossterm::event::KeyCode;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
-use crossterm::event::KeyCode;
+
+use crate::{
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+    kill_ring::KillRing,
+    undo_stack::UndoStack,
+    word_navigation::{
+        find_word_backward,
+        find_word_forward,
+    },
+};
 
 /// Snapshot of editor state for undo/redo.
 #[derive(Clone)]
@@ -86,7 +97,9 @@ impl Editor {
     }
 
     /// Returns `true` if vim modal editing is enabled.
-    pub fn vim_mode_enabled(&self) -> bool { self.vim_mode_enabled }
+    pub fn vim_mode_enabled(&self) -> bool {
+        self.vim_mode_enabled
+    }
 
     /// Enable or disable vim modal editing.
     ///
@@ -100,16 +113,25 @@ impl Editor {
     }
 
     /// Current vim mode (only meaningful when vim mode is enabled).
-    pub fn mode(&self) -> VimMode { self.mode }
+    pub fn mode(&self) -> VimMode {
+        self.mode
+    }
 
     /// Switch to the given vim mode.
-    pub fn set_mode(&mut self, mode: VimMode) { self.mode = mode; self.pending_cmd = None; }
+    pub fn set_mode(&mut self, mode: VimMode) {
+        self.mode = mode;
+        self.pending_cmd = None;
+    }
 
     /// Borrow the current text content.
-    pub fn text(&self) -> &str { &self.text }
+    pub fn text(&self) -> &str {
+        &self.text
+    }
 
     /// Current cursor position in grapheme indices.
-    pub fn cursor_grapheme(&self) -> usize { self.cursor }
+    pub fn cursor_grapheme(&self) -> usize {
+        self.cursor
+    }
 
     /// Replace the entire text buffer and move the cursor to the end.
     pub fn set_text(&mut self, text: impl Into<String>) {
@@ -124,14 +146,18 @@ impl Editor {
     }
 
     fn byte_index(&self, grapheme_idx: usize) -> usize {
-        self.text.grapheme_indices(true)
+        self.text
+            .grapheme_indices(true)
             .nth(grapheme_idx)
             .map(|(i, _)| i)
             .unwrap_or(self.text.len())
     }
 
     fn save_undo(&mut self) {
-        self.undo_stack.push(EditorAction { text: self.text.clone(), cursor: self.cursor });
+        self.undo_stack.push(EditorAction {
+            text: self.text.clone(),
+            cursor: self.cursor,
+        });
     }
 
     fn insert_char(&mut self, c: char) {
@@ -176,16 +202,22 @@ impl Editor {
     }
 
     fn move_cursor_left(&mut self) {
-        if self.cursor > 0 { self.cursor -= 1; }
+        if self.cursor > 0 {
+            self.cursor -= 1;
+        }
     }
 
     fn move_cursor_right(&mut self) {
-        if self.cursor < self.graphemes().len() { self.cursor += 1; }
+        if self.cursor < self.graphemes().len() {
+            self.cursor += 1;
+        }
     }
 
     fn move_cursor_up(&mut self) {
         let (line, col) = self.cursor_line_col();
-        if line == 0 { return; }
+        if line == 0 {
+            return;
+        }
         let target_line = line - 1;
         let mut current_line = 0;
         let mut current_col = 0;
@@ -208,7 +240,9 @@ impl Editor {
     fn move_cursor_down(&mut self) {
         let (line, col) = self.cursor_line_col();
         let total_lines = self.text.lines().count();
-        if line + 1 >= total_lines { return; }
+        if line + 1 >= total_lines {
+            return;
+        }
         let target_line = line + 1;
         let mut current_line = 0;
         let mut current_col = 0;
@@ -238,7 +272,9 @@ impl Editor {
                 self.cursor = gidx;
                 return;
             }
-            if g == "\n" { current_line += 1; }
+            if g == "\n" {
+                current_line += 1;
+            }
             gidx += 1;
         }
     }
@@ -256,7 +292,9 @@ impl Editor {
                 }
                 current_line += 1;
             }
-            if current_line == line { found = true; }
+            if current_line == line {
+                found = true;
+            }
             gidx += 1;
         }
         self.cursor = gidx;
@@ -345,11 +383,13 @@ impl Editor {
     }
 
     fn history_up(&mut self) {
-        if self.history.is_empty() { return; }
+        if self.history.is_empty() {
+            return;
+        }
         let idx = match self.history_index {
-            Some(i) if i > 0 => i - 1,
-            Some(_) => return,
-            None => self.history.len() - 1,
+            | Some(i) if i > 0 => i - 1,
+            | Some(_) => return,
+            | None => self.history.len() - 1,
         };
         self.history_index = Some(idx);
         self.text = self.history[idx].clone();
@@ -359,15 +399,15 @@ impl Editor {
 
     fn history_down(&mut self) {
         let idx = match self.history_index {
-            Some(i) if i + 1 < self.history.len() => i + 1,
-            Some(_) => {
+            | Some(i) if i + 1 < self.history.len() => i + 1,
+            | Some(_) => {
                 self.history_index = None;
                 self.text.clear();
                 self.cursor = 0;
                 self.invalidate_cache();
                 return;
-            }
-            None => return,
+            },
+            | None => return,
         };
         self.history_index = Some(idx);
         self.text = self.history[idx].clone();
@@ -395,7 +435,11 @@ impl Editor {
         let line_count = text.lines().count();
         if line_count > 5 {
             self.paste_markers.push(PasteMarker {
-                label: format!("[paste #{} +{} lines]", self.paste_markers.len() + 1, line_count),
+                label: format!(
+                    "[paste #{} +{} lines]",
+                    self.paste_markers.len() + 1,
+                    line_count
+                ),
                 start,
                 end,
             });
@@ -413,7 +457,9 @@ impl Editor {
                 start_byte = byte_pos;
                 break;
             }
-            if g == "\n" { current_line += 1; }
+            if g == "\n" {
+                current_line += 1;
+            }
             byte_pos += g.len();
         }
         // Find the end of this line, including the newline if present.
@@ -425,7 +471,9 @@ impl Editor {
                 end_byte = byte_pos + g.len();
                 break;
             }
-            if byte_pos >= start_byte { found = true; }
+            if byte_pos >= start_byte {
+                found = true;
+            }
             byte_pos += g.len();
         }
         self.cursor = self.text[..start_byte].graphemes(true).count();
@@ -447,7 +495,9 @@ impl Editor {
                 start_byte = byte_pos;
                 break;
             }
-            if g == "\n" { current_line += 1; }
+            if g == "\n" {
+                current_line += 1;
+            }
             byte_pos += g.len();
         }
         let mut end_byte = self.text.len();
@@ -458,7 +508,9 @@ impl Editor {
                 end_byte = byte_pos + g.len();
                 break;
             }
-            if byte_pos >= start_byte { found = true; }
+            if byte_pos >= start_byte {
+                found = true;
+            }
             byte_pos += g.len();
         }
         let yanked = self.text[start_byte..end_byte].to_string();
@@ -499,10 +551,14 @@ impl Editor {
     }
 
     /// Move cursor to the start of the document.
-    fn go_to_start(&mut self) { self.cursor = 0; }
+    fn go_to_start(&mut self) {
+        self.cursor = 0;
+    }
 
     /// Move cursor to the end of the document.
-    fn go_to_end(&mut self) { self.cursor = self.graphemes().len(); }
+    fn go_to_end(&mut self) {
+        self.cursor = self.graphemes().len();
+    }
 
     /// Compute the cursor position as `(line, column)` in display coordinates.
     fn cursor_line_col(&self) -> (usize, usize) {
@@ -526,12 +582,19 @@ impl Editor {
 }
 
 impl Default for Editor {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Focusable for Editor {
-    fn focused(&self) -> bool { self.focused }
-    fn set_focused(&mut self, focused: bool) { self.focused = focused; }
+    fn focused(&self) -> bool {
+        self.focused
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
 }
 
 impl Editor {
@@ -539,40 +602,40 @@ impl Editor {
         use crossterm::event::KeyModifiers;
         self.save_undo();
         match key.code {
-            KeyCode::Char(c) => {
+            | KeyCode::Char(c) => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     match c {
-                        'a' => self.move_cursor_home(),
-                        'e' => self.move_cursor_end(),
-                        'b' => self.move_cursor_left(),
-                        'f' => self.move_cursor_right(),
-                        'n' => self.move_cursor_down(),
-                        'p' => self.move_cursor_up(),
-                        'd' => self.delete_forward(),
-                        'h' => self.delete_backward(),
-                        'k' => self.kill_to_end(),
-                        'w' => self.kill_word_backward(),
-                        'u' => {
+                        | 'a' => self.move_cursor_home(),
+                        | 'e' => self.move_cursor_end(),
+                        | 'b' => self.move_cursor_left(),
+                        | 'f' => self.move_cursor_right(),
+                        | 'n' => self.move_cursor_down(),
+                        | 'p' => self.move_cursor_up(),
+                        | 'd' => self.delete_forward(),
+                        | 'h' => self.delete_backward(),
+                        | 'k' => self.kill_to_end(),
+                        | 'w' => self.kill_word_backward(),
+                        | 'u' => {
                             self.move_cursor_home();
                             self.kill_to_end();
-                        }
-                        'y' => self.yank(),
-                        '-' | '_' => self.undo(),
-                        _ => return InputResult::Ignored,
+                        },
+                        | 'y' => self.yank(),
+                        | '-' | '_' => self.undo(),
+                        | _ => return InputResult::Ignored,
                     }
                 } else if key.modifiers.contains(KeyModifiers::ALT) {
                     match c {
-                        'b' => self.move_word_backward(),
-                        'f' => self.move_word_forward(),
-                        'd' => self.kill_word_forward(),
-                        _ => return InputResult::Ignored,
+                        | 'b' => self.move_word_backward(),
+                        | 'f' => self.move_word_forward(),
+                        | 'd' => self.kill_word_forward(),
+                        | _ => return InputResult::Ignored,
                     }
                 } else {
                     self.insert_char(c);
                 }
                 InputResult::Handled
-            }
-            KeyCode::Enter => {
+            },
+            | KeyCode::Enter => {
                 let idx = self.byte_index(self.cursor);
                 if idx > 0 && self.text.as_bytes().get(idx - 1) == Some(&b'\\') {
                     self.text.remove(idx - 1);
@@ -582,31 +645,52 @@ impl Editor {
                     self.insert_newline();
                 }
                 InputResult::Handled
-            }
-            KeyCode::Left => { self.move_cursor_left(); InputResult::Handled }
-            KeyCode::Right => { self.move_cursor_right(); InputResult::Handled }
-            KeyCode::Up => {
+            },
+            | KeyCode::Left => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | KeyCode::Right => {
+                self.move_cursor_right();
+                InputResult::Handled
+            },
+            | KeyCode::Up => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     self.move_cursor_up();
                 } else {
                     self.history_up();
                 }
                 InputResult::Handled
-            }
-            KeyCode::Down => {
+            },
+            | KeyCode::Down => {
                 if key.modifiers.contains(KeyModifiers::CONTROL) {
                     self.move_cursor_down();
                 } else {
                     self.history_down();
                 }
                 InputResult::Handled
-            }
-            KeyCode::Home => { self.move_cursor_home(); InputResult::Handled }
-            KeyCode::End => { self.move_cursor_end(); InputResult::Handled }
-            KeyCode::Backspace => { self.delete_backward(); InputResult::Handled }
-            KeyCode::Delete => { self.delete_forward(); InputResult::Handled }
-            KeyCode::Esc => { self.mode = VimMode::Normal; InputResult::Handled }
-            _ => InputResult::Ignored,
+            },
+            | KeyCode::Home => {
+                self.move_cursor_home();
+                InputResult::Handled
+            },
+            | KeyCode::End => {
+                self.move_cursor_end();
+                InputResult::Handled
+            },
+            | KeyCode::Backspace => {
+                self.delete_backward();
+                InputResult::Handled
+            },
+            | KeyCode::Delete => {
+                self.delete_forward();
+                InputResult::Handled
+            },
+            | KeyCode::Esc => {
+                self.mode = VimMode::Normal;
+                InputResult::Handled
+            },
+            | _ => InputResult::Ignored,
         }
     }
 
@@ -614,95 +698,136 @@ impl Editor {
         // Multi-key commands (dd, yy, gg, etc.) are handled via pending_cmd.
         if let Some(pending) = self.pending_cmd {
             match key.code {
-                KeyCode::Char('d') if pending == 'd' => {
+                | KeyCode::Char('d') if pending == 'd' => {
                     self.save_undo();
                     self.delete_line();
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                KeyCode::Char('y') if pending == 'y' => {
+                },
+                | KeyCode::Char('y') if pending == 'y' => {
                     self.yank_line();
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                KeyCode::Char('g') if pending == 'g' => {
+                },
+                | KeyCode::Char('g') if pending == 'g' => {
                     self.go_to_start();
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                KeyCode::Char('w') if pending == 'd' => {
+                },
+                | KeyCode::Char('w') if pending == 'd' => {
                     self.save_undo();
                     self.kill_word_forward();
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                KeyCode::Char('w') if pending == 'y' => {
+                },
+                | KeyCode::Char('w') if pending == 'y' => {
                     let start = self.cursor;
                     self.move_word_forward();
                     let end_byte = self.byte_index(self.cursor);
                     let start_byte = self.byte_index(start);
                     let yanked = self.text[start_byte..end_byte].to_string();
-                    if !yanked.is_empty() { self.kill_ring.push(yanked); }
+                    if !yanked.is_empty() {
+                        self.kill_ring.push(yanked);
+                    }
                     self.cursor = start;
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                KeyCode::Char(c) if pending == 'r' => {
+                },
+                | KeyCode::Char(c) if pending == 'r' => {
                     self.save_undo();
                     self.replace_char(c);
                     self.pending_cmd = None;
                     return InputResult::Handled;
-                }
-                _ => {
+                },
+                | _ => {
                     self.pending_cmd = None;
                     // Fall through to normal handling below
-                }
+                },
             }
         }
 
         match key.code {
-            KeyCode::Char(c) => {
+            | KeyCode::Char(c) => {
                 match c {
-                    'h' => self.move_cursor_left(),
-                    'j' => self.move_cursor_down(),
-                    'k' => self.move_cursor_up(),
-                    'l' => self.move_cursor_right(),
-                    'w' => self.move_word_forward(),
-                    'b' => self.move_word_backward(),
-                    'x' => { self.save_undo(); self.delete_forward(); }
-                    '0' => self.move_cursor_home(),
-                    '$' => self.move_cursor_end(),
-                    'i' => self.mode = VimMode::Insert,
-                    'a' => { self.move_cursor_right(); self.mode = VimMode::Insert; }
-                    'o' => { self.save_undo(); self.open_line_below(); }
-                    'O' => { self.save_undo(); self.open_line_above(); }
-                    'p' => { self.save_undo(); self.yank(); }
-                    'u' => { self.save_undo(); self.undo(); }
-                    'r' => {
+                    | 'h' => self.move_cursor_left(),
+                    | 'j' => self.move_cursor_down(),
+                    | 'k' => self.move_cursor_up(),
+                    | 'l' => self.move_cursor_right(),
+                    | 'w' => self.move_word_forward(),
+                    | 'b' => self.move_word_backward(),
+                    | 'x' => {
+                        self.save_undo();
+                        self.delete_forward();
+                    },
+                    | '0' => self.move_cursor_home(),
+                    | '$' => self.move_cursor_end(),
+                    | 'i' => self.mode = VimMode::Insert,
+                    | 'a' => {
+                        self.move_cursor_right();
+                        self.mode = VimMode::Insert;
+                    },
+                    | 'o' => {
+                        self.save_undo();
+                        self.open_line_below();
+                    },
+                    | 'O' => {
+                        self.save_undo();
+                        self.open_line_above();
+                    },
+                    | 'p' => {
+                        self.save_undo();
+                        self.yank();
+                    },
+                    | 'u' => {
+                        self.save_undo();
+                        self.undo();
+                    },
+                    | 'r' => {
                         self.pending_cmd = Some('r');
                         return InputResult::Handled;
-                    }
-                    'd' | 'y' => {
+                    },
+                    | 'd' | 'y' => {
                         self.pending_cmd = Some(c);
                         return InputResult::Handled;
-                    }
-                    'g' => {
+                    },
+                    | 'g' => {
                         self.pending_cmd = Some('g');
                         return InputResult::Handled;
-                    }
-                    'G' => self.go_to_end(),
-                    _ => return InputResult::Ignored,
+                    },
+                    | 'G' => self.go_to_end(),
+                    | _ => return InputResult::Ignored,
                 }
                 InputResult::Handled
-            }
-            KeyCode::Left => { self.move_cursor_left(); InputResult::Handled }
-            KeyCode::Right => { self.move_cursor_right(); InputResult::Handled }
-            KeyCode::Up => { self.move_cursor_up(); InputResult::Handled }
-            KeyCode::Down => { self.move_cursor_down(); InputResult::Handled }
-            KeyCode::Home => { self.move_cursor_home(); InputResult::Handled }
-            KeyCode::End => { self.move_cursor_end(); InputResult::Handled }
-            KeyCode::Backspace => { self.move_cursor_left(); InputResult::Handled }
-            _ => InputResult::Ignored,
+            },
+            | KeyCode::Left => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | KeyCode::Right => {
+                self.move_cursor_right();
+                InputResult::Handled
+            },
+            | KeyCode::Up => {
+                self.move_cursor_up();
+                InputResult::Handled
+            },
+            | KeyCode::Down => {
+                self.move_cursor_down();
+                InputResult::Handled
+            },
+            | KeyCode::Home => {
+                self.move_cursor_home();
+                InputResult::Handled
+            },
+            | KeyCode::End => {
+                self.move_cursor_end();
+                InputResult::Handled
+            },
+            | KeyCode::Backspace => {
+                self.move_cursor_left();
+                InputResult::Handled
+            },
+            | _ => InputResult::Ignored,
         }
     }
 }
@@ -718,7 +843,11 @@ impl Component for Editor {
         };
         Ok(Rendered {
             lines,
-            cursor: if self.focused { Some((cursor_line, cursor_col)) } else { None },
+            cursor: if self.focused {
+                Some((cursor_line, cursor_col))
+            } else {
+                None
+            },
             images: Vec::new(),
         })
     }
@@ -727,8 +856,8 @@ impl Component for Editor {
         if let Event::Key(key) = event {
             if self.vim_mode_enabled {
                 match self.mode {
-                    VimMode::Insert => self.handle_insert_mode(key),
-                    VimMode::Normal => self.handle_normal_mode(key),
+                    | VimMode::Insert => self.handle_insert_mode(key),
+                    | VimMode::Normal => self.handle_normal_mode(key),
                 }
             } else {
                 self.handle_insert_mode(key)
@@ -738,14 +867,24 @@ impl Component for Editor {
         }
     }
 
-    fn as_focusable(&self) -> Option<&dyn Focusable> { Some(self) }
-    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> { Some(self) }
+    fn as_focusable(&self) -> Option<&dyn Focusable> {
+        Some(self)
+    }
+
+    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
+        Some(self)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crossterm::event::{
+        KeyCode,
+        KeyEvent,
+        KeyModifiers,
+    };
+
     use super::*;
-    use crossterm::event::{KeyCode, KeyModifiers, KeyEvent};
 
     fn key_event(code: KeyCode) -> Event {
         Event::Key(code.into())
@@ -782,7 +921,8 @@ mod tests {
     #[test]
     fn insert_paste_long() {
         let mut editor = Editor::new();
-        let long_text = "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11";
+        let long_text =
+            "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11";
         editor.insert_paste(long_text);
         assert_eq!(editor.paste_markers.len(), 1);
         assert!(editor.paste_markers[0].label.contains("+11 lines"));
@@ -836,7 +976,8 @@ mod tests {
         let mut editor = Editor::new();
         editor.insert_str("a\nb");
         editor.move_cursor_up();
-        // cursor lands at newline position because col=1 and current_col reaches 1 at '\n'
+        // cursor lands at newline position because col=1 and current_col reaches 1 at
+        // '\n'
         assert_eq!(editor.cursor_grapheme(), 1);
         editor.move_cursor_down();
         assert_eq!(editor.cursor_grapheme(), 3);
@@ -1026,13 +1167,25 @@ mod tests {
         editor.cursor = 0;
         editor.move_cursor_down(); // to line 1, 'c'
         assert_eq!(editor.cursor_grapheme(), 3); // 'c'
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('l'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('l'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 4); // 'd'
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('h'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 3); // 'c'
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('j'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('j'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 6); // 'e' on line 2
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('k'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('k'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 3); // back to 'c'
     }
 
@@ -1040,7 +1193,10 @@ mod tests {
     fn vim_i_enters_insert_mode() {
         let mut editor = Editor::new();
         editor.set_vim_mode_enabled(true);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('i'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('i'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.mode(), VimMode::Insert);
         editor.handle_input(&key_event(KeyCode::Char('x')));
         assert_eq!(editor.text(), "x");
@@ -1063,7 +1219,10 @@ mod tests {
         editor.insert_str("abc");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_home();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('x'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), "bc");
     }
 
@@ -1075,8 +1234,14 @@ mod tests {
         editor.insert_str("hello\nworld");
         editor.set_mode(VimMode::Normal);
         editor.cursor = 0;
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::empty())));
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('d'),
+            KeyModifiers::empty(),
+        )));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('d'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), "world");
     }
 
@@ -1088,10 +1253,19 @@ mod tests {
         editor.insert_str("hello\nworld");
         editor.set_mode(VimMode::Normal);
         editor.cursor = 0;
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::empty())));
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('y'),
+            KeyModifiers::empty(),
+        )));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('y'),
+            KeyModifiers::empty(),
+        )));
         // p pastes after cursor (position 0)
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('p'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), "hello\nhello\nworld");
     }
 
@@ -1103,9 +1277,15 @@ mod tests {
         editor.insert_str("abc");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_end();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('0'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('0'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 0);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('$'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('$'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 3);
     }
 
@@ -1117,10 +1297,19 @@ mod tests {
         editor.insert_str("a\nb\nc");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_end();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::empty())));
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('g'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('g'),
+            KeyModifiers::empty(),
+        )));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('g'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 0);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('G'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('G'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.cursor_grapheme(), 5);
     }
 
@@ -1132,7 +1321,10 @@ mod tests {
         editor.insert_str("a");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_home();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('a'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.mode(), VimMode::Insert);
         editor.handle_input(&key_event(KeyCode::Char('b')));
         assert_eq!(editor.text(), "ab");
@@ -1145,7 +1337,10 @@ mod tests {
         editor.set_mode(VimMode::Insert);
         editor.insert_str("a");
         editor.set_mode(VimMode::Normal);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('o'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('o'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.mode(), VimMode::Insert);
         assert_eq!(editor.text(), "a\n");
     }
@@ -1157,7 +1352,10 @@ mod tests {
         editor.set_mode(VimMode::Insert);
         editor.insert_str("a");
         editor.set_mode(VimMode::Normal);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('O'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('O'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.mode(), VimMode::Insert);
         assert_eq!(editor.text(), "\na");
     }
@@ -1170,8 +1368,14 @@ mod tests {
         editor.insert_str("abc");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_home();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::empty())));
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('r'),
+            KeyModifiers::empty(),
+        )));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('x'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), "xbc");
     }
 
@@ -1183,8 +1387,14 @@ mod tests {
         editor.insert_str("hello world");
         editor.set_mode(VimMode::Normal);
         editor.move_cursor_home();
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::empty())));
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('d'),
+            KeyModifiers::empty(),
+        )));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('w'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), " world");
     }
 
@@ -1196,7 +1406,10 @@ mod tests {
         editor.handle_input(&key_event(KeyCode::Char('a')));
         editor.handle_input(&key_event(KeyCode::Char('b')));
         editor.set_mode(VimMode::Normal);
-        editor.handle_input(&Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::empty())));
+        editor.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('u'),
+            KeyModifiers::empty(),
+        )));
         assert_eq!(editor.text(), "a");
     }
 
@@ -1211,6 +1424,4 @@ mod tests {
         editor.handle_input(&key_event(KeyCode::Left));
         assert_eq!(editor.cursor_grapheme(), 1);
     }
-
-
 }

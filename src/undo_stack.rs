@@ -16,7 +16,10 @@ pub struct UndoStack<T: Clone> {
 impl<T: Clone> UndoStack<T> {
     /// Create an empty undo stack.
     pub fn new() -> Self {
-        Self { history: Vec::new(), index: 0 }
+        Self {
+            history: Vec::new(),
+            index: 0,
+        }
     }
 
     /// Push a new state snapshot onto the stack.
@@ -61,7 +64,9 @@ impl<T: Clone> UndoStack<T> {
 }
 
 impl<T: Clone> Default for UndoStack<T> {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

@@ -8,8 +8,14 @@
 //! # Quick start
 //!
 //! ```no_run
-//! use photon_ui::{TUI, Component, Rendered, RenderError, TestTerminal};
-//! use photon_ui::components::Text;
+//! use photon_ui::{
+//!     Component,
+//!     RenderError,
+//!     Rendered,
+//!     TUI,
+//!     TestTerminal,
+//!     components::Text,
+//! };
 //!
 //! let mut tui = TUI::new(Box::new(TestTerminal::new(80, 24)));
 //! tui.mount(Box::new(Text::new("Hello, world!", 0, 0)));
@@ -19,11 +25,11 @@
 pub mod autocomplete;
 pub mod components;
 pub mod events;
-pub mod layout;
 pub mod fuzzy;
 pub mod image;
 pub mod keybindings;
 pub mod kill_ring;
+pub mod layout;
 pub mod renderer;
 pub mod terminal;
 pub mod theme;
@@ -33,17 +39,41 @@ pub mod utils;
 pub mod word_navigation;
 
 pub use crossterm::event::KeyEvent;
-pub use events::{Event, Key, Modifiers, matches_key};
-pub use keybindings::{KeybindingsManager, default_bindings};
-pub use renderer::{InputResult, RenderError, RenderStrategy, Rendered, Renderer};
-pub use terminal::{Terminal, TestTerminal};
-pub use tui::{Anchor, Overlay, OverlayConstraints, OverlayPosition, TUI};
+pub use events::{
+    Event,
+    Key,
+    Modifiers,
+    matches_key,
+};
+pub use keybindings::{
+    KeybindingsManager,
+    default_bindings,
+};
+pub use renderer::{
+    InputResult,
+    RenderError,
+    RenderStrategy,
+    Rendered,
+    Renderer,
+};
+pub use terminal::{
+    Terminal,
+    TestTerminal,
+};
+pub use tui::{
+    Anchor,
+    Overlay,
+    OverlayConstraints,
+    OverlayPosition,
+    TUI,
+};
 
 /// A UI element that can be rendered and respond to input.
 ///
-/// All visible elements in a TUI application implement this trait. The framework
-/// calls [`render`](Component::render) on every frame and [`handle_input`](Component::handle_input)
-/// when the focused component should process an event.
+/// All visible elements in a TUI application implement this trait. The
+/// framework calls [`render`](Component::render) on every frame and
+/// [`handle_input`](Component::handle_input) when the focused component should
+/// process an event.
 ///
 /// Components that can receive focus should also implement [`Focusable`].
 pub trait Component {
@@ -71,8 +101,8 @@ pub trait Component {
         InputResult::Ignored
     }
 
-    /// Returns `true` if this component wants to receive `KeyEventKind::Release`
-    /// events in addition to `Press` / `Repeat`.
+    /// Returns `true` if this component wants to receive
+    /// `KeyEventKind::Release` events in addition to `Press` / `Repeat`.
     ///
     /// Most components should leave this as `false`.
     fn wants_key_release(&self) -> bool {
@@ -92,7 +122,8 @@ pub trait Component {
 
 /// Extension of [`Component`] for elements that can receive keyboard focus.
 ///
-/// Focus is managed by [`TUI`]; only the focused component receives input events.
+/// Focus is managed by [`TUI`]; only the focused component receives input
+/// events.
 pub trait Focusable: Component {
     /// Returns `true` when this component currently has focus.
     fn focused(&self) -> bool;

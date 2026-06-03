@@ -1,4 +1,11 @@
-use photon_ui::{Component, Focusable, InputResult, Rendered, RenderError, Event};
+use photon_ui::{
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+};
 
 struct MinimalComponent;
 
@@ -25,16 +32,27 @@ struct FocusableComponent {
 }
 
 impl Focusable for FocusableComponent {
-    fn focused(&self) -> bool { self.focused }
-    fn set_focused(&mut self, focused: bool) { self.focused = focused; }
+    fn focused(&self) -> bool {
+        self.focused
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
 }
 
 impl Component for FocusableComponent {
     fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
         Ok(Rendered::empty())
     }
-    fn as_focusable(&self) -> Option<&dyn Focusable> { Some(self) }
-    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> { Some(self) }
+
+    fn as_focusable(&self) -> Option<&dyn Focusable> {
+        Some(self)
+    }
+
+    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
+        Some(self)
+    }
 }
 
 #[test]

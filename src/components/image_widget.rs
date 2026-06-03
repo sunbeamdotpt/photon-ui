@@ -1,10 +1,15 @@
-use crate::{Component, Rendered, RenderError};
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// A placeholder component for inline terminal images.
 ///
-/// The actual image data is passed to the renderer via [`ImageCommand`](crate::renderer::ImageCommand);
-/// this widget only renders a placeholder text line. Image protocol encoding
-/// (Kitty, iTerm2) is handled by [`crate::image`].
+/// The actual image data is passed to the renderer via
+/// [`ImageCommand`](crate::renderer::ImageCommand); this widget only renders a
+/// placeholder text line. Image protocol encoding (Kitty, iTerm2) is handled by
+/// [`crate::image`].
 pub struct ImageWidget {
     data: Vec<u8>,
     mime_type: String,

@@ -1,8 +1,18 @@
-use photon_ui::{TUI, Overlay, OverlayPosition, OverlayConstraints, Anchor, Component, Focusable, Rendered, RenderError};
-use photon_ui::tui::Rect;
-use photon_ui::terminal::TestTerminal;
-use photon_ui::events::Event;
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Anchor,
+    Component,
+    Focusable,
+    Overlay,
+    OverlayConstraints,
+    OverlayPosition,
+    RenderError,
+    Rendered,
+    TUI,
+    events::Event,
+    terminal::TestTerminal,
+    tui::Rect,
+};
 
 struct DummyComponent {
     focused: bool,
@@ -11,13 +21,21 @@ struct DummyComponent {
 
 impl DummyComponent {
     fn new(lines: Vec<String>) -> Self {
-        Self { focused: false, render_result: lines }
+        Self {
+            focused: false,
+            render_result: lines,
+        }
     }
 }
 
 impl Focusable for DummyComponent {
-    fn focused(&self) -> bool { self.focused }
-    fn set_focused(&mut self, focused: bool) { self.focused = focused; }
+    fn focused(&self) -> bool {
+        self.focused
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.focused = focused;
+    }
 }
 
 impl Component for DummyComponent {
@@ -28,8 +46,14 @@ impl Component for DummyComponent {
             images: Vec::new(),
         })
     }
-    fn as_focusable(&self) -> Option<&dyn Focusable> { Some(self) }
-    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> { Some(self) }
+
+    fn as_focusable(&self) -> Option<&dyn Focusable> {
+        Some(self)
+    }
+
+    fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
+        Some(self)
+    }
 }
 
 #[test]
@@ -67,7 +91,10 @@ fn tui_handle_input() {
     let term = TestTerminal::new(80, 24);
     let mut tui = TUI::new(Box::new(term));
     tui.mount(Box::new(DummyComponent::new(vec!["a".into()])));
-    tui.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('x'), crossterm::event::KeyModifiers::empty())));
+    tui.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+        KeyCode::Char('x'),
+        crossterm::event::KeyModifiers::empty(),
+    )));
 }
 
 #[test]

@@ -1,4 +1,9 @@
-use photon_ui::utils::{visible_width, truncate_to_width, AnsiCodeTracker, wrap_text_with_ansi};
+use photon_ui::utils::{
+    AnsiCodeTracker,
+    truncate_to_width,
+    visible_width,
+    wrap_text_with_ansi,
+};
 
 #[test]
 fn visible_width_ascii() {

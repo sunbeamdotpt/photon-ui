@@ -9,8 +9,8 @@ pub enum Direction {
 impl Direction {
     pub const fn perpendicular(self) -> Self {
         match self {
-            Self::Horizontal => Self::Vertical,
-            Self::Vertical => Self::Horizontal,
+            | Self::Horizontal => Self::Vertical,
+            | Self::Vertical => Self::Horizontal,
         }
     }
 }

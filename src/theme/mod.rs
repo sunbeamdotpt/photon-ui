@@ -6,7 +6,12 @@
 //! # Quick start
 //!
 //! ```
-//! use photon_ui::theme::{Theme, Palette, stylize, Style};
+//! use photon_ui::theme::{
+//!     Palette,
+//!     Style,
+//!     Theme,
+//!     stylize,
+//! };
 //!
 //! Theme::set(Theme::Light);
 //! let accent = Theme::current().accent();
@@ -16,7 +21,10 @@
 //! # Switching themes on demand
 //!
 //! ```
-//! use photon_ui::theme::{Theme, Palette};
+//! use photon_ui::theme::{
+//!     Palette,
+//!     Theme,
+//! };
 //!
 //! Theme::set(Theme::Dark);
 //! assert_eq!(Theme::current().bg_page().to_hex(), "#1f1f1f");
@@ -30,7 +38,19 @@ pub mod color;
 pub mod palette;
 pub mod style;
 
-pub use ansi::{fg, bg, ColorMode, RESET};
+pub use ansi::{
+    ColorMode,
+    RESET,
+    bg,
+    fg,
+};
 pub use color::Color;
-pub use palette::{Palette, Theme};
-pub use style::{stylize, stylize_padded, Style};
+pub use palette::{
+    Palette,
+    Theme,
+};
+pub use style::{
+    Style,
+    stylize,
+    stylize_padded,
+};

@@ -9,7 +9,10 @@ pub struct Margin {
 
 impl Margin {
     pub const fn new(horizontal: u16, vertical: u16) -> Self {
-        Self { horizontal, vertical }
+        Self {
+            horizontal,
+            vertical,
+        }
     }
 }
 

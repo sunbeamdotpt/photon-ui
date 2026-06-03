@@ -1,6 +1,20 @@
-use photon_ui::components::{Spacer, Text, TruncatedText, Box as BoxComp, Loader, CancellableLoader};
-use photon_ui::{Component, InputResult};
-use photon_ui::events::{Event, Key, matches_key};
+use photon_ui::{
+    Component,
+    InputResult,
+    components::{
+        Box as BoxComp,
+        CancellableLoader,
+        Loader,
+        Spacer,
+        Text,
+        TruncatedText,
+    },
+    events::{
+        Event,
+        Key,
+        matches_key,
+    },
+};
 
 #[test]
 fn spacer_renders_empty_lines() {

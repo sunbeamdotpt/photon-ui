@@ -1,6 +1,10 @@
-use photon_ui::components::SelectList;
-use photon_ui::{Component, Focusable, Event};
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Component,
+    Event,
+    Focusable,
+    components::SelectList,
+};
 
 fn key_event(code: KeyCode) -> Event {
     Event::Key(code.into())

@@ -1,5 +1,8 @@
-use photon_ui::layout::layout::Layout;
-use photon_ui::layout::{Constraint, Rect};
+use photon_ui::layout::{
+    Constraint,
+    Rect,
+    layout::Layout,
+};
 use proptest::prelude::*;
 
 proptest! {
@@ -73,11 +76,9 @@ fn constraint_strategy() -> impl Strategy<Value = Constraint> {
 }
 
 fn rect_strategy() -> impl Strategy<Value = Rect> {
-    (0u16..100, 0u16..100, 1u16..100, 1u16..100)
-        .prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
+    (0u16..100, 0u16..100, 1u16..100, 1u16..100).prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
 }
 
 fn non_empty_rect_strategy() -> impl Strategy<Value = Rect> {
-    (0u16..50, 0u16..50, 5u16..100, 5u16..100)
-        .prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
+    (0u16..50, 0u16..50, 5u16..100, 5u16..100).prop_map(|(x, y, w, h)| Rect::new(x, y, w, h))
 }

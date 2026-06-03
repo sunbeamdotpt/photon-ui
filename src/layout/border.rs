@@ -4,9 +4,14 @@
 //! outlines — and [`draw_border`] for rendering them into a [`Rendered`]
 //! buffer with ANSI styling.
 
-use crate::layout::Rect;
-use crate::renderer::Rendered;
-use crate::theme::{ColorMode, Style};
+use crate::{
+    layout::Rect,
+    renderer::Rendered,
+    theme::{
+        ColorMode,
+        Style,
+    },
+};
 
 /// Characters used to draw a rectangular border.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -22,6 +27,61 @@ pub struct Border {
 }
 
 impl Border {
+    /// Double-line box-drawing border (╔═╗║║╚═╝).
+    pub const DOUBLE: Self = Self {
+        left: '║',
+        right: '║',
+        top: '═',
+        bottom: '═',
+        top_left: '╔',
+        top_right: '╗',
+        bottom_left: '╚',
+        bottom_right: '╝',
+    };
+    /// A left-only border (▐) — useful for callouts.
+    pub const LEFT: Self = Self {
+        left: '▐',
+        right: ' ',
+        top: ' ',
+        bottom: ' ',
+        top_left: '▐',
+        top_right: ' ',
+        bottom_left: '▐',
+        bottom_right: ' ',
+    };
+    /// No border — useful as a default.
+    pub const NONE: Self = Self {
+        left: ' ',
+        right: ' ',
+        top: ' ',
+        bottom: ' ',
+        top_left: ' ',
+        top_right: ' ',
+        bottom_left: ' ',
+        bottom_right: ' ',
+    };
+    /// Rounded box-drawing border (╭─╮││╰─╯).
+    pub const ROUNDED: Self = Self {
+        left: '│',
+        right: '│',
+        top: '─',
+        bottom: '─',
+        top_left: '╭',
+        top_right: '╮',
+        bottom_left: '╰',
+        bottom_right: '╯',
+    };
+    /// Thick/heavy box-drawing border (┏━┓┃┃┗━┛).
+    pub const THICK: Self = Self {
+        left: '┃',
+        right: '┃',
+        top: '━',
+        bottom: '━',
+        top_left: '┏',
+        top_right: '┓',
+        bottom_left: '┗',
+        bottom_right: '┛',
+    };
     /// Single-line box-drawing border (┌─┐││└─┘).
     pub const THIN: Self = Self {
         left: '│',
@@ -34,72 +94,20 @@ impl Border {
         bottom_right: '┘',
     };
 
-    /// Rounded box-drawing border (╭─╮││╰─╯).
-    pub const ROUNDED: Self = Self {
-        left: '│',
-        right: '│',
-        top: '─',
-        bottom: '─',
-        top_left: '╭',
-        top_right: '╮',
-        bottom_left: '╰',
-        bottom_right: '╯',
-    };
-
-    /// Thick/heavy box-drawing border (┏━┓┃┃┗━┛).
-    pub const THICK: Self = Self {
-        left: '┃',
-        right: '┃',
-        top: '━',
-        bottom: '━',
-        top_left: '┏',
-        top_right: '┓',
-        bottom_left: '┗',
-        bottom_right: '┛',
-    };
-
-    /// Double-line box-drawing border (╔═╗║║╚═╝).
-    pub const DOUBLE: Self = Self {
-        left: '║',
-        right: '║',
-        top: '═',
-        bottom: '═',
-        top_left: '╔',
-        top_right: '╗',
-        bottom_left: '╚',
-        bottom_right: '╝',
-    };
-
-    /// No border — useful as a default.
-    pub const NONE: Self = Self {
-        left: ' ',
-        right: ' ',
-        top: ' ',
-        bottom: ' ',
-        top_left: ' ',
-        top_right: ' ',
-        bottom_left: ' ',
-        bottom_right: ' ',
-    };
-
-    /// A left-only border (▐) — useful for callouts.
-    pub const LEFT: Self = Self {
-        left: '▐',
-        right: ' ',
-        top: ' ',
-        bottom: ' ',
-        top_left: '▐',
-        top_right: ' ',
-        bottom_left: '▐',
-        bottom_right: ' ',
-    };
-
     /// How many columns the border consumes on each axis.
     ///
     /// For a full border this is (2, 2); for a left-only border it's (1, 0).
     pub fn size(&self) -> (u16, u16) {
-        let h = if self.left != ' ' || self.right != ' ' { 1 } else { 0 };
-        let v = if self.top != ' ' || self.bottom != ' ' { 1 } else { 0 };
+        let h = if self.left != ' ' || self.right != ' ' {
+            1
+        } else {
+            0
+        };
+        let v = if self.top != ' ' || self.bottom != ' ' {
+            1
+        } else {
+            0
+        };
         (h, v)
     }
 
@@ -212,7 +220,10 @@ pub fn draw_border(target: &mut Rendered, rect: Rect, border: &Border, style: &S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theme::{Color, Theme};
+    use crate::theme::{
+        Color,
+        Theme,
+    };
 
     fn empty_rendered(width: u16, height: u16) -> Rendered {
         Rendered {

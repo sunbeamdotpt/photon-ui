@@ -1,6 +1,14 @@
-use crate::layout::layout::Layout;
-use crate::layout::Rect;
-use crate::{Component, InputResult, RenderError, Rendered, events::Event};
+use crate::{
+    Component,
+    InputResult,
+    RenderError,
+    Rendered,
+    events::Event,
+    layout::{
+        Rect,
+        layout::Layout,
+    },
+};
 
 /// A component that lays out its children using a [`Layout`].
 ///
@@ -65,14 +73,17 @@ impl Component for Container {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::Text;
-    use crate::layout::Constraint;
+    use crate::{
+        components::Text,
+        layout::Constraint,
+    };
 
     #[test]
     fn container_renders_children() {
-        let mut container = Container::new(
-            Layout::horizontal([Constraint::Length(10), Constraint::Length(10)])
-        );
+        let mut container = Container::new(Layout::horizontal([
+            Constraint::Length(10),
+            Constraint::Length(10),
+        ]));
         container.push(Box::new(Text::new("left", 0, 0)));
         container.push(Box::new(Text::new("right", 0, 0)));
 
@@ -84,9 +95,10 @@ mod tests {
 
     #[test]
     fn container_vertical_split() {
-        let mut container = Container::new(
-            Layout::vertical([Constraint::Length(1), Constraint::Length(1)])
-        );
+        let mut container = Container::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]));
         container.push(Box::new(Text::new("top", 0, 0)));
         container.push(Box::new(Text::new("bottom", 0, 0)));
 

@@ -1,7 +1,10 @@
-use photon_ui::components::SelectList;
-use photon_ui::events::Event;
-use photon_ui::{Component, InputResult};
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Component,
+    InputResult,
+    components::SelectList,
+    events::Event,
+};
 
 #[test]
 fn select_list_navigation() {
@@ -14,7 +17,10 @@ fn select_list_navigation() {
 
 #[test]
 fn select_list_scrolls() {
-    let mut list = SelectList::new(vec!["a".into(), "b".into(), "c".into(), "d".into(), "e".into()], 3);
+    let mut list = SelectList::new(
+        vec!["a".into(), "b".into(), "c".into(), "d".into(), "e".into()],
+        3,
+    );
     list.handle_input(&Event::Key(KeyCode::Down.into()));
     list.handle_input(&Event::Key(KeyCode::Down.into()));
     list.handle_input(&Event::Key(KeyCode::Down.into()));

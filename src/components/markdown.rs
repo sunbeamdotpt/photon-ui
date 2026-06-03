@@ -1,12 +1,23 @@
-use crate::{Component, Rendered, RenderError};
-use pulldown_cmark::{Parser, Event as MdEvent, Tag, TagEnd};
+use pulldown_cmark::{
+    Event as MdEvent,
+    Parser,
+    Tag,
+    TagEnd,
+};
+
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+};
 
 /// Renders CommonMark / Markdown text as styled terminal output.
 ///
 /// Supports headings (bold + underline, no `#` prefix), bold, italic,
 /// inline code (configurable style, no backticks), lists with bullet markers,
 /// soft/hard breaks, and raw HTML passthrough. Text is automatically wrapped
-/// to the requested width via [`wrap_text_with_ansi`](crate::utils::wrap_text_with_ansi).
+/// to the requested width via
+/// [`wrap_text_with_ansi`](crate::utils::wrap_text_with_ansi).
 pub struct Markdown {
     text: String,
     code_style: Option<fn(&str) -> String>,
@@ -34,8 +45,7 @@ impl Markdown {
     /// ```
     /// use photon_ui::components::Markdown;
     ///
-    /// let md = Markdown::new("`hello`")
-    ///     .with_code_style(|s| format!("\x1b[48;5;240m{}\x1b[0m", s));
+    /// let md = Markdown::new("`hello`").with_code_style(|s| format!("\x1b[48;5;240m{}\x1b[0m", s));
     /// ```
     pub fn with_code_style(mut self, style: fn(&str) -> String) -> Self {
         self.code_style = Some(style);
@@ -68,20 +78,18 @@ impl Component for Markdown {
 
         for event in parser {
             match event {
-                MdEvent::Start(tag) => {
-                    match tag {
-                        Tag::Heading { level, .. } => {
-                            heading_level = level as usize;
-                        }
-                        Tag::Strong => in_bold = true,
-                        Tag::Emphasis => in_italic = true,
-                        Tag::Item => pending_bullet = true,
-                        _ => {}
-                    }
-                }
-                MdEvent::End(tag_end) => {
+                | MdEvent::Start(tag) => match tag {
+                    | Tag::Heading { level, .. } => {
+                        heading_level = level as usize;
+                    },
+                    | Tag::Strong => in_bold = true,
+                    | Tag::Emphasis => in_italic = true,
+                    | Tag::Item => pending_bullet = true,
+                    | _ => {},
+                },
+                | MdEvent::End(tag_end) => {
                     match tag_end {
-                        TagEnd::Heading(_) => {
+                        | TagEnd::Heading(_) => {
                             if !current_line.is_empty() {
                                 // Headings: bold + underline, no Markdown # prefix
                                 let styled = format!("\x1b[1m\x1b[4m{}\x1b[0m", current_line);
@@ -93,20 +101,20 @@ impl Component for Markdown {
                                 }
                                 current_line.clear();
                             }
-                        }
-                        TagEnd::Paragraph => {
+                        },
+                        | TagEnd::Paragraph => {
                             push_line(&mut current_line, &mut pending_bullet, &mut lines);
                             lines.push("".to_string());
-                        }
-                        TagEnd::Item => {
+                        },
+                        | TagEnd::Item => {
                             push_line(&mut current_line, &mut pending_bullet, &mut lines);
-                        }
-                        TagEnd::Strong => in_bold = false,
-                        TagEnd::Emphasis => in_italic = false,
-                        _ => {}
+                        },
+                        | TagEnd::Strong => in_bold = false,
+                        | TagEnd::Emphasis => in_italic = false,
+                        | _ => {},
                     }
-                }
-                MdEvent::Text(text) => {
+                },
+                | MdEvent::Text(text) => {
                     let mut styled = text.to_string();
                     if in_bold {
                         // Bold: bright white for visibility
@@ -116,22 +124,22 @@ impl Component for Markdown {
                         styled = format!("\x1b[3m{}\x1b[23m", styled);
                     }
                     current_line.push_str(&styled);
-                }
-                MdEvent::Code(code) => {
+                },
+                | MdEvent::Code(code) => {
                     let styled = if let Some(style) = self.code_style {
                         style(&code)
                     } else {
                         format!("\x1b[36m{}\x1b[0m", code)
                     };
                     current_line.push_str(&styled);
-                }
-                MdEvent::SoftBreak | MdEvent::HardBreak => {
+                },
+                | MdEvent::SoftBreak | MdEvent::HardBreak => {
                     push_line(&mut current_line, &mut pending_bullet, &mut lines);
-                }
-                MdEvent::Html(html) => {
+                },
+                | MdEvent::Html(html) => {
                     current_line.push_str(&html);
-                }
-                _ => {}
+                },
+                | _ => {},
             }
         }
 
@@ -151,7 +159,11 @@ impl Component for Markdown {
             }
         }
 
-        Ok(Rendered { lines: wrapped, cursor: None, images: Vec::new() })
+        Ok(Rendered {
+            lines: wrapped,
+            cursor: None,
+            images: Vec::new(),
+        })
     }
 }
 
@@ -220,15 +232,28 @@ mod tests {
         let md = Markdown::new("- item one\n- item two\n- item three");
         let r = md.render(80).unwrap();
         let item_lines: Vec<&String> = r.lines.iter().filter(|l| l.contains("item")).collect();
-        assert_eq!(item_lines.len(), 3, "each list item should be on its own line: {:?}", r.lines);
+        assert_eq!(
+            item_lines.len(),
+            3,
+            "each list item should be on its own line: {:?}",
+            r.lines
+        );
     }
 
     #[test]
     fn markdown_list_has_bullets() {
         let md = Markdown::new("- first\n- second");
         let r = md.render(80).unwrap();
-        assert!(r.lines.iter().any(|l| l.contains("- first")), "expected bullets: {:?}", r.lines);
-        assert!(r.lines.iter().any(|l| l.contains("- second")), "expected bullets: {:?}", r.lines);
+        assert!(
+            r.lines.iter().any(|l| l.contains("- first")),
+            "expected bullets: {:?}",
+            r.lines
+        );
+        assert!(
+            r.lines.iter().any(|l| l.contains("- second")),
+            "expected bullets: {:?}",
+            r.lines
+        );
     }
 
     #[test]
@@ -236,7 +261,11 @@ mod tests {
         let md = Markdown::new("- *italic* item\n- **bold** item");
         let r = md.render(80).unwrap();
         let italic_line = r.lines.iter().find(|l| l.contains("italic")).unwrap();
-        assert!(italic_line.contains("- "), "expected bullet: {}", italic_line);
+        assert!(
+            italic_line.contains("- "),
+            "expected bullet: {}",
+            italic_line
+        );
         assert!(italic_line.contains("\x1b[3m"));
 
         let bold_line = r.lines.iter().find(|l| l.contains("bold")).unwrap();

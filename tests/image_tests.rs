@@ -1,4 +1,11 @@
-use photon_ui::image::{encode_kitty, encode_iterm2, delete_kitty_image, get_png_dimensions, get_jpeg_dimensions, get_gif_dimensions};
+use photon_ui::image::{
+    delete_kitty_image,
+    encode_iterm2,
+    encode_kitty,
+    get_gif_dimensions,
+    get_jpeg_dimensions,
+    get_png_dimensions,
+};
 
 #[test]
 fn kitty_encode_produces_sequence() {
@@ -22,7 +29,7 @@ fn delete_kitty_produces_sequence() {
 
 #[test]
 fn png_dimensions_parse() {
-    let mut data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    let mut data = vec![0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
     data.extend_from_slice(&[0; 8]);
     data.extend_from_slice(&100u32.to_be_bytes());
     data.extend_from_slice(&200u32.to_be_bytes());

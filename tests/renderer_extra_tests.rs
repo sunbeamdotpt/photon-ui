@@ -1,5 +1,11 @@
-use photon_ui::renderer::{Renderer, Rendered, RenderStrategy};
-use photon_ui::terminal::TestTerminal;
+use photon_ui::{
+    renderer::{
+        RenderStrategy,
+        Rendered,
+        Renderer,
+    },
+    terminal::TestTerminal,
+};
 
 #[test]
 fn renderer_diff_no_change() {

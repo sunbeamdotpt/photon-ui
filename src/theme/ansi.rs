@@ -5,8 +5,9 @@
 //! - **Color256** — xterm 256-color cube fallback
 //! - **Basic16** — coarse 16-color fallback
 
-use super::Color;
 use std::env;
+
+use super::Color;
 
 /// Terminal color support level.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -27,10 +28,10 @@ impl ColorMode {
     pub fn detect() -> Self {
         if let Ok(mode) = env::var("PHOTON_COLOR_MODE") {
             match mode.as_str() {
-                "truecolor" | "24bit" | "rgb" => return ColorMode::TrueColor,
-                "256" | "256color" => return ColorMode::Color256,
-                "16" | "basic" => return ColorMode::Basic16,
-                _ => {}
+                | "truecolor" | "24bit" | "rgb" => return ColorMode::TrueColor,
+                | "256" | "256color" => return ColorMode::Color256,
+                | "16" | "basic" => return ColorMode::Basic16,
+                | _ => {},
             }
         }
         if let Ok(ct) = env::var("COLORTERM") {
@@ -50,18 +51,18 @@ impl ColorMode {
 /// Generate a foreground ANSI escape sequence for the given color.
 pub fn fg(color: Color, mode: ColorMode) -> String {
     match mode {
-        ColorMode::TrueColor => format!("\x1b[38;2;{};{};{}m", color.0, color.1, color.2),
-        ColorMode::Color256 => format!("\x1b[38;5;{}m", rgb_to_256(color)),
-        ColorMode::Basic16 => format!("\x1b[{}m", rgb_to_16_fg(color)),
+        | ColorMode::TrueColor => format!("\x1b[38;2;{};{};{}m", color.0, color.1, color.2),
+        | ColorMode::Color256 => format!("\x1b[38;5;{}m", rgb_to_256(color)),
+        | ColorMode::Basic16 => format!("\x1b[{}m", rgb_to_16_fg(color)),
     }
 }
 
 /// Generate a background ANSI escape sequence for the given color.
 pub fn bg(color: Color, mode: ColorMode) -> String {
     match mode {
-        ColorMode::TrueColor => format!("\x1b[48;2;{};{};{}m", color.0, color.1, color.2),
-        ColorMode::Color256 => format!("\x1b[48;5;{}m", rgb_to_256(color)),
-        ColorMode::Basic16 => format!("\x1b[{}m", rgb_to_16_bg(color)),
+        | ColorMode::TrueColor => format!("\x1b[48;2;{};{};{}m", color.0, color.1, color.2),
+        | ColorMode::Color256 => format!("\x1b[48;5;{}m", rgb_to_256(color)),
+        | ColorMode::Basic16 => format!("\x1b[{}m", rgb_to_16_bg(color)),
     }
 }
 

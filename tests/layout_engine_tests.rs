@@ -1,5 +1,11 @@
-use photon_ui::layout::{Constraint, Direction, Flex, Margin, Rect};
-use photon_ui::layout::layout::Layout;
+use photon_ui::layout::{
+    Constraint,
+    Direction,
+    Flex,
+    Margin,
+    Rect,
+    layout::Layout,
+};
 
 #[test]
 fn layout_split_two_equal_vertical() {
@@ -28,8 +34,7 @@ fn layout_split_three_horizontal() {
 
 #[test]
 fn layout_split_with_margin_reduces_size() {
-    let layout = Layout::vertical([Constraint::Length(5)])
-        .margin(2);
+    let layout = Layout::vertical([Constraint::Length(5)]).margin(2);
     let rects = layout.split(Rect::new(0, 0, 10, 10));
     assert_eq!(rects[0].width, 6); // 10 - 2*2
 }
@@ -79,16 +84,15 @@ fn layout_split_empty_returns_zeros() {
 
 #[test]
 fn layout_flex_start_leaves_trailing_space() {
-    let layout = Layout::vertical([Constraint::Length(3)])
-        .flex(Flex::Start);
+    let layout = Layout::vertical([Constraint::Length(3)]).flex(Flex::Start);
     let rects = layout.split(Rect::new(0, 0, 10, 10));
     assert_eq!(rects[0].height, 3);
 }
 
 #[test]
 fn layout_flex_space_between_no_edge_space() {
-    let layout = Layout::horizontal([Constraint::Length(3), Constraint::Length(3)])
-        .flex(Flex::SpaceBetween);
+    let layout =
+        Layout::horizontal([Constraint::Length(3), Constraint::Length(3)]).flex(Flex::SpaceBetween);
     let rects = layout.split(Rect::new(0, 0, 10, 1));
     assert_eq!(rects.len(), 2);
     assert_eq!(rects[0].x, 0);
@@ -106,7 +110,10 @@ fn layout_min_expands_to_fill() {
     let rects = layout.split(Rect::new(0, 0, 80, 40));
     assert_eq!(rects.len(), 3);
     assert_eq!(rects[0].height, 4, "top Length(4) should be exactly 4");
-    assert_eq!(rects[1].height, 32, "middle Min(3) should expand to fill remaining 32");
+    assert_eq!(
+        rects[1].height, 32,
+        "middle Min(3) should expand to fill remaining 32"
+    );
     assert_eq!(rects[2].height, 4, "bottom Length(4) should be exactly 4");
     assert_eq!(rects[0].y, 0);
     assert_eq!(rects[1].y, 4);
@@ -124,7 +131,10 @@ fn layout_min_stays_at_minimum_when_constrained() {
     let rects = layout.split(Rect::new(0, 0, 80, 11));
     assert_eq!(rects.len(), 3);
     assert_eq!(rects[0].height, 4);
-    assert_eq!(rects[1].height, 3, "middle should be exactly Min(3) when no extra space");
+    assert_eq!(
+        rects[1].height, 3,
+        "middle should be exactly Min(3) when no extra space"
+    );
     assert_eq!(rects[2].height, 4);
 }
 
@@ -139,7 +149,10 @@ fn layout_fill_expands_to_fill() {
     let rects = layout.split(Rect::new(0, 0, 80, 40));
     assert_eq!(rects.len(), 3);
     assert_eq!(rects[0].height, 4);
-    assert_eq!(rects[1].height, 32, "Fill(1) should expand to fill remaining 32");
+    assert_eq!(
+        rects[1].height, 32,
+        "Fill(1) should expand to fill remaining 32"
+    );
     assert_eq!(rects[2].height, 4);
 }
 
@@ -149,5 +162,8 @@ fn layout_min_only_fills_area() {
     let layout = Layout::vertical([Constraint::Min(3)]);
     let rects = layout.split(Rect::new(0, 0, 80, 40));
     assert_eq!(rects.len(), 1);
-    assert_eq!(rects[0].height, 40, "single Min(3) should fill entire 40-row area");
+    assert_eq!(
+        rects[0].height, 40,
+        "single Min(3) should fill entire 40-row area"
+    );
 }

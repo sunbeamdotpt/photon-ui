@@ -1,4 +1,9 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, KeyEventKind};
+use crossterm::event::{
+    KeyCode,
+    KeyEvent,
+    KeyEventKind,
+    KeyModifiers,
+};
 
 /// Unified input event type used by the framework.
 ///
@@ -46,48 +51,119 @@ pub struct Modifiers {
 
 impl Modifiers {
     /// No modifiers.
-    pub fn none() -> Self { Self::default() }
+    pub fn none() -> Self {
+        Self::default()
+    }
+
     /// Control only.
-    pub fn ctrl() -> Self { Self { ctrl: true, ..Default::default() } }
+    pub fn ctrl() -> Self {
+        Self {
+            ctrl: true,
+            ..Default::default()
+        }
+    }
+
     /// Shift only.
-    pub fn shift() -> Self { Self { shift: true, ..Default::default() } }
+    pub fn shift() -> Self {
+        Self {
+            shift: true,
+            ..Default::default()
+        }
+    }
+
     /// Alt only.
-    pub fn alt() -> Self { Self { alt: true, ..Default::default() } }
+    pub fn alt() -> Self {
+        Self {
+            alt: true,
+            ..Default::default()
+        }
+    }
+
     /// Control + Shift.
-    pub fn ctrl_shift() -> Self { Self { ctrl: true, shift: true, ..Default::default() } }
+    pub fn ctrl_shift() -> Self {
+        Self {
+            ctrl: true,
+            shift: true,
+            ..Default::default()
+        }
+    }
 }
 
 impl Key {
     /// Enter / Return with no modifiers.
-    pub fn enter() -> Self { Key::Code(KeyCode::Enter, Modifiers::none()) }
+    pub fn enter() -> Self {
+        Key::Code(KeyCode::Enter, Modifiers::none())
+    }
+
     /// Left arrow with no modifiers.
-    pub fn left() -> Self { Key::Code(KeyCode::Left, Modifiers::none()) }
+    pub fn left() -> Self {
+        Key::Code(KeyCode::Left, Modifiers::none())
+    }
+
     /// Right arrow with no modifiers.
-    pub fn right() -> Self { Key::Code(KeyCode::Right, Modifiers::none()) }
+    pub fn right() -> Self {
+        Key::Code(KeyCode::Right, Modifiers::none())
+    }
+
     /// Up arrow with no modifiers.
-    pub fn up() -> Self { Key::Code(KeyCode::Up, Modifiers::none()) }
+    pub fn up() -> Self {
+        Key::Code(KeyCode::Up, Modifiers::none())
+    }
+
     /// Down arrow with no modifiers.
-    pub fn down() -> Self { Key::Code(KeyCode::Down, Modifiers::none()) }
+    pub fn down() -> Self {
+        Key::Code(KeyCode::Down, Modifiers::none())
+    }
+
     /// Backspace with no modifiers.
-    pub fn backspace() -> Self { Key::Code(KeyCode::Backspace, Modifiers::none()) }
+    pub fn backspace() -> Self {
+        Key::Code(KeyCode::Backspace, Modifiers::none())
+    }
+
     /// Delete with no modifiers.
-    pub fn delete() -> Self { Key::Code(KeyCode::Delete, Modifiers::none()) }
+    pub fn delete() -> Self {
+        Key::Code(KeyCode::Delete, Modifiers::none())
+    }
+
     /// Home with no modifiers.
-    pub fn home() -> Self { Key::Code(KeyCode::Home, Modifiers::none()) }
+    pub fn home() -> Self {
+        Key::Code(KeyCode::Home, Modifiers::none())
+    }
+
     /// End with no modifiers.
-    pub fn end() -> Self { Key::Code(KeyCode::End, Modifiers::none()) }
+    pub fn end() -> Self {
+        Key::Code(KeyCode::End, Modifiers::none())
+    }
+
     /// Tab with no modifiers.
-    pub fn tab() -> Self { Key::Code(KeyCode::Tab, Modifiers::none()) }
+    pub fn tab() -> Self {
+        Key::Code(KeyCode::Tab, Modifiers::none())
+    }
+
     /// Escape with no modifiers.
-    pub fn esc() -> Self { Key::Code(KeyCode::Esc, Modifiers::none()) }
+    pub fn esc() -> Self {
+        Key::Code(KeyCode::Esc, Modifiers::none())
+    }
+
     /// Character with Control held.
-    pub fn ctrl(c: char) -> Self { Key::Char(c, Modifiers::ctrl()) }
+    pub fn ctrl(c: char) -> Self {
+        Key::Char(c, Modifiers::ctrl())
+    }
+
     /// Character with Control + Shift held.
-    pub fn ctrl_shift(c: char) -> Self { Key::Char(c, Modifiers::ctrl_shift()) }
+    pub fn ctrl_shift(c: char) -> Self {
+        Key::Char(c, Modifiers::ctrl_shift())
+    }
+
     /// Character with Alt held.
-    pub fn alt(c: char) -> Self { Key::Char(c, Modifiers::alt()) }
+    pub fn alt(c: char) -> Self {
+        Key::Char(c, Modifiers::alt())
+    }
+
     /// Character with no modifiers.
-    pub fn char(c: char) -> Self { Key::Char(c, Modifiers::none()) }
+    pub fn char(c: char) -> Self {
+        Key::Char(c, Modifiers::none())
+    }
 }
 
 /// Check whether an [`Event`] matches a specific [`Key`].
@@ -98,14 +174,24 @@ impl Key {
 /// # Example
 ///
 /// ```
-/// use photon_ui::{Event, Key, matches_key};
-/// use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+/// use crossterm::event::{
+///     KeyCode,
+///     KeyEvent,
+///     KeyModifiers,
+/// };
+/// use photon_ui::{
+///     Event,
+///     Key,
+///     matches_key,
+/// };
 ///
 /// let event = Event::Key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
 /// assert!(matches_key(&event, &Key::ctrl('c')));
 /// ```
 pub fn matches_key(event: &Event, key: &Key) -> bool {
-    let Event::Key(key_event) = event else { return false };
+    let Event::Key(key_event) = event else {
+        return false;
+    };
     if key_event.kind == KeyEventKind::Release {
         return false;
     }
@@ -116,15 +202,15 @@ pub fn matches_key(event: &Event, key: &Key) -> bool {
         alt: km.contains(KeyModifiers::ALT),
     };
     match key {
-        Key::Char(expected, expected_mods) => {
+        | Key::Char(expected, expected_mods) => {
             if let KeyCode::Char(c) = key_event.code {
                 c == *expected && mods == *expected_mods
             } else {
                 false
             }
-        }
-        Key::Code(expected, expected_mods) => {
+        },
+        | Key::Code(expected, expected_mods) => {
             key_event.code == *expected && mods == *expected_mods
-        }
+        },
     }
 }

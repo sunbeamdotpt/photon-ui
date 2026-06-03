@@ -1,4 +1,7 @@
-use photon_ui::layout::{Offset, Position};
+use photon_ui::layout::{
+    Offset,
+    Position,
+};
 
 #[test]
 fn position_add_offset_roundtrip() {
@@ -48,8 +51,5 @@ fn position_add_sub_assign() {
 
 #[test]
 fn position_origin_plus_offset() {
-    assert_eq!(
-        Position::ORIGIN + Offset::new(5, 7),
-        Position::new(5, 7)
-    );
+    assert_eq!(Position::ORIGIN + Offset::new(5, 7), Position::new(5, 7));
 }

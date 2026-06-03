@@ -43,7 +43,10 @@ pub struct CombinedAutocompleteProvider {
 impl CombinedAutocompleteProvider {
     /// Create a combined provider.
     pub fn new(commands: Vec<String>, base_path: impl Into<String>) -> Self {
-        Self { commands, _base_path: base_path.into() }
+        Self {
+            commands,
+            _base_path: base_path.into(),
+        }
     }
 }
 

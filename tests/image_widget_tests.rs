@@ -1,5 +1,9 @@
-use photon_ui::{Component, Rendered, RenderError};
-use photon_ui::components::ImageWidget;
+use photon_ui::{
+    Component,
+    RenderError,
+    Rendered,
+    components::ImageWidget,
+};
 
 #[test]
 fn image_widget_default_placeholder() {

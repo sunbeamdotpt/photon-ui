@@ -1,4 +1,7 @@
-use photon_ui::fuzzy::{fuzzy_match, fuzzy_filter};
+use photon_ui::fuzzy::{
+    fuzzy_filter,
+    fuzzy_match,
+};
 
 #[test]
 fn fuzzy_match_scores() {

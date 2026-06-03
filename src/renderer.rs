@@ -5,7 +5,11 @@ use thiserror::Error;
 pub enum RenderError {
     /// A rendered line exceeds the allowed width.
     #[error("width overflow: line width {actual} exceeds {width}")]
-    WidthOverflow { line: String, width: u16, actual: usize },
+    WidthOverflow {
+        line: String,
+        width: u16,
+        actual: usize,
+    },
 }
 
 /// Result of handling an input event.
@@ -48,7 +52,11 @@ pub struct ImageCommand {
 impl Rendered {
     /// Create an empty rendered frame with no lines, cursor, or images.
     pub fn empty() -> Self {
-        Self { lines: Vec::new(), cursor: None, images: Vec::new() }
+        Self {
+            lines: Vec::new(),
+            cursor: None,
+            images: Vec::new(),
+        }
     }
 
     /// Composite this rendered content onto a target at the given offset.
@@ -65,8 +73,7 @@ impl Rendered {
             let target_len = target.lines[target_row].len();
             // Pad target line so the overlay has something to overwrite.
             if target_len < col_usize {
-                target.lines[target_row]
-                    .push_str(&" ".repeat(col_usize - target_len));
+                target.lines[target_row].push_str(&" ".repeat(col_usize - target_len));
             }
             let end = (col_usize + line.len()).min(target.lines[target_row].len());
             target.lines[target_row].replace_range(col_usize..end, line);
@@ -114,21 +121,26 @@ impl Rendered {
     }
 }
 
-use crate::layout::Rect;
-use crate::terminal::Terminal;
 use std::io;
+
+use crate::{
+    layout::Rect,
+    terminal::Terminal,
+};
 
 impl Renderer {
     /// Write the rendered output to the terminal using the current strategy.
     ///
-    /// This implementation closely follows the original TypeScript TUI renderer:
-    /// - FirstRender: outputs all lines without clearing (assumes clean alternate screen).
+    /// This implementation closely follows the original TypeScript TUI
+    /// renderer:
+    /// - FirstRender: outputs all lines without clearing (assumes clean
+    ///   alternate screen).
     /// - FullRedraw: clears screen + scrollback, then outputs all lines.
     /// - Diff: computes first/last changed line, moves cursor there, and only
     ///   rewrites the changed region using `\x1b[2K` per line.
     pub fn render(&mut self, term: &mut dyn Terminal, rendered: &Rendered) -> io::Result<()> {
         match self.strategy {
-            RenderStrategy::FirstRender => {
+            | RenderStrategy::FirstRender => {
                 let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
@@ -138,8 +150,8 @@ impl Renderer {
                 }
                 buffer.push_str("\x1b[?2026l");
                 term.write(&buffer)?;
-            }
-            RenderStrategy::FullRedraw => {
+            },
+            | RenderStrategy::FullRedraw => {
                 let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H\x1b[3J");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
@@ -149,8 +161,8 @@ impl Renderer {
                 }
                 buffer.push_str("\x1b[?2026l");
                 term.write(&buffer)?;
-            }
-            RenderStrategy::Diff => {
+            },
+            | RenderStrategy::Diff => {
                 if let Some(ref prev) = self.previous {
                     let mut first_diff: Option<usize> = None;
                     let mut last_diff: usize = 0;
@@ -234,7 +246,7 @@ impl Renderer {
                     buffer.push_str("\x1b[?2026l");
                     term.write(&buffer)?;
                 }
-            }
+            },
         }
 
         if let Some((row, col)) = rendered.cursor {
@@ -268,9 +280,13 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    /// Create a new renderer with no previous frame and [`FirstRender`](RenderStrategy::FirstRender) strategy.
+    /// Create a new renderer with no previous frame and
+    /// [`FirstRender`](RenderStrategy::FirstRender) strategy.
     pub fn new() -> Self {
-        Self { previous: None, strategy: RenderStrategy::FirstRender }
+        Self {
+            previous: None,
+            strategy: RenderStrategy::FirstRender,
+        }
     }
 
     /// Override the strategy for the next render call.
@@ -296,7 +312,10 @@ mod tests {
         let rendered = Rendered {
             lines: vec!["hello".into()],
             cursor: None,
-            images: vec![ImageCommand { id: 1, data: "img".into() }],
+            images: vec![ImageCommand {
+                id: 1,
+                data: "img".into(),
+            }],
         };
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
@@ -348,7 +367,10 @@ mod tests {
         renderer.render(&mut term, &frame2).unwrap();
 
         let written = term.written().join("");
-        assert!(written.contains("\x1b[2K"), "diff must clear each changed line");
+        assert!(
+            written.contains("\x1b[2K"),
+            "diff must clear each changed line"
+        );
     }
 
     #[test]
@@ -373,12 +395,21 @@ mod tests {
 
         let written = term.written().join("");
         // Should move cursor to line 2 and only rewrite from there
-        assert!(written.contains("\x1b[2;1H"), "cursor should jump to first changed line");
+        assert!(
+            written.contains("\x1b[2;1H"),
+            "cursor should jump to first changed line"
+        );
         // Should use \r (not \r\n) after positioning
-        assert!(written.contains("\x1b[2;1H\r\x1b[0m\x1b[2K"), "should use \\r after positioning");
+        assert!(
+            written.contains("\x1b[2;1H\r\x1b[0m\x1b[2K"),
+            "should use \\r after positioning"
+        );
         // Should NOT rewrite line 3 (unchanged)
         let after_line2 = written.split("\x1b[2;1H").nth(1).unwrap_or("");
-        assert!(!after_line2.contains("\r\nc"), "should not rewrite unchanged line 3");
+        assert!(
+            !after_line2.contains("\r\nc"),
+            "should not rewrite unchanged line 3"
+        );
     }
 
     #[test]
@@ -433,7 +464,10 @@ mod tests {
         let source = Rendered {
             lines: vec!["XY".into()],
             cursor: Some((0, 1)),
-            images: vec![ImageCommand { id: 1, data: "img".into() }],
+            images: vec![ImageCommand {
+                id: 1,
+                data: "img".into(),
+            }],
         };
         source.blit_onto(&mut target, 0, 6);
         assert_eq!(target.images.len(), 1);
@@ -449,7 +483,10 @@ mod tests {
         let source = Rendered {
             lines: vec!["XY".into(), "Z".into()],
             cursor: Some((0, 1)),
-            images: vec![ImageCommand { id: 1, data: "img".into() }],
+            images: vec![ImageCommand {
+                id: 1,
+                data: "img".into(),
+            }],
         };
         source.blit_into_rect(&mut target, Rect::new(6, 0, 10, 2));
         assert_eq!(target.lines[0], "hello XYrld");
@@ -520,7 +557,10 @@ mod tests {
         };
         source.blit_into_rect(&mut target, Rect::new(0, 0, 10, 1));
         // Must NOT truncate the \x1b[0m reset
-        assert!(target.lines[0].contains("\x1b[0m"), "reset code should survive blit");
+        assert!(
+            target.lines[0].contains("\x1b[0m"),
+            "reset code should survive blit"
+        );
         // Visible width should be exactly 10
         assert_eq!(crate::utils::visible_width(&target.lines[0]), 10);
     }
@@ -552,7 +592,8 @@ mod tests {
             if !chunk.is_empty() && chunk.contains("\x1b[") {
                 assert!(
                     chunk.ends_with("\x1b[0m") || !chunk.contains("\x1b[2K"),
-                    "clear must be preceded by reset: {}", chunk
+                    "clear must be preceded by reset: {}",
+                    chunk
                 );
             }
         }
@@ -570,7 +611,10 @@ mod tests {
         };
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
-        assert!(written.contains("\x1b[0m\x1b[2J"), "reset must precede screen clear");
+        assert!(
+            written.contains("\x1b[0m\x1b[2J"),
+            "reset must precede screen clear"
+        );
     }
 
     /// Regression: FullRedraw must reset ANSI attributes before clearing.
@@ -586,6 +630,9 @@ mod tests {
         };
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
-        assert!(written.contains("\x1b[0m\x1b[2J"), "reset must precede screen clear");
+        assert!(
+            written.contains("\x1b[0m\x1b[2J"),
+            "reset must precede screen clear"
+        );
     }
 }

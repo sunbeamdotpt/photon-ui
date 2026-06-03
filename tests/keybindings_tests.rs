@@ -1,4 +1,8 @@
-use photon_ui::{KeybindingsManager, default_bindings, Key};
+use photon_ui::{
+    Key,
+    KeybindingsManager,
+    default_bindings,
+};
 
 #[test]
 fn default_bindings_contains_navigation() {

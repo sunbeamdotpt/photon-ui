@@ -1,5 +1,15 @@
-use photon_ui::events::{Event, Key, Modifiers, matches_key};
-use crossterm::event::{KeyCode, KeyModifiers, KeyEvent, KeyEventKind};
+use crossterm::event::{
+    KeyCode,
+    KeyEvent,
+    KeyEventKind,
+    KeyModifiers,
+};
+use photon_ui::events::{
+    Event,
+    Key,
+    Modifiers,
+    matches_key,
+};
 
 #[test]
 fn matches_key_char() {
@@ -44,14 +54,20 @@ fn key_constructors() {
     assert_eq!(Key::right(), Key::Code(KeyCode::Right, Modifiers::none()));
     assert_eq!(Key::up(), Key::Code(KeyCode::Up, Modifiers::none()));
     assert_eq!(Key::down(), Key::Code(KeyCode::Down, Modifiers::none()));
-    assert_eq!(Key::backspace(), Key::Code(KeyCode::Backspace, Modifiers::none()));
+    assert_eq!(
+        Key::backspace(),
+        Key::Code(KeyCode::Backspace, Modifiers::none())
+    );
     assert_eq!(Key::delete(), Key::Code(KeyCode::Delete, Modifiers::none()));
     assert_eq!(Key::home(), Key::Code(KeyCode::Home, Modifiers::none()));
     assert_eq!(Key::end(), Key::Code(KeyCode::End, Modifiers::none()));
     assert_eq!(Key::tab(), Key::Code(KeyCode::Tab, Modifiers::none()));
     assert_eq!(Key::esc(), Key::Code(KeyCode::Esc, Modifiers::none()));
     assert_eq!(Key::ctrl('x'), Key::Char('x', Modifiers::ctrl()));
-    assert_eq!(Key::ctrl_shift('x'), Key::Char('x', Modifiers::ctrl_shift()));
+    assert_eq!(
+        Key::ctrl_shift('x'),
+        Key::Char('x', Modifiers::ctrl_shift())
+    );
     assert_eq!(Key::alt('x'), Key::Char('x', Modifiers::alt()));
 }
 

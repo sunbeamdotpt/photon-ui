@@ -1,5 +1,12 @@
-use std::fmt;
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::{
+    fmt,
+    ops::{
+        Add,
+        AddAssign,
+        Sub,
+        SubAssign,
+    },
+};
 
 use super::Offset;
 use crate::tui::Rect;
@@ -12,9 +19,9 @@ pub struct Position {
 }
 
 impl Position {
-    pub const ORIGIN: Self = Self::new(0, 0);
-    pub const MIN: Self = Self::ORIGIN;
     pub const MAX: Self = Self::new(u16::MAX, u16::MAX);
+    pub const MIN: Self = Self::ORIGIN;
+    pub const ORIGIN: Self = Self::new(0, 0);
 
     pub const fn new(x: u16, y: u16) -> Self {
         Self { x, y }
@@ -51,20 +58,30 @@ impl fmt::Display for Position {
 
 impl Add<Offset> for Position {
     type Output = Self;
+
     fn add(self, offset: Offset) -> Self::Output {
         let max = i32::from(u16::MAX);
-        let x = i32::from(self.x).saturating_add(i32::from(offset.x)).clamp(0, max) as u16;
-        let y = i32::from(self.y).saturating_add(i32::from(offset.y)).clamp(0, max) as u16;
+        let x = i32::from(self.x)
+            .saturating_add(i32::from(offset.x))
+            .clamp(0, max) as u16;
+        let y = i32::from(self.y)
+            .saturating_add(i32::from(offset.y))
+            .clamp(0, max) as u16;
         Self { x, y }
     }
 }
 
 impl Sub<Offset> for Position {
     type Output = Self;
+
     fn sub(self, offset: Offset) -> Self::Output {
         let max = i32::from(u16::MAX);
-        let x = i32::from(self.x).saturating_sub(i32::from(offset.x)).clamp(0, max) as u16;
-        let y = i32::from(self.y).saturating_sub(i32::from(offset.y)).clamp(0, max) as u16;
+        let x = i32::from(self.x)
+            .saturating_sub(i32::from(offset.x))
+            .clamp(0, max) as u16;
+        let y = i32::from(self.y)
+            .saturating_sub(i32::from(offset.y))
+            .clamp(0, max) as u16;
         Self { x, y }
     }
 }
@@ -150,7 +167,12 @@ mod tests {
 
     #[test]
     fn position_from_rect() {
-        let rect = Rect { x: 7, y: 8, width: 10, height: 20 };
+        let rect = Rect {
+            x: 7,
+            y: 8,
+            width: 10,
+            height: 20,
+        };
         let p: Position = rect.into();
         assert_eq!(p, Position::new(7, 8));
     }

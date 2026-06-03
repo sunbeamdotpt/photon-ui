@@ -1,4 +1,10 @@
-use photon_ui::layout::{Margin, Offset, Position, Rect, Size};
+use photon_ui::layout::{
+    Margin,
+    Offset,
+    Position,
+    Rect,
+    Size,
+};
 
 #[test]
 fn rect_inner_preserves_area_when_no_margin() {

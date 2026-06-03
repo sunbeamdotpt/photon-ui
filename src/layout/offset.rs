@@ -16,22 +16,34 @@ impl Offset {
 
 impl std::ops::Add for Offset {
     type Output = Self;
+
     fn add(self, other: Self) -> Self::Output {
-        Self { x: self.x.saturating_add(other.x), y: self.y.saturating_add(other.y) }
+        Self {
+            x: self.x.saturating_add(other.x),
+            y: self.y.saturating_add(other.y),
+        }
     }
 }
 
 impl std::ops::Sub for Offset {
     type Output = Self;
+
     fn sub(self, other: Self) -> Self::Output {
-        Self { x: self.x.saturating_sub(other.x), y: self.y.saturating_sub(other.y) }
+        Self {
+            x: self.x.saturating_sub(other.x),
+            y: self.y.saturating_sub(other.y),
+        }
     }
 }
 
 impl std::ops::Neg for Offset {
     type Output = Self;
+
     fn neg(self) -> Self::Output {
-        Self { x: self.x.saturating_neg(), y: self.y.saturating_neg() }
+        Self {
+            x: self.x.saturating_neg(),
+            y: self.y.saturating_neg(),
+        }
     }
 }
 

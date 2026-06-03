@@ -1,4 +1,7 @@
-use photon_ui::renderer::{Rendered, ImageCommand};
+use photon_ui::renderer::{
+    ImageCommand,
+    Rendered,
+};
 
 #[test]
 fn rendered_empty() {
@@ -18,7 +21,10 @@ fn rendered_blit_onto_basic() {
     let source = Rendered {
         lines: vec!["XY".into()],
         cursor: Some((0, 1)),
-        images: vec![ImageCommand { id: 1, data: "img".into() }],
+        images: vec![ImageCommand {
+            id: 1,
+            data: "img".into(),
+        }],
     };
     source.blit_onto(&mut target, 0, 6);
     assert_eq!(target.lines[0], "hello XYrld");
@@ -39,7 +45,8 @@ fn rendered_blit_onto_out_of_bounds() {
         images: Vec::new(),
     };
     source.blit_onto(&mut target, 0, 0);
-    // Line gets replaced since col=0 and source fits within target_line.len() roughly
+    // Line gets replaced since col=0 and source fits within target_line.len()
+    // roughly
     assert_eq!(target.lines[0], "longer text");
 }
 

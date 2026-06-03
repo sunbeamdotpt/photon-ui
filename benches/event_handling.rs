@@ -1,7 +1,17 @@
-use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
-use photon_ui::{Component, Event, Focusable};
-use photon_ui::components::Editor;
+use criterion::{
+    BatchSize,
+    Criterion,
+    black_box,
+    criterion_group,
+    criterion_main,
+};
 use crossterm::event::KeyCode;
+use photon_ui::{
+    Component,
+    Event,
+    Focusable,
+    components::Editor,
+};
 
 fn bench_editor_typing(c: &mut Criterion) {
     c.bench_function("editor_type_100_chars", |b| {
@@ -67,5 +77,10 @@ fn bench_editor_backspace(c: &mut Criterion) {
     });
 }
 
-criterion_group!(event_benches, bench_editor_typing, bench_editor_navigate, bench_editor_backspace);
+criterion_group!(
+    event_benches,
+    bench_editor_typing,
+    bench_editor_navigate,
+    bench_editor_backspace
+);
 criterion_main!(event_benches);

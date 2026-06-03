@@ -1,7 +1,12 @@
-use crate::{Component, Rendered, RenderError};
-use crate::utils::truncate_to_width;
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+    utils::truncate_to_width,
+};
 
-/// Static text that is truncated with an ellipsis if it exceeds the available width.
+/// Static text that is truncated with an ellipsis if it exceeds the available
+/// width.
 ///
 /// Each line is padded with `pad_x` spaces and truncated independently.
 /// `pad_y` empty lines are added before and after the content.
@@ -14,7 +19,11 @@ pub struct TruncatedText {
 impl TruncatedText {
     /// Create a new truncated text component.
     pub fn new(text: impl Into<String>, pad_x: u16, pad_y: u16) -> Self {
-        Self { text: text.into(), pad_x, pad_y }
+        Self {
+            text: text.into(),
+            pad_x,
+            pad_y,
+        }
     }
 }
 
@@ -33,7 +42,11 @@ impl Component for TruncatedText {
         for _ in 0..self.pad_y {
             lines.push("".to_string());
         }
-        Ok(Rendered { lines, cursor: None, images: Vec::new() })
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
     }
 }
 
