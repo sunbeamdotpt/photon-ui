@@ -58,3 +58,19 @@ fn wrap_preserves_ansi() {
     assert_eq!(lines[0], "\x1b[31mhello \x1b[0m");
     assert!(lines[1].contains("world"));
 }
+
+#[test]
+fn visible_width_emoji() {
+    use photon_ui::utils::visible_width;
+    assert_eq!(visible_width("📊"), 2);
+    assert_eq!(visible_width("👤"), 2);
+}
+
+#[test]
+fn truncate_to_width_with_emoji() {
+    use photon_ui::utils::truncate_to_width;
+    let s = "> 📊 Overview";
+    assert_eq!(visible_width(s), 13);
+    let truncated = truncate_to_width(s, 10, "…");
+    assert_eq!(visible_width(&truncated), 10);
+}
