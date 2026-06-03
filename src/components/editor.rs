@@ -26,17 +26,6 @@ pub struct EditorAction {
     pub cursor: usize,
 }
 
-/// Marks a region of text that was inserted via paste, for later reference.
-#[derive(Clone)]
-pub struct PasteMarker {
-    /// Human-readable label describing the paste source.
-    pub label: String,
-    /// Start grapheme index (inclusive).
-    pub start: usize,
-    /// End grapheme index (exclusive).
-    pub end: usize,
-}
-
 /// Vim editing mode state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VimMode {
@@ -65,7 +54,6 @@ pub struct Editor {
     cache_width: u16,
     history: Vec<String>,
     history_index: Option<usize>,
-    paste_markers: Vec<PasteMarker>,
     max_history: usize,
     /// Whether vim modal editing is enabled.
     vim_mode_enabled: bool,
@@ -88,7 +76,6 @@ impl Editor {
             cache_width: 0,
             history: Vec::new(),
             history_index: None,
-            paste_markers: Vec::new(),
             max_history: 100,
             vim_mode_enabled: false,
             mode: VimMode::Normal,
@@ -420,31 +407,7 @@ impl Editor {
         self.cache_width = 0;
     }
 
-    /// (Re-)wrap the editor text at the given width, caching the result.
-    pub(crate) fn rewrap(&mut self, width: u16) {
-        self.lines_cache = crate::utils::wrap_text_with_ansi(&self.text, width);
-        self.cache_width = width;
-    }
 
-    /// Insert a potentially large pasted string, marking it with a label if
-    /// it spans many lines.
-    pub(crate) fn insert_paste(&mut self, text: &str) {
-        let start = self.cursor;
-        self.insert_str(text);
-        let end = self.cursor;
-        let line_count = text.lines().count();
-        if line_count > 5 {
-            self.paste_markers.push(PasteMarker {
-                label: format!(
-                    "[paste #{} +{} lines]",
-                    self.paste_markers.len() + 1,
-                    line_count
-                ),
-                start,
-                end,
-            });
-        }
-    }
 
     /// Delete the current line (vim `dd` behavior).
     fn delete_line(&mut self) {
@@ -620,6 +583,7 @@ impl Editor {
                             self.kill_to_end();
                         },
                         | 'y' => self.yank(),
+                        | 'r' => self.redo(),
                         | '-' | '_' => self.undo(),
                         | _ => return InputResult::Ignored,
                     }
@@ -628,6 +592,7 @@ impl Editor {
                         | 'b' => self.move_word_backward(),
                         | 'f' => self.move_word_forward(),
                         | 'd' => self.kill_word_forward(),
+                        | 'y' => self.yank_pop(),
                         | _ => return InputResult::Ignored,
                     }
                 } else {
@@ -890,14 +855,6 @@ mod tests {
         Event::Key(code.into())
     }
 
-    fn ctrl_event(c: char) -> Event {
-        Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL))
-    }
-
-    fn alt_event(c: char) -> Event {
-        Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::ALT))
-    }
-
     #[test]
     fn yank_pop_cycles() {
         let mut editor = Editor::new();
@@ -909,33 +866,6 @@ mod tests {
         assert_eq!(editor.text(), "ab");
         editor.yank_pop();
         assert_eq!(editor.text(), "abab");
-    }
-
-    #[test]
-    fn insert_paste_short() {
-        let mut editor = Editor::new();
-        editor.insert_paste("short");
-        assert_eq!(editor.text(), "short");
-    }
-
-    #[test]
-    fn insert_paste_long() {
-        let mut editor = Editor::new();
-        let long_text =
-            "line1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9\nline10\nline11";
-        editor.insert_paste(long_text);
-        assert_eq!(editor.paste_markers.len(), 1);
-        assert!(editor.paste_markers[0].label.contains("+11 lines"));
-    }
-
-    #[test]
-    fn rewrap_caches() {
-        let mut editor = Editor::new();
-        editor.insert_str("ab");
-        editor.rewrap(80);
-        // Second call with same width should use cache
-        editor.rewrap(80);
-        assert_eq!(editor.text(), "ab");
     }
 
     #[test]
