@@ -12,8 +12,10 @@ pub mod editor;
 pub mod markdown;
 pub mod button;
 pub mod container;
+pub mod panel;
 
 pub use button::Button;
+pub use panel::Panel;
 pub use spacer::Spacer;
 pub use text::Text;
 pub use truncated_text::TruncatedText;
