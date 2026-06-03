@@ -13,7 +13,7 @@
 //! | 2    | Input, Editor, SelectList, SettingsList |
 //! | 3    | Loader, CancellableLoader, Overlay |
 //! | 4    | Layout engine, Theme + Button, Panel |
-//! | 5    | Header, Tabs, Table, StatusBar |
+//! | 5    | Full dashboard — all components |
 //!
 //! # Keybindings
 //!
@@ -51,22 +51,30 @@ use photon_ui::{
     Terminal,
     components::{
         Box as BoxComponent,
+        Breadcrumbs,
         Button,
         CancellableLoader,
+        Container,
         Editor,
         Header,
+        ImageWidget,
         Input,
         Loader,
         Markdown,
         Panel,
+        ProgressBar,
         Segment,
         SelectList,
         SettingsList,
+        Sidebar,
+        SidebarItem,
         Spacer,
         StatusBar,
         Table,
         Tabs,
         Text,
+        TreeNode,
+        TreeView,
         TruncatedText,
     },
     components::table::{
@@ -87,7 +95,6 @@ use photon_ui::{
     },
     terminal::ProcessTerminal,
     theme::{
-        Palette,
         Theme,
     },
 };
@@ -649,14 +656,58 @@ impl DemoApp {
     fn load_page_dashboard(&mut self) {
         self.tui.set_layout(Layout::vertical([
             Constraint::Length(1), // Header
-            Constraint::Length(1), // Tabs
-            Constraint::Min(5),    // Table
+            Constraint::Length(1), // Breadcrumbs
+            Constraint::Min(10),   // DashboardBody
             Constraint::Length(1), // StatusBar
         ]));
+
         self.tui
             .mount(Box::new(Header::new("Dashboard Demo").action("q:quit")));
         self.tui
-            .mount(Box::new(Tabs::new(vec!["Overview", "Resources", "Logs"])));
+            .mount(Box::new(Breadcrumbs::new(vec!["Home", "Dashboard", "Overview"])));
+
+        // ── DashboardBody: Sidebar + MainContent ──
+        let mut dashboard_body = Container::new(Layout::horizontal([
+            Constraint::Length(16), // Sidebar
+            Constraint::Min(10),    // MainContent
+        ]));
+
+        let sidebar = Sidebar::new(vec![
+            SidebarItem::new("Overview").icon("📊"),
+            SidebarItem::new("Files").icon("📁"),
+            SidebarItem::new("Settings").icon("⚙️"),
+            SidebarItem::new("Profile").icon("👤"),
+        ]);
+        dashboard_body.push(Box::new(sidebar));
+
+        // ── MainContent (vertical) ──
+        let mut main_content = Container::new(Layout::vertical([
+            Constraint::Length(1), // Tabs
+            Constraint::Length(1), // ProgressBar row
+            Constraint::Length(5), // DataRow
+            Constraint::Length(3), // FormsRow
+            Constraint::Length(4), // ListsRow
+            Constraint::Length(1), // ButtonsRow
+            Constraint::Length(4), // ContentRow
+            Constraint::Length(2), // SystemRow
+        ]));
+
+        main_content.push(Box::new(Tabs::new(vec!["Overview", "Resources", "Logs"])));
+
+        // ProgressBar row
+        let mut progress_row = Container::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]));
+        progress_row.push(Box::new(ProgressBar::new("CPU", 0.45).width(15)));
+        progress_row.push(Box::new(ProgressBar::new("RAM", 1.0).width(15)));
+        main_content.push(Box::new(progress_row));
+
+        // DataRow: Table + TreeView
+        let mut data_row = Container::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]));
         let table = Table::new(
             vec![
                 Column::new("name", "Name").width(15),
@@ -681,7 +732,115 @@ impl DemoApp {
                 ])),
             ],
         );
-        self.tui.mount(Box::new(table));
+        data_row.push(Box::new(table));
+        let tree = TreeView::new(vec![
+            TreeNode::new("src")
+                .child(TreeNode::new("main.rs"))
+                .child(TreeNode::new("lib.rs")),
+            TreeNode::new("tests").child(TreeNode::new("integration.rs")),
+        ]);
+        data_row.push(Box::new(tree));
+        main_content.push(Box::new(data_row));
+
+        // FormsRow: Input + Editor
+        let mut forms_row = Container::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]));
+        let mut input = Input::new();
+        input.set_text("Search components...");
+        forms_row.push(Box::new(input));
+        let mut editor = Editor::new();
+        editor.set_text("fn main() {\n    println!(\"Hello\");\n}");
+        forms_row.push(Box::new(editor));
+        main_content.push(Box::new(forms_row));
+
+        // ListsRow: SelectList + SettingsList
+        let mut lists_row = Container::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]));
+        let mut select_list = SelectList::new(
+            vec![
+                "Rust".into(),
+                "Python".into(),
+                "TypeScript".into(),
+                "Go".into(),
+                "Zig".into(),
+                "Haskell".into(),
+            ],
+            4,
+        );
+        select_list.set_selected(1);
+        lists_row.push(Box::new(select_list));
+        let mut settings = SettingsList::new(vec![
+            ("Dark mode".into(), true),
+            ("Auto-save".into(), false),
+            ("Notifications".into(), true),
+        ]);
+        settings.set_selected(0);
+        lists_row.push(Box::new(settings));
+        main_content.push(Box::new(lists_row));
+
+        // ButtonsRow
+        let mut buttons_row = Container::new(Layout::horizontal([
+            Constraint::Length(12),
+            Constraint::Length(12),
+            Constraint::Length(12),
+            Constraint::Length(12),
+        ]));
+        buttons_row.push(Box::new(Button::primary("Primary")));
+        buttons_row.push(Box::new(Button::dark("Dark")));
+        buttons_row.push(Box::new(Button::ghost("Ghost")));
+        buttons_row.push(Box::new(Button::text("Text")));
+        main_content.push(Box::new(buttons_row));
+
+        // ContentRow: Markdown + Panel
+        let mut content_row = Container::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]));
+        content_row.push(Box::new(Markdown::new(DEMO_MARKDOWN)));
+        content_row.push(Box::new(
+            Panel::new()
+                .title("Info")
+                .lines(vec![
+                    "Photon UI v0.1.0".into(),
+                    "A Rust TUI library".into(),
+                    "Built with ♥".into(),
+                ]),
+        ));
+        main_content.push(Box::new(content_row));
+
+        // SystemRow: Loader + CancellableLoader + ImageWidget + Box + TruncatedText
+        let mut system_row = Container::new(Layout::horizontal([
+            Constraint::Length(14),
+            Constraint::Length(20),
+            Constraint::Length(10),
+            Constraint::Length(8),
+            Constraint::Min(5),
+        ]));
+        system_row.push(Box::new(SharedLoader(self.loader.clone())));
+        system_row.push(Box::new(SharedCancellableLoader(self.cancellable.clone())));
+        system_row.push(Box::new(ImageWidget::new(
+            vec![],
+            "image/png",
+            Some("[image]".to_string()),
+        )));
+        system_row.push(Box::new(
+            BoxComponent::new(1)
+                .with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
+        ));
+        system_row.push(Box::new(TruncatedText::new(
+            "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",
+            0,
+            0,
+        )));
+        main_content.push(Box::new(system_row));
+
+        dashboard_body.push(Box::new(main_content));
+        self.tui.mount(Box::new(dashboard_body));
+
         self.tui.mount(Box::new(
             StatusBar::new()
                 .left(Segment::new("MODE: normal"))
@@ -691,7 +850,7 @@ impl DemoApp {
 
     /// Advance animation frames. Call periodically from the event loop.
     fn tick(&mut self) {
-        if self.page == 3 {
+        if self.page == 3 || self.page == 5 {
             self.loader.borrow_mut().tick();
             self.cancellable.borrow_mut().tick();
         }
