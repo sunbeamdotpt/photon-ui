@@ -1,27 +1,4 @@
-//! photon-ui — Blazing fast minimal TUI
-//!
-//! This crate provides a lightweight, high-performance terminal UI framework
-//! built on top of [`crossterm`]. It features a custom differential renderer,
-//! ANSI-aware text wrapping, OSC 8 hyperlink support, and a component-based
-//! architecture.
-//!
-//! # Quick start
-//!
-//! ```no_run
-//! use photon_ui::{
-//!     Component,
-//!     RenderError,
-//!     Rendered,
-//!     TUI,
-//!     TestTerminal,
-//!     components::Text,
-//! };
-//!
-//! let mut tui = TUI::new(Box::new(TestTerminal::new(80, 24)));
-//! tui.mount(Box::new(Text::new("Hello, world!", 0, 0)));
-//! tui.render_frame().unwrap();
-//! ```
-
+#![doc = include_str!("../README.md")]
 #![deny(dead_code)]
 #![deny(unused)]
 #![deny(unused_mut)]
