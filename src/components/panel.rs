@@ -88,7 +88,7 @@ impl Default for Panel {
 
 impl Component for Panel {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let _theme = Theme::current();
         let border_style = self.border_style();
         let (border_w, _border_h) = self.border.size();
         let pad = self.pad as usize;
@@ -189,13 +189,7 @@ impl Component for Panel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        theme::{
-            Color,
-            Theme,
-        },
-        utils::visible_width,
-    };
+    use crate::theme::Theme;
 
     #[test]
     fn panel_renders_rounded_border() {

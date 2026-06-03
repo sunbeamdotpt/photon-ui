@@ -57,7 +57,6 @@ impl Component for Markdown {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
         let mut lines = Vec::new();
         let parser = Parser::new(&self.text);
-        let mut heading_level = 0;
         let mut current_line = String::new();
         let mut in_bold = false;
         let mut in_italic = false;
@@ -79,9 +78,7 @@ impl Component for Markdown {
         for event in parser {
             match event {
                 | MdEvent::Start(tag) => match tag {
-                    | Tag::Heading { level, .. } => {
-                        heading_level = level as usize;
-                    },
+                    | Tag::Heading { .. } => {},
                     | Tag::Strong => in_bold = true,
                     | Tag::Emphasis => in_italic = true,
                     | Tag::Item => pending_bullet = true,

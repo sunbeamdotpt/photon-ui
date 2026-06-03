@@ -161,7 +161,6 @@ pub struct TUI {
     renderer: Renderer,
     size: (u16, u16),
     previous_image_ids: std::collections::HashSet<u32>,
-    clear_on_shrink: bool,
     hardware_cursor: bool,
     layout: Option<Layout>,
 }
@@ -177,7 +176,6 @@ impl TUI {
             renderer: Renderer::new(),
             size: (80, 24),
             previous_image_ids: std::collections::HashSet::new(),
-            clear_on_shrink: std::env::var("PHOTON_UI_CLEAR_ON_SHRINK").is_ok(),
             hardware_cursor: std::env::var("PHOTON_UI_HARDWARE_CURSOR").is_ok(),
             layout: None,
         }

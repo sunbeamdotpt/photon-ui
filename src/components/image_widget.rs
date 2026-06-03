@@ -11,8 +11,8 @@ use crate::{
 /// placeholder text line. Image protocol encoding (Kitty, iTerm2) is handled by
 /// [`crate::image`].
 pub struct ImageWidget {
-    data: Vec<u8>,
-    mime_type: String,
+    _data: Vec<u8>,
+    _mime_type: String,
     placeholder: String,
 }
 
@@ -22,8 +22,8 @@ impl ImageWidget {
     /// `data` is the raw image bytes. `placeholder` defaults to `"[image]"`.
     pub fn new(data: Vec<u8>, mime_type: impl Into<String>, placeholder: Option<String>) -> Self {
         Self {
-            data,
-            mime_type: mime_type.into(),
+            _data: data,
+            _mime_type: mime_type.into(),
             placeholder: placeholder.unwrap_or_else(|| "[image]".to_string()),
         }
     }
