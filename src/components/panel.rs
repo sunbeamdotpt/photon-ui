@@ -92,14 +92,19 @@ impl Component for Panel {
         let border_style = self.border_style();
         let (border_w, _border_h) = self.border.size();
         let pad = self.pad as usize;
-        let inner_width = width.saturating_sub(border_w * 2 + self.pad * 2) as usize;
 
         let mode = ColorMode::detect();
         let prefix = border_style.prefix(mode);
         let suffix = Style::suffix();
 
         let mut rendered = Rendered::empty();
-        let total_width = inner_width + pad * 2; // width between the two borders
+
+        // Available space between the two vertical borders.
+        let available = width.saturating_sub(border_w * 2) as usize;
+        // Reduce padding when the width is too small to accommodate full borders + padding.
+        let actual_pad = pad.min(available / 2);
+        let inner_width = available.saturating_sub(actual_pad * 2);
+        let total_width = inner_width + actual_pad * 2;
 
         // ── Top border (with optional title) ──
         {
@@ -107,9 +112,8 @@ impl Component for Panel {
             top.push_str(&prefix);
             top.push(self.border.top_left);
 
-            let available = total_width;
             let title_text = self.title.as_ref().map(|t| {
-                let max_title = available.saturating_sub(2);
+                let max_title = total_width.saturating_sub(2);
                 let t = if t.len() > max_title {
                     &t[..max_title]
                 } else {
@@ -120,12 +124,12 @@ impl Component for Panel {
 
             let fill = if let Some(ref t) = title_text {
                 let t_visible = crate::utils::visible_width(t);
-                let fill_count = available.saturating_sub(t_visible);
+                let fill_count = total_width.saturating_sub(t_visible);
                 let mut s = t.clone();
                 s.push_str(&self.border.top.to_string().repeat(fill_count));
                 s
             } else {
-                self.border.top.to_string().repeat(available)
+                self.border.top.to_string().repeat(total_width)
             };
 
             top.push_str(&fill);
@@ -143,7 +147,7 @@ impl Component for Panel {
                 line.push(self.border.left);
                 line.push_str(suffix);
             }
-            for _ in 0..pad {
+            for _ in 0..actual_pad {
                 line.push(' ');
             }
 
@@ -159,7 +163,7 @@ impl Component for Panel {
                 line.push(' ');
             }
 
-            for _ in 0..pad {
+            for _ in 0..actual_pad {
                 line.push(' ');
             }
 
@@ -321,5 +325,25 @@ mod tests {
     fn panel_default_is_rounded() {
         let panel = Panel::default();
         assert_eq!(panel.border, Border::ROUNDED);
+    }
+
+    /// Regression: Panel must never produce lines wider than the requested width,
+    /// even when the width is too small to accommodate borders + padding.
+    #[test]
+    fn panel_respects_narrow_width() {
+        Theme::with(Theme::Light, || {
+            let panel = Panel::new().lines(vec!["X".into()]);
+            let rendered = panel.render(3).unwrap();
+            for (i, line) in rendered.lines.iter().enumerate() {
+                let vw = crate::utils::visible_width(line);
+                assert!(
+                    vw <= 3,
+                    "line {} exceeds width 3 (actual {}): {:?}",
+                    i,
+                    vw,
+                    line
+                );
+            }
+        });
     }
 }
