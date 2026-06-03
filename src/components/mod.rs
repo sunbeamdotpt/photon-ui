@@ -1,4 +1,5 @@
 pub mod box_component;
+pub mod breadcrumbs;
 pub mod button;
 pub mod cancellable_loader;
 pub mod container;
@@ -16,6 +17,7 @@ pub mod text;
 pub mod truncated_text;
 
 pub use box_component::Box;
+pub use breadcrumbs::Breadcrumbs;
 pub use button::Button;
 pub use cancellable_loader::CancellableLoader;
 pub use container::Container;
