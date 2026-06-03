@@ -1,8 +1,22 @@
 use crate::{
-    Component, Event, Focusable, InputResult, RenderError, Rendered,
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+    layout::{
+        Border,
+        Rect,
+    },
+    theme::{
+        ColorMode,
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
-use crate::layout::{Border, Rect};
-use crate::theme::{ColorMode, Palette, Style, Theme, stylize};
 
 /// A modal dialog that wraps content in a bordered box with an optional title.
 ///
@@ -12,10 +26,12 @@ use crate::theme::{ColorMode, Palette, Style, Theme, stylize};
 /// # Example
 ///
 /// ```
-/// use photon_ui::components::{Modal, Text};
+/// use photon_ui::components::{
+///     Modal,
+///     Text,
+/// };
 ///
-/// let modal = Modal::new(Box::new(Text::new("Are you sure?", 0, 0)))
-///     .title("Confirm");
+/// let modal = Modal::new(Box::new(Text::new("Are you sure?", 0, 0))).title("Confirm");
 /// ```
 pub struct Modal {
     content: Box<dyn Component>,
@@ -144,7 +160,11 @@ impl Component for Modal {
             line.push(self.border.left);
             line.push_str(suffix);
 
-            let content_line = content_rendered.lines.get(i as usize).map(|s| s.as_str()).unwrap_or("");
+            let content_line = content_rendered
+                .lines
+                .get(i as usize)
+                .map(|s| s.as_str())
+                .unwrap_or("");
             let pad = inner_w as usize - crate::utils::visible_width(content_line);
             line.push_str(content_line);
             if pad > 0 {
@@ -198,8 +218,10 @@ impl Component for Modal {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::Text;
-    use crate::theme::Theme;
+    use crate::{
+        components::Text,
+        theme::Theme,
+    };
 
     #[test]
     fn modal_renders_with_border() {

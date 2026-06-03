@@ -7,28 +7,46 @@
 //! # Example
 //!
 //! ```
-//! use photon_ui::components::Div;
-//! use photon_ui::layout::{Constraint, layout::Layout};
+//! use photon_ui::{
+//!     components::Div,
+//!     layout::{
+//!         Constraint,
+//!         layout::Layout,
+//!     },
+//! };
 //!
 //! let div = Div::new(Layout::vertical([
-//!         Constraint::Length(1),
-//!         Constraint::Min(3),
-//!         Constraint::Length(1),
-//!     ]))
-//!     .child(Box::new(photon_ui::components::Text::new("Header", 0, 0)))
-//!     .child(Box::new(photon_ui::components::Text::new("Body", 0, 0)))
-//!     .child(Box::new(photon_ui::components::Text::new("Footer", 0, 0)))
-//!     .border(photon_ui::layout::Border::ROUNDED)
-//!     .padding(photon_ui::layout::Margin::new(1, 1))
-//!     .title("My Box");
+//!     Constraint::Length(1),
+//!     Constraint::Min(3),
+//!     Constraint::Length(1),
+//! ]))
+//! .child(Box::new(photon_ui::components::Text::new("Header", 0, 0)))
+//! .child(Box::new(photon_ui::components::Text::new("Body", 0, 0)))
+//! .child(Box::new(photon_ui::components::Text::new("Footer", 0, 0)))
+//! .border(photon_ui::layout::Border::ROUNDED)
+//! .padding(photon_ui::layout::Margin::new(1, 1))
+//! .title("My Box");
 //! ```
 
 use crate::{
-    Component, Event, Focusable, InputResult, RenderError, Rendered,
+    Component,
+    Event,
+    Focusable,
+    InputResult,
+    RenderError,
+    Rendered,
+    layout::{
+        Border,
+        Margin,
+        Rect,
+        layout::Layout,
+    },
+    theme::{
+        Palette,
+        Style,
+        Theme,
+    },
 };
-use crate::layout::{Border, Margin, Rect, layout::Layout};
-use crate::theme::{Style, Theme};
-use crate::theme::Palette;
 
 /// A general-purpose container with optional chrome.
 pub struct Div {
@@ -163,14 +181,14 @@ impl Div {
             .focused_child
             .and_then(|idx| focusable.iter().position(|&i| i == idx))
         {
-            Some(pos) => pos,
-            None => {
+            | Some(pos) => pos,
+            | None => {
                 self.focused_child = Some(focusable[0]);
                 if let Some(f) = self.children[focusable[0]].as_focusable_mut() {
                     f.set_focused(true);
                 }
                 return InputResult::Handled;
-            }
+            },
         };
 
         // Try to cycle within the current child first (recursive descent).
@@ -258,7 +276,11 @@ impl Component for Div {
         // ── Collapsed state: render only a single-line header ──
         if self.collapsed {
             let indicator = if self.collapsible { "▶ " } else { "" };
-            let title_text = self.title.as_ref().map(|t| format!("{}{}", indicator, t)).unwrap_or_else(|| "▶".into());
+            let title_text = self
+                .title
+                .as_ref()
+                .map(|t| format!("{}{}", indicator, t))
+                .unwrap_or_else(|| "▶".into());
             let header_style = if self.focused {
                 Style::new().fg(theme.accent()).bold()
             } else {
@@ -283,7 +305,13 @@ impl Component for Div {
             let prefix = bg.prefix(crate::theme::ColorMode::detect());
             let suffix = Style::suffix();
             for _ in 0..rect.height {
-                let line = format!("{}{:width$}{}", prefix, "", suffix, width = rect.width as usize);
+                let line = format!(
+                    "{}{:width$}{}",
+                    prefix,
+                    "",
+                    suffix,
+                    width = rect.width as usize
+                );
                 screen.lines.push(line);
             }
         }
@@ -418,9 +446,11 @@ impl Component for Div {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::Text;
-    use crate::layout::Constraint;
-    use crate::theme::Theme;
+    use crate::{
+        components::Text,
+        layout::Constraint,
+        theme::Theme,
+    };
 
     #[test]
     fn div_renders_children() {
@@ -481,11 +511,9 @@ mod tests {
     #[test]
     fn div_focus_propagation() {
         Theme::with(Theme::Light, || {
-            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
-                .child(Box::new(crate::components::SelectList::new(
-                    vec!["a".into()],
-                    1,
-                )));
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)])).child(Box::new(
+                crate::components::SelectList::new(vec!["a".into()], 1),
+            ));
 
             div.set_focused(true);
             assert!(div.focused());
@@ -508,14 +536,19 @@ mod tests {
                     Constraint::Length(1),
                 ]))
                 .child(Box::new(Text::new("a", 0, 0)))
-                .child(Box::new(Text::new("b", 0, 0)))
+                .child(Box::new(Text::new("b", 0, 0))),
             ));
 
             // Outer rect starts at (0, 2). Inner div gets y = 2 from the layout.
             let rendered = outer.render_rect(Rect::new(0, 2, 20, 2)).unwrap();
             // The inner div's content should be at local rows 0 and 1,
             // NOT shifted down by 2 due to double-offsetting.
-            assert_eq!(rendered.lines.len(), 2, "expected 2 lines, got {}", rendered.lines.len());
+            assert_eq!(
+                rendered.lines.len(),
+                2,
+                "expected 2 lines, got {}",
+                rendered.lines.len()
+            );
             assert!(rendered.lines[0].contains("left"));
             assert!(rendered.lines[0].contains("a"));
             assert!(rendered.lines[1].contains("b"));
@@ -532,8 +565,14 @@ mod tests {
                 .border(Border::ROUNDED);
 
             let rendered = div.render_rect(Rect::new(0, 5, 6, 3)).unwrap();
-            assert!(rendered.lines[0].contains("╭"), "border should be at local row 0");
-            assert!(rendered.lines[2].contains("╰"), "border should be at local row 2");
+            assert!(
+                rendered.lines[0].contains("╭"),
+                "border should be at local row 0"
+            );
+            assert!(
+                rendered.lines[2].contains("╰"),
+                "border should be at local row 2"
+            );
             // Note: draw_border() currently replaces the entire middle rows,
             // so child content inside bordered divs is overwritten. This is a
             // pre-existing issue unrelated to the nonzero-rect fix.

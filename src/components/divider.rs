@@ -1,9 +1,16 @@
 //! A visual divider line — horizontal or vertical.
 
-use crate::{Component, RenderError, Rendered};
-use crate::theme::{Style, Theme};
-use crate::theme::Palette;
-use crate::layout::Direction;
+use crate::{
+    Component,
+    RenderError,
+    Rendered,
+    layout::Direction,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+    },
+};
 
 /// A standalone divider line.
 ///
@@ -58,7 +65,7 @@ impl Component for Divider {
         };
 
         let line = match self.direction {
-            Direction::Horizontal => {
+            | Direction::Horizontal => {
                 if let Some(ref label) = self.label {
                     let label = format!(" {} ", label);
                     let label_vw = crate::utils::visible_width(&label);
@@ -78,11 +85,11 @@ impl Component for Divider {
                     let line = "─".repeat(width as usize);
                     crate::theme::stylize(&line, &style)
                 }
-            }
-            Direction::Vertical => {
+            },
+            | Direction::Vertical => {
                 let line = "│".repeat(width as usize);
                 crate::theme::stylize(&line, &style)
-            }
+            },
         };
 
         Ok(Rendered {
@@ -153,7 +160,9 @@ mod tests {
     fn divider_rect_vertical_multi_line() {
         Theme::with(Theme::Light, || {
             let div = Divider::vertical();
-            let rendered = div.render_rect(crate::layout::Rect::new(0, 0, 1, 3)).unwrap();
+            let rendered = div
+                .render_rect(crate::layout::Rect::new(0, 0, 1, 3))
+                .unwrap();
             assert_eq!(rendered.lines.len(), 3);
             for line in &rendered.lines {
                 assert!(line.contains("│"));

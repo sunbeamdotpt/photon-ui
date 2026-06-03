@@ -8,16 +8,16 @@ use crate::{
     Component,
     RenderError,
     Rendered,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
     utils::{
         truncate_to_width,
         visible_width,
     },
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
 };
 
 /// A single piece of text in a status bar zone.
@@ -126,8 +126,16 @@ impl Component for StatusBar {
         let mut center = center_str;
 
         // Reserve minimum space for right and center so they remain visible.
-        let min_right = if self.right.is_empty() { 0 } else { right_w.min(5) };
-        let min_center = if self.center.is_empty() { 0 } else { center_w.min(5) };
+        let min_right = if self.right.is_empty() {
+            0
+        } else {
+            right_w.min(5)
+        };
+        let min_center = if self.center.is_empty() {
+            0
+        } else {
+            center_w.min(5)
+        };
         let left_max = width_usize.saturating_sub(min_right + min_center);
 
         // Cap left to remaining space after reservations.

@@ -7,12 +7,12 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A horizontal tab bar with keyboard navigation.

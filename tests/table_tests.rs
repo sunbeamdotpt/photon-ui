@@ -5,7 +5,11 @@ use photon_ui::{
     Component,
     Focusable,
     InputResult,
-    components::{Column, Row, Table},
+    components::{
+        Column,
+        Row,
+        Table,
+    },
     events::Event,
     theme::Theme,
 };

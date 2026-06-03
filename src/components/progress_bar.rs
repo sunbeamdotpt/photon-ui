@@ -7,12 +7,12 @@ use crate::{
     Component,
     RenderError,
     Rendered,
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A non-interactive progress bar.

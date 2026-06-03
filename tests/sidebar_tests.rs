@@ -3,7 +3,10 @@ use photon_ui::{
     Component,
     Focusable,
     InputResult,
-    components::{Sidebar, SidebarItem},
+    components::{
+        Sidebar,
+        SidebarItem,
+    },
     events::Event,
     theme::Theme,
 };
@@ -47,7 +50,11 @@ fn sidebar_unfocused_no_accent() {
 
 #[test]
 fn sidebar_keyboard_navigation() {
-    let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B"), SidebarItem::new("C")]);
+    let mut sidebar = Sidebar::new(vec![
+        SidebarItem::new("A"),
+        SidebarItem::new("B"),
+        SidebarItem::new("C"),
+    ]);
     sidebar.set_focused(true);
 
     sidebar.handle_input(&Event::Key(KeyCode::Down.into()));
@@ -62,7 +69,11 @@ fn sidebar_keyboard_navigation() {
 
 #[test]
 fn sidebar_up_navigation() {
-    let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B"), SidebarItem::new("C")]);
+    let mut sidebar = Sidebar::new(vec![
+        SidebarItem::new("A"),
+        SidebarItem::new("B"),
+        SidebarItem::new("C"),
+    ]);
     sidebar.set_focused(true);
     sidebar.set_selected(2);
 
@@ -78,7 +89,11 @@ fn sidebar_up_navigation() {
 
 #[test]
 fn sidebar_j_and_k_navigation() {
-    let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B"), SidebarItem::new("C")]);
+    let mut sidebar = Sidebar::new(vec![
+        SidebarItem::new("A"),
+        SidebarItem::new("B"),
+        SidebarItem::new("C"),
+    ]);
     sidebar.set_focused(true);
 
     sidebar.handle_input(&Event::Key(KeyCode::Char('j').into()));

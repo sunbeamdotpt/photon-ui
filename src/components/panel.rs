@@ -101,7 +101,8 @@ impl Component for Panel {
 
         // Available space between the two vertical borders.
         let available = width.saturating_sub(border_w * 2) as usize;
-        // Reduce padding when the width is too small to accommodate full borders + padding.
+        // Reduce padding when the width is too small to accommodate full borders +
+        // padding.
         let actual_pad = pad.min(available / 2);
         let inner_width = available.saturating_sub(actual_pad * 2);
         let total_width = inner_width + actual_pad * 2;
@@ -332,8 +333,9 @@ mod tests {
         assert_eq!(panel.border, Border::ROUNDED);
     }
 
-    /// Regression: Panel must never produce lines wider than the requested width,
-    /// even when the width is too small to accommodate borders + padding.
+    /// Regression: Panel must never produce lines wider than the requested
+    /// width, even when the width is too small to accommodate borders +
+    /// padding.
     #[test]
     fn panel_respects_narrow_width() {
         Theme::with(Theme::Light, || {

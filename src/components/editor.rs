@@ -407,8 +407,6 @@ impl Editor {
         self.cache_width = 0;
     }
 
-
-
     /// Delete the current line (vim `dd` behavior).
     fn delete_line(&mut self) {
         let (line, _) = self.cursor_line_col();

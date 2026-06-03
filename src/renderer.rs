@@ -81,7 +81,8 @@ impl Rendered {
             if end > target_vw_after {
                 target.lines[target_row].push_str(&" ".repeat(end - target_vw_after));
             }
-            let start_byte = crate::utils::byte_index_at_visual_pos(&target.lines[target_row], col_usize);
+            let start_byte =
+                crate::utils::byte_index_at_visual_pos(&target.lines[target_row], col_usize);
             let end_byte = crate::utils::byte_index_at_visual_pos(&target.lines[target_row], end);
             target.lines[target_row].replace_range(start_byte..end_byte, line);
         }
@@ -125,8 +126,8 @@ impl Rendered {
             let end_byte = crate::utils::byte_index_at_visual_pos(target_line, end);
             // Preserve ANSI reset codes (\x1b[0m) at the start boundary so
             // background colours don't bleed into the next component.
-            if target_line.as_bytes().get(start_byte) == Some(&b'\x1b')
-                && target_line[start_byte..].starts_with("\x1b[0m")
+            if target_line.as_bytes().get(start_byte) == Some(&b'\x1b') &&
+                target_line[start_byte..].starts_with("\x1b[0m")
             {
                 start_byte = (start_byte + "\x1b[0m".len()).min(end_byte);
             }
@@ -583,7 +584,8 @@ mod tests {
         assert_eq!(crate::utils::visible_width(&target.lines[0]), 10);
     }
 
-    /// Regression: blit_into_rect must not panic when target contains ANSI codes.
+    /// Regression: blit_into_rect must not panic when target contains ANSI
+    /// codes.
     #[test]
     fn blit_into_rect_ansi_target() {
         let mut target = Rendered {

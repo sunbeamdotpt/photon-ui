@@ -9,12 +9,12 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A column definition for the [`Table`] component.
@@ -208,9 +208,9 @@ impl Component for Table {
         let mut header_parts = vec![stylize("  ", &header_style)];
         for (i, col) in self.columns.iter().enumerate() {
             let mut label = col.label.clone();
-            if let Some(sort_idx) = self.sort_column
-                && sort_idx == i
-                && col.sortable
+            if let Some(sort_idx) = self.sort_column &&
+                sort_idx == i &&
+                col.sortable
             {
                 let indicator = if self.sort_ascending { "▲" } else { "▼" };
                 label.push_str(indicator);
@@ -326,8 +326,9 @@ impl Component for Table {
 
 #[cfg(test)]
 mod tests {
-    use crossterm::event::KeyCode;
     use std::collections::HashMap;
+
+    use crossterm::event::KeyCode;
 
     use super::*;
     use crate::Event;

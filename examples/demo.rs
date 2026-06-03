@@ -78,10 +78,10 @@ use photon_ui::{
         TreeNode,
         TreeView,
         TruncatedText,
-    },
-    components::table::{
-        Column,
-        Row,
+        table::{
+            Column,
+            Row,
+        },
     },
     layout::{
         Border,
@@ -97,9 +97,7 @@ use photon_ui::{
         layout::Layout,
     },
     terminal::ProcessTerminal,
-    theme::{
-        Theme,
-    },
+    theme::Theme,
 };
 
 const DEMO_MARKDOWN: &str = r#"# Photon UI
@@ -666,8 +664,11 @@ impl DemoApp {
 
         self.tui
             .mount(Box::new(Header::new("Dashboard Demo").action("q:quit")));
-        self.tui
-            .mount(Box::new(Breadcrumbs::new(vec!["Home", "Dashboard", "Overview"])));
+        self.tui.mount(Box::new(Breadcrumbs::new(vec![
+            "Home",
+            "Dashboard",
+            "Overview",
+        ])));
 
         // ── DashboardBody: Sidebar + MainContent ──
         let mut dashboard_body = Div::new(Layout::horizontal([
@@ -831,15 +832,11 @@ impl DemoApp {
             Constraint::Percentage(50),
         ]));
         content_row.push(Box::new(Markdown::new(DEMO_MARKDOWN)));
-        content_row.push(Box::new(
-            Panel::new()
-                .title("Info")
-                .lines(vec![
-                    "\x1b[1m\x1b[97mPhoton UI v0.1.0\x1b[0m".into(),
-                    "A Rust TUI library".into(),
-                    "\x1b[31mBuilt with ♥\x1b[0m".into(),
-                ]),
-        ));
+        content_row.push(Box::new(Panel::new().title("Info").lines(vec![
+            "\x1b[1m\x1b[97mPhoton UI v0.1.0\x1b[0m".into(),
+            "A Rust TUI library".into(),
+            "\x1b[31mBuilt with ♥\x1b[0m".into(),
+        ])));
         main_content.push(Box::new(content_row));
         main_content.push(Box::new(Divider::horizontal().labeled("System")));
 
@@ -858,11 +855,7 @@ impl DemoApp {
             "image/png",
             Some("[image]".to_string()),
         )));
-        system_row.push(Box::new(Text::new(
-            "\x1b[32m●\x1b[0m online",
-            0,
-            0,
-        )));
+        system_row.push(Box::new(Text::new("\x1b[32m●\x1b[0m online", 0, 0)));
         system_row.push(Box::new(TruncatedText::new(
             "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",
             0,
@@ -982,8 +975,14 @@ impl DemoApp {
                             Constraint::Length(1),
                         ]))
                         .child(Box::new(Text::new("This is a modal dialog.", 0, 0)))
-                        .child(Box::new(Text::new("Press Esc to dismiss.", 0, 0)));
-                        self.tui.show_modal(Box::new(Modal::new(Box::new(modal_content)).title("Modal")));
+                        .child(Box::new(Text::new(
+                            "Press Esc to dismiss.",
+                            0,
+                            0,
+                        )));
+                        self.tui.show_modal(Box::new(
+                            Modal::new(Box::new(modal_content)).title("Modal"),
+                        ));
                     }
                     return true;
                 }
@@ -1002,8 +1001,17 @@ impl DemoApp {
 /// Attempt to detect terminal background color via OSC 11 query.
 /// Returns `true` for dark, `false` for light, `None` if detection fails.
 fn detect_dark_background() -> Option<bool> {
-    use std::io::{self, Read, Write};
-    use std::time::{Duration, Instant};
+    use std::{
+        io::{
+            self,
+            Read,
+            Write,
+        },
+        time::{
+            Duration,
+            Instant,
+        },
+    };
 
     // Send OSC 11 query
     let mut stdout = io::stdout();
@@ -1019,17 +1027,17 @@ fn detect_dark_background() -> Option<bool> {
 
     while start.elapsed() < Duration::from_millis(200) {
         match io::stdin().read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => {
+            | Ok(0) => break,
+            | Ok(n) => {
                 response.extend_from_slice(&buf[..n]);
                 if response.contains(&0x07) {
                     break;
                 }
-            }
-            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+            },
+            | Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                 std::thread::sleep(Duration::from_millis(10));
-            }
-            Err(_) => break,
+            },
+            | Err(_) => break,
         }
     }
 

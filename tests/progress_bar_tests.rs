@@ -58,11 +58,21 @@ fn progress_bar_clamps_value() {
 #[test]
 fn progress_bar_uses_theme_colors() {
     let light_line = Theme::with(Theme::Light, || {
-        ProgressBar::new("", 0.5).width(10).render(80).unwrap().lines[0].clone()
+        ProgressBar::new("", 0.5)
+            .width(10)
+            .render(80)
+            .unwrap()
+            .lines[0]
+            .clone()
     });
 
     let dark_line = Theme::with(Theme::Dark, || {
-        ProgressBar::new("", 0.5).width(10).render(80).unwrap().lines[0].clone()
+        ProgressBar::new("", 0.5)
+            .width(10)
+            .render(80)
+            .unwrap()
+            .lines[0]
+            .clone()
     });
 
     // Both should contain the bar structure

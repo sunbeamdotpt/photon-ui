@@ -3,18 +3,45 @@ use std::collections::HashMap;
 use photon_ui::{
     Component,
     components::{
-        Box as BoxComponent, Button, Div, Divider, Editor, Header, ImageWidget,
-        Input, Loader, Panel, ProgressBar, SelectList, SettingsList, Sidebar, SidebarItem,
-        Table, Column, Row, Tabs, TreeNode, TreeView, TruncatedText,
+        Box as BoxComponent,
+        Button,
+        Column,
+        Div,
+        Divider,
+        Editor,
+        Header,
+        ImageWidget,
+        Input,
+        Loader,
+        Panel,
+        ProgressBar,
+        Row,
+        SelectList,
+        SettingsList,
+        Sidebar,
+        SidebarItem,
+        Table,
+        Tabs,
+        TreeNode,
+        TreeView,
+        TruncatedText,
     },
-    layout::{Constraint, Rect, layout::Layout},
-    renderer::{RenderStrategy, Renderer},
+    layout::{
+        Constraint,
+        Rect,
+        layout::Layout,
+    },
+    renderer::{
+        RenderStrategy,
+        Renderer,
+    },
     terminal::TestTerminal,
     utils::visible_width,
 };
 
 /// Build the exact dashboard layout from the demo, wrapped in a root container
-/// that mimics the TUI's vertical layout (Header + Breadcrumbs + DashboardBody).
+/// that mimics the TUI's vertical layout (Header + Breadcrumbs +
+/// DashboardBody).
 fn build_full_dashboard(_width: u16) -> Box<dyn Component> {
     let mut root = Div::new(Layout::vertical([
         Constraint::Length(1), // Header
@@ -23,7 +50,11 @@ fn build_full_dashboard(_width: u16) -> Box<dyn Component> {
     ]));
 
     root.push(Box::new(Header::new("Dashboard Demo").action("q:quit")));
-    root.push(Box::new(photon_ui::components::Breadcrumbs::new(vec!["Home", "Dashboard", "Overview"])));
+    root.push(Box::new(photon_ui::components::Breadcrumbs::new(vec![
+        "Home",
+        "Dashboard",
+        "Overview",
+    ])));
 
     let mut dashboard_body = Div::new(Layout::horizontal([
         Constraint::Length(16), // Sidebar
@@ -170,10 +201,7 @@ fn build_full_dashboard(_width: u16) -> Box<dyn Component> {
     content_row.push(Box::new(
         Panel::new()
             .title("Info")
-            .lines(vec![
-                "Photon UI v0.1.0".into(),
-                "A Rust TUI library".into(),
-            ]),
+            .lines(vec!["Photon UI v0.1.0".into(), "A Rust TUI library".into()]),
     ));
     main_content.push(Box::new(content_row));
     main_content.push(Box::new(Divider::horizontal().labeled("System")));
@@ -185,7 +213,11 @@ fn build_full_dashboard(_width: u16) -> Box<dyn Component> {
         Constraint::Length(8),
         Constraint::Min(5),
     ]));
-    system_row.push(Box::new(Loader::new("Loading...", Some("\x1b[36m".into()), None)));
+    system_row.push(Box::new(Loader::new(
+        "Loading...",
+        Some("\x1b[36m".into()),
+        None,
+    )));
     system_row.push(Box::new(Loader::new(
         "Background task running...",
         Some("\x1b[33m".into()),
@@ -197,8 +229,7 @@ fn build_full_dashboard(_width: u16) -> Box<dyn Component> {
         Some("[image]".to_string()),
     )));
     system_row.push(Box::new(
-        BoxComponent::new(1)
-            .with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
+        BoxComponent::new(1).with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
     ));
     system_row.push(Box::new(TruncatedText::new(
         "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",

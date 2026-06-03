@@ -6,16 +6,16 @@ use crate::{
     Component,
     RenderError,
     Rendered,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
     utils::{
         truncate_to_width,
         visible_width,
     },
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
 };
 
 /// A non-interactive header bar.

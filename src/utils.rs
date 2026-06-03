@@ -44,7 +44,8 @@ pub fn visible_width(s: &str) -> usize {
     width
 }
 
-/// Return the byte index in `s` that corresponds to visual position `target_pos`.
+/// Return the byte index in `s` that corresponds to visual position
+/// `target_pos`.
 ///
 /// ANSI escape sequences are skipped (they contribute 0 width). If `target_pos`
 /// is beyond the visible width of `s`, the byte index after the last visible
@@ -134,7 +135,7 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
         // Skip ANSI escape sequences (CSI and OSC) — they contribute 0 width.
         if ch == '\x1b' {
             match chars.peek() {
-                Some(&'[') => {
+                | Some(&'[') => {
                     result.push(ch);
                     chars.next(); // consume '['
                     result.push('[');
@@ -146,8 +147,8 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
                         }
                     }
                     continue;
-                }
-                Some(&']') => {
+                },
+                | Some(&']') => {
                     result.push(ch);
                     chars.next(); // consume ']'
                     result.push(']');
@@ -166,8 +167,8 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
                         }
                     }
                     continue;
-                }
-                _ => {}
+                },
+                | _ => {},
             }
         }
         let cw = ch.width().unwrap_or(0);

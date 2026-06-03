@@ -43,11 +43,24 @@ pub use panel::Panel;
 pub use progress_bar::ProgressBar;
 pub use select_list::SelectList;
 pub use settings_list::SettingsList;
-pub use sidebar::{Sidebar, SidebarItem};
+pub use sidebar::{
+    Sidebar,
+    SidebarItem,
+};
 pub use spacer::Spacer;
-pub use status_bar::{Segment, StatusBar};
-pub use table::{Column, Row, Table};
+pub use status_bar::{
+    Segment,
+    StatusBar,
+};
+pub use table::{
+    Column,
+    Row,
+    Table,
+};
 pub use tabs::Tabs;
 pub use text::Text;
-pub use tree_view::{TreeNode, TreeView};
+pub use tree_view::{
+    TreeNode,
+    TreeView,
+};
 pub use truncated_text::TruncatedText;

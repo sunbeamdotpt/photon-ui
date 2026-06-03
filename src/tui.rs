@@ -375,7 +375,9 @@ impl TUI {
         if let Some(ref modal) = self.modal {
             if let Ok(rendered) = modal.render(width) {
                 let modal_h = rendered.lines.len() as u16;
-                let modal_w = crate::utils::visible_width(rendered.lines.first().unwrap_or(&String::new())) as u16;
+                let modal_w =
+                    crate::utils::visible_width(rendered.lines.first().unwrap_or(&String::new()))
+                        as u16;
                 let row = (height.saturating_sub(modal_h)) / 2;
                 let col = (width.saturating_sub(modal_w)) / 2;
                 rendered.blit_onto(&mut screen, row, col);

@@ -7,12 +7,12 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
-};
-use crate::theme::{
-    Palette,
-    Style,
-    Theme,
-    stylize,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A single node in a tree view.
@@ -98,11 +98,9 @@ impl TreeView {
     }
 
     /// Find the flat index of the currently selected node by comparing paths.
-    fn selected_flat_index(
-        &self,
-        flat: &[(usize, &TreeNode, Vec<usize>, bool)],
-    ) -> Option<usize> {
-        flat.iter().position(|(_, _, path, _)| path == &self.selected)
+    fn selected_flat_index(&self, flat: &[(usize, &TreeNode, Vec<usize>, bool)]) -> Option<usize> {
+        flat.iter()
+            .position(|(_, _, path, _)| path == &self.selected)
     }
 
     /// Navigate to the node at the given mutable path.
@@ -111,13 +109,13 @@ impl TreeView {
             return None;
         }
         let mut node = match self.nodes.get_mut(path[0]) {
-            Some(n) => n,
-            None => return None,
+            | Some(n) => n,
+            | None => return None,
         };
         for &index in &path[1..] {
             node = match node.children.get_mut(index) {
-                Some(n) => n,
-                None => return None,
+                | Some(n) => n,
+                | None => return None,
             };
         }
         Some(node)
@@ -249,8 +247,8 @@ impl Component for TreeView {
                 },
                 | KeyCode::Right | KeyCode::Enter => {
                     let path = self.selected.clone();
-                    if let Some(node) = self.node_at_path_mut(&path)
-                        && !node.children.is_empty()
+                    if let Some(node) = self.node_at_path_mut(&path) &&
+                        !node.children.is_empty()
                     {
                         node.expanded = !node.expanded;
                         return InputResult::Handled;
@@ -259,9 +257,9 @@ impl Component for TreeView {
                 },
                 | KeyCode::Left => {
                     let path = self.selected.clone();
-                    if let Some(node) = self.node_at_path_mut(&path)
-                        && node.expanded
-                        && !node.children.is_empty()
+                    if let Some(node) = self.node_at_path_mut(&path) &&
+                        node.expanded &&
+                        !node.children.is_empty()
                     {
                         node.expanded = false;
                         return InputResult::Handled;

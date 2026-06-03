@@ -7,13 +7,13 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
-};
-use crate::theme::{
-    ColorMode,
-    Palette,
-    Style,
-    Theme,
-    stylize,
+    theme::{
+        ColorMode,
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A single item in a sidebar.
@@ -107,7 +107,11 @@ impl Component for Sidebar {
             };
 
             let prefix = if is_selected { "> " } else { "  " };
-            let icon = item.icon.as_ref().map(|s| format!("{} ", s)).unwrap_or_default();
+            let icon = item
+                .icon
+                .as_ref()
+                .map(|s| format!("{} ", s))
+                .unwrap_or_default();
             let line = format!("{}{}{}", prefix, icon, item.label);
             let line = crate::utils::truncate_to_width(&line, content_width, "…");
             lines.push(stylize(&line, &style));
@@ -138,41 +142,41 @@ impl Component for Sidebar {
         use crossterm::event::KeyModifiers;
         if let Event::Key(key) = event {
             match key.code {
-                KeyCode::Down => {
+                | KeyCode::Down => {
                     if self.selected + 1 < self.items.len() {
                         self.selected += 1;
                     }
                     InputResult::Handled
-                }
-                KeyCode::Up => {
+                },
+                | KeyCode::Up => {
                     if self.selected > 0 {
                         self.selected -= 1;
                     }
                     InputResult::Handled
-                }
-                KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                },
+                | KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if self.selected + 1 < self.items.len() {
                         self.selected += 1;
                     }
                     InputResult::Handled
-                }
-                KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
+                },
+                | KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                     if self.selected > 0 {
                         self.selected -= 1;
                     }
                     InputResult::Handled
-                }
+                },
                 // Allow Tab / BackTab to propagate so TUI can cycle focus.
-                KeyCode::Tab | KeyCode::BackTab => InputResult::Ignored,
+                | KeyCode::Tab | KeyCode::BackTab => InputResult::Ignored,
                 // When focused, consume all other keys to prevent fallthrough
                 // to sibling components (e.g. Tabs reacting to Left/Right).
-                _ => {
+                | _ => {
                     if self.focused {
                         InputResult::Handled
                     } else {
                         InputResult::Ignored
                     }
-                }
+                },
             }
         } else {
             InputResult::Ignored
@@ -256,7 +260,11 @@ mod tests {
 
     #[test]
     fn sidebar_keyboard_navigation() {
-        let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B"), SidebarItem::new("C")]);
+        let mut sidebar = Sidebar::new(vec![
+            SidebarItem::new("A"),
+            SidebarItem::new("B"),
+            SidebarItem::new("C"),
+        ]);
         sidebar.set_focused(true);
 
         sidebar.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
@@ -280,7 +288,11 @@ mod tests {
 
     #[test]
     fn sidebar_j_k_navigation() {
-        let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B"), SidebarItem::new("C")]);
+        let mut sidebar = Sidebar::new(vec![
+            SidebarItem::new("A"),
+            SidebarItem::new("B"),
+            SidebarItem::new("C"),
+        ]);
         sidebar.set_focused(true);
 
         sidebar.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
