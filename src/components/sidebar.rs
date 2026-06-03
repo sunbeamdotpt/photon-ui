@@ -162,7 +162,17 @@ impl Component for Sidebar {
                     }
                     InputResult::Handled
                 }
-                _ => InputResult::Ignored,
+                // Allow Tab / BackTab to propagate so TUI can cycle focus.
+                KeyCode::Tab | KeyCode::BackTab => InputResult::Ignored,
+                // When focused, consume all other keys to prevent fallthrough
+                // to sibling components (e.g. Tabs reacting to Left/Right).
+                _ => {
+                    if self.focused {
+                        InputResult::Handled
+                    } else {
+                        InputResult::Ignored
+                    }
+                }
             }
         } else {
             InputResult::Ignored
@@ -314,5 +324,38 @@ mod tests {
             let rendered = sidebar.render(10).unwrap();
             assert!(!rendered.lines[0].contains('▐'));
         });
+    }
+
+    /// Regression: when focused, unhandled keys must be consumed (Handled) so
+    /// they don't fall through to sibling components.
+    #[test]
+    fn sidebar_focused_consumes_unhandled_keys() {
+        let mut sidebar = Sidebar::new(vec![SidebarItem::new("A"), SidebarItem::new("B")]);
+        sidebar.set_focused(true);
+
+        let left = Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Left,
+            crossterm::event::KeyModifiers::empty(),
+        ));
+        assert_eq!(sidebar.handle_input(&left), InputResult::Handled);
+
+        let right = Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Right,
+            crossterm::event::KeyModifiers::empty(),
+        ));
+        assert_eq!(sidebar.handle_input(&right), InputResult::Handled);
+    }
+
+    /// Tab must propagate (Ignored) so TUI can cycle focus.
+    #[test]
+    fn sidebar_tab_propagates_for_focus_cycle() {
+        let mut sidebar = Sidebar::new(vec![SidebarItem::new("A")]);
+        sidebar.set_focused(true);
+
+        let tab = Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Tab,
+            crossterm::event::KeyModifiers::empty(),
+        ));
+        assert_eq!(sidebar.handle_input(&tab), InputResult::Ignored);
     }
 }
