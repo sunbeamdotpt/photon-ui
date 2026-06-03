@@ -208,11 +208,12 @@ impl Component for Table {
         let mut header_parts = vec![stylize("  ", &header_style)];
         for (i, col) in self.columns.iter().enumerate() {
             let mut label = col.label.clone();
-            if let Some(sort_idx) = self.sort_column {
-                if sort_idx == i && col.sortable {
-                    let indicator = if self.sort_ascending { "▲" } else { "▼" };
-                    label.push_str(indicator);
-                }
+            if let Some(sort_idx) = self.sort_column
+                && sort_idx == i
+                && col.sortable
+            {
+                let indicator = if self.sort_ascending { "▲" } else { "▼" };
+                label.push_str(indicator);
             }
 
             let cell_width = widths.get(i).copied().unwrap_or(0);

@@ -70,7 +70,7 @@ impl TreeView {
 
     /// Flatten the visible tree into a list of entries with depth, node
     /// reference, path, and whether the node is the last child of its parent.
-    fn flatten<'a>(&'a self) -> Vec<(usize, &'a TreeNode, Vec<usize>, bool)> {
+    fn flatten(&self) -> Vec<(usize, &TreeNode, Vec<usize>, bool)> {
         let mut result = Vec::new();
         let len = self.nodes.len();
         for (i, node) in self.nodes.iter().enumerate() {
@@ -110,9 +110,15 @@ impl TreeView {
         if path.is_empty() {
             return None;
         }
-        let mut node = self.nodes.get_mut(path[0])?;
+        let mut node = match self.nodes.get_mut(path[0]) {
+            Some(n) => n,
+            None => return None,
+        };
         for &index in &path[1..] {
-            node = node.children.get_mut(index)?;
+            node = match node.children.get_mut(index) {
+                Some(n) => n,
+                None => return None,
+            };
         }
         Some(node)
     }
@@ -243,21 +249,22 @@ impl Component for TreeView {
                 },
                 | KeyCode::Right | KeyCode::Enter => {
                     let path = self.selected.clone();
-                    if let Some(node) = self.node_at_path_mut(&path) {
-                        if !node.children.is_empty() {
-                            node.expanded = !node.expanded;
-                            return InputResult::Handled;
-                        }
+                    if let Some(node) = self.node_at_path_mut(&path)
+                        && !node.children.is_empty()
+                    {
+                        node.expanded = !node.expanded;
+                        return InputResult::Handled;
                     }
                     InputResult::Ignored
                 },
                 | KeyCode::Left => {
                     let path = self.selected.clone();
-                    if let Some(node) = self.node_at_path_mut(&path) {
-                        if node.expanded && !node.children.is_empty() {
-                            node.expanded = false;
-                            return InputResult::Handled;
-                        }
+                    if let Some(node) = self.node_at_path_mut(&path)
+                        && node.expanded
+                        && !node.children.is_empty()
+                    {
+                        node.expanded = false;
+                        return InputResult::Handled;
                     }
                     if self.selected.len() > 1 {
                         self.selected.pop();
