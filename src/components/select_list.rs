@@ -7,6 +7,12 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A scrollable list of selectable items with keyboard navigation.
@@ -64,11 +70,25 @@ impl Focusable for SelectList {
 
 impl Component for SelectList {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let theme = Theme::current();
+        let accent_style = Style::new().fg(theme.accent()).bold();
+        let primary_style = Style::new().fg(theme.text_primary());
+        let dim_style = Style::new().fg(theme.text_secondary());
+
         let mut lines = Vec::new();
         let visible_end = (self.scroll + self.max_visible).min(self.items.len());
         for i in self.scroll..visible_end {
-            let prefix = if i == self.selected { "> " } else { "  " };
-            let line = format!("{}{}", prefix, self.items[i]);
+            let is_selected = i == self.selected;
+            let style = if is_selected && self.focused {
+                &accent_style
+            } else if is_selected {
+                &primary_style
+            } else {
+                &dim_style
+            };
+
+            let prefix = if is_selected { "> " } else { "  " };
+            let line = stylize(&format!("{}{}", prefix, self.items[i]), style);
             lines.push(crate::utils::truncate_to_width(&line, width, "…"));
         }
         Ok(Rendered {

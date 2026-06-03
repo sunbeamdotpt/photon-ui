@@ -10,6 +10,12 @@ use crate::{
     InputResult,
     RenderError,
     Rendered,
+    theme::{
+        Palette,
+        Style,
+        Theme,
+        stylize,
+    },
 };
 
 /// A scrollable list of toggleable settings rendered as checkboxes.
@@ -66,11 +72,25 @@ impl Focusable for SettingsList {
 
 impl Component for SettingsList {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let theme = Theme::current();
+        let accent_style = Style::new().fg(theme.accent()).bold();
+        let primary_style = Style::new().fg(theme.text_primary());
+        let dim_style = Style::new().fg(theme.text_secondary());
+
         let mut lines = Vec::new();
         for (i, (name, value)) in self.items.iter().enumerate() {
-            let prefix = if i == self.selected { "> " } else { "  " };
+            let is_selected = i == self.selected;
+            let style = if is_selected && self.focused {
+                &accent_style
+            } else if is_selected {
+                &primary_style
+            } else {
+                &dim_style
+            };
+
+            let prefix = if is_selected { "> " } else { "  " };
             let check = if *value { "[x]" } else { "[ ]" };
-            let line = format!("{}{} {}", prefix, check, name);
+            let line = stylize(&format!("{}{} {}", prefix, check, name), style);
             lines.push(crate::utils::truncate_to_width(&line, width, "…"));
         }
         Ok(Rendered {
