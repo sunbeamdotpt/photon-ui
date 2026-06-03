@@ -121,8 +121,15 @@ impl Rendered {
             if end > target_vw_after {
                 target_line.push_str(&" ".repeat(end - target_vw_after));
             }
-            let start_byte = crate::utils::byte_index_at_visual_pos(target_line, col);
+            let mut start_byte = crate::utils::byte_index_at_visual_pos(target_line, col);
             let end_byte = crate::utils::byte_index_at_visual_pos(target_line, end);
+            // Preserve ANSI reset codes (\x1b[0m) at the start boundary so
+            // background colours don't bleed into the next component.
+            if target_line.as_bytes().get(start_byte) == Some(&b'\x1b')
+                && target_line[start_byte..].starts_with("\x1b[0m")
+            {
+                start_byte = (start_byte + "\x1b[0m".len()).min(end_byte);
+            }
             target_line.replace_range(start_byte..end_byte, source);
         }
         if let Some((r, c)) = self.cursor {
@@ -592,6 +599,36 @@ mod tests {
         // Blit at visual position 4 — byte index would be inside the ANSI prefix
         source.blit_into_rect(&mut target, Rect::new(4, 0, 10, 1));
         assert!(target.lines[0].contains("XY"));
+        assert_eq!(crate::utils::visible_width(&target.lines[0]), 13);
+    }
+
+    /// Regression: blit_into_rect must preserve ANSI reset codes at the start
+    /// boundary so background colours don't bleed into adjacent components.
+    #[test]
+    fn blit_into_rect_preserves_ansi_reset_at_boundary() {
+        let mut target = Rendered::empty();
+        // Blue background spanning visual columns 0–7
+        let blue_box = Rendered {
+            lines: vec!["\x1b[44m        \x1b[0m".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        blue_box.blit_into_rect(&mut target, Rect::new(0, 0, 8, 1));
+
+        // Plain text blitted immediately after the blue box (column 8)
+        let text = Rendered {
+            lines: vec!["hello".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        text.blit_into_rect(&mut target, Rect::new(8, 0, 5, 1));
+
+        // The reset code must survive so "hello" doesn't pick up the blue bg
+        assert!(
+            target.lines[0].contains("\x1b[0mhello"),
+            "reset should be preserved before hello: {}",
+            target.lines[0]
+        );
         assert_eq!(crate::utils::visible_width(&target.lines[0]), 13);
     }
 
