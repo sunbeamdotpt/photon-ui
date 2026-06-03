@@ -2,10 +2,46 @@ use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
 
 /// Compute the visible display width of a string.
 ///
-/// ANSI escape sequences and control characters do not contribute to the
-/// width. Full-width characters (e.g. CJK) count as 2 columns.
+/// ANSI escape sequences (CSI `\x1b[…` and OSC `\x1b]…`) do not contribute to
+/// the width. Full-width characters (e.g. CJK) count as 2 columns.
 pub fn visible_width(s: &str) -> usize {
-    s.width()
+    let mut width = 0;
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '\x1b' {
+            match chars.peek() {
+                Some(&'[') => {
+                    chars.next();
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        if c.is_alphabetic() {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                Some(&']') => {
+                    chars.next();
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        if c == '\x07' {
+                            break;
+                        }
+                        if c == '\x1b' {
+                            if let Some(&'\\') = chars.peek() {
+                                chars.next();
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+                }
+                _ => {}
+            }
+        }
+        width += ch.width().unwrap_or(0);
+    }
+    width
 }
 
 /// Truncate a string so its visible width does not exceed `max_width`.
