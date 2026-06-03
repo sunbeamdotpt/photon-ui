@@ -2,6 +2,7 @@ use std::cell::Cell;
 
 use crossterm::event::KeyCode;
 use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::{
     Component,
@@ -326,26 +327,45 @@ impl Input {
 impl Component for Input {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
         let w = width as usize;
-        let mut scroll = self.scroll.get();
-        if self.cursor > scroll.saturating_add(w.saturating_sub(1)) {
-            scroll = self.cursor.saturating_sub(w.saturating_sub(1));
+        let graphemes = self.graphemes();
+
+        // Compute cumulative visible widths for each grapheme boundary.
+        let mut cum_vw = vec![0usize; graphemes.len() + 1];
+        for (i, g) in graphemes.iter().enumerate() {
+            cum_vw[i + 1] = cum_vw[i] + g.width();
+        }
+
+        let cursor_vw = cum_vw[self.cursor.min(graphemes.len())];
+        let mut scroll = self.scroll.get().min(graphemes.len());
+
+        // Adjust scroll so the cursor remains visible.
+        let cursor_screen_vw = cursor_vw.saturating_sub(cum_vw[scroll]);
+        if cursor_screen_vw > w.saturating_sub(1) {
+            let target = cursor_vw.saturating_sub(w.saturating_sub(1));
+            scroll = cum_vw.partition_point(|&v| v < target);
+            scroll = scroll.min(graphemes.len());
         } else if self.cursor < scroll {
             scroll = self.cursor;
         }
+
         self.scroll.set(scroll);
 
-        let visible = self
-            .graphemes()
-            .iter()
-            .skip(scroll)
-            .take(w)
-            .copied()
-            .collect::<String>();
-        let mut line = visible;
-        if line.len() < w {
-            line.push_str(&" ".repeat(w.saturating_sub(line.len())));
+        // Build the visible line by accumulating graphemes until width is reached.
+        let mut line = String::new();
+        let mut display_vw = 0;
+        for g in graphemes.iter().skip(scroll) {
+            let gw = g.width();
+            if display_vw + gw > w {
+                break;
+            }
+            line.push_str(g);
+            display_vw += gw;
         }
-        let cursor_col = self.cursor.saturating_sub(scroll);
+        if display_vw < w {
+            line.push_str(&" ".repeat(w - display_vw));
+        }
+
+        let cursor_col = cursor_vw.saturating_sub(cum_vw[scroll]);
         Ok(Rendered {
             lines: vec![line],
             cursor: if self.focused {
@@ -664,5 +684,22 @@ mod tests {
             KeyModifiers::empty(),
         )));
         assert_eq!(input.text(), "a");
+    }
+
+    /// Regression: Input must not exceed its allocated width when the text
+    /// contains wide characters (e.g. CJK). Taking `w` graphemes can produce
+    /// a visible width up to `2*w` if each grapheme is 2 columns wide.
+    #[test]
+    fn input_respects_width_with_wide_chars() {
+        let mut input = Input::new();
+        input.set_text("中文测试");
+        let rendered = input.render(4).unwrap();
+        let vw = crate::utils::visible_width(&rendered.lines[0]);
+        assert!(
+            vw <= 4,
+            "input line exceeds width 4 (actual {}): {:?}",
+            vw,
+            rendered.lines[0]
+        );
     }
 }
