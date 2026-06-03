@@ -129,7 +129,47 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
     let target = max.saturating_sub(ellip_width);
     let mut result = String::new();
     let mut w = 0;
-    for ch in s.chars() {
+    let mut chars = s.chars().peekable();
+    while let Some(ch) = chars.next() {
+        // Skip ANSI escape sequences (CSI and OSC) — they contribute 0 width.
+        if ch == '\x1b' {
+            match chars.peek() {
+                Some(&'[') => {
+                    result.push(ch);
+                    chars.next(); // consume '['
+                    result.push('[');
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        result.push(c);
+                        if c.is_alphabetic() {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                Some(&']') => {
+                    result.push(ch);
+                    chars.next(); // consume ']'
+                    result.push(']');
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        result.push(c);
+                        if c == '\x07' {
+                            break;
+                        }
+                        if c == '\x1b' {
+                            if let Some(&'\\') = chars.peek() {
+                                chars.next();
+                                result.push('\\');
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+                }
+                _ => {}
+            }
+        }
         let cw = ch.width().unwrap_or(0);
         if w + cw > target {
             break;
@@ -138,6 +178,12 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
         w += cw;
     }
     result.push_str(ellipsis);
+    // If the original string contained ANSI codes, append a reset so that
+    // truncated strings don't leave active attributes (e.g. background colours)
+    // dangling.
+    if s.contains('\x1b') {
+        result.push_str("\x1b[0m");
+    }
     result
 }
 
@@ -548,6 +594,36 @@ mod tests {
         eprintln!("truncated vw: {}", vw);
         assert!(vw <= 80, "truncated width {} exceeds 80", vw);
         assert!(truncated.ends_with("…"));
+    }
+
+    #[test]
+    fn truncate_to_width_preserves_ansi_prefix() {
+        let s = "\x1b[44mhello\x1b[0m";
+        let truncated = truncate_to_width(s, 3, "…");
+        // Should preserve the ANSI prefix, truncate visible text, add ellipsis,
+        // and append a reset so attributes don't bleed.
+        assert!(truncated.starts_with("\x1b[44m"));
+        assert!(truncated.contains("…"));
+        assert!(truncated.ends_with("\x1b[0m"));
+        assert_eq!(visible_width(&truncated), 3);
+    }
+
+    #[test]
+    fn truncate_to_width_preserves_ansi_infix() {
+        let s = "hi\x1b[31mred\x1b[0mlo";
+        let truncated = truncate_to_width(s, 4, "…");
+        assert_eq!(visible_width(&truncated), 4);
+        // The ANSI sequence should be fully preserved, not split mid-sequence.
+        assert!(truncated.contains("\x1b[31m"));
+        assert!(truncated.contains("\x1b[0m"));
+    }
+
+    #[test]
+    fn truncate_to_width_no_truncation_when_fits() {
+        let s = "\x1b[44mhi\x1b[0m";
+        let truncated = truncate_to_width(s, 5, "…");
+        // visible width is 2, which fits in 5, so return as-is
+        assert_eq!(truncated, s);
     }
 
     #[test]
