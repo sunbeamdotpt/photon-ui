@@ -62,6 +62,7 @@ use photon_ui::{
         Input,
         Loader,
         Markdown,
+        Modal,
         Panel,
         ProgressBar,
         Segment,
@@ -83,6 +84,7 @@ use photon_ui::{
         Row,
     },
     layout::{
+        Border,
         Constraint,
         Direction,
         Flex,
@@ -673,13 +675,31 @@ impl DemoApp {
             Constraint::Min(10),    // MainContent
         ]));
 
+        let mut sidebar_column = Div::new(Layout::vertical([
+            Constraint::Length(4), // Nav items
+            Constraint::Min(1),    // Collapsible tags panel
+        ]));
         let sidebar = Sidebar::new(vec![
             SidebarItem::new("Overview").icon("📊"),
             SidebarItem::new("Files").icon("📁"),
             SidebarItem::new("Settings").icon("⚙️"),
             SidebarItem::new("Profile").icon("👤"),
         ]);
-        dashboard_body.push(Box::new(sidebar));
+        sidebar_column.push(Box::new(sidebar));
+
+        let tags_panel = Div::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]))
+        .border(Border::ROUNDED)
+        .title("Tags")
+        .collapsible(true)
+        .child(Box::new(Text::new("rust", 0, 0)))
+        .child(Box::new(Text::new("tui", 0, 0)))
+        .child(Box::new(Text::new("cli", 0, 0)));
+        sidebar_column.push(Box::new(tags_panel));
+        dashboard_body.push(Box::new(sidebar_column));
 
         // ── MainContent (vertical) with Dividers ──
         // Total = 24 lines. Each component gets exactly the height it needs
@@ -946,6 +966,25 @@ impl DemoApp {
                 if key.code == KeyCode::Char('l') && key.modifiers.is_empty() {
                     self.design_subpage = !self.design_subpage;
                     self.load_page();
+                    return true;
+                }
+            }
+        }
+
+        if self.page == 5 {
+            if let Event::Key(key) = event {
+                if key.code == KeyCode::Char('m') && key.modifiers.is_empty() {
+                    if self.tui.modal_active() {
+                        self.tui.dismiss_modal();
+                    } else {
+                        let modal_content = Div::new(Layout::vertical([
+                            Constraint::Length(1),
+                            Constraint::Length(1),
+                        ]))
+                        .child(Box::new(Text::new("This is a modal dialog.", 0, 0)))
+                        .child(Box::new(Text::new("Press Esc to dismiss.", 0, 0)));
+                        self.tui.show_modal(Box::new(Modal::new(Box::new(modal_content)).title("Modal")));
+                    }
                     return true;
                 }
             }
