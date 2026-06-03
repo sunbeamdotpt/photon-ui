@@ -14,7 +14,7 @@
 //! | 3    | SelectList, SettingsList |
 //! | 4    | Loader, CancellableLoader, Overlay |
 //! | 5    | Layout primitives (Rect, Position, Margin, blit_into_rect) |
-//! | 6    | Layout engine (Layout::split, Container) |
+//! | 6    | Layout engine (Layout::split, render_rect) |
 //!
 //! # Keybindings
 //!
@@ -28,7 +28,7 @@
 //! Page-specific bindings are shown on each page.
 
 use photon_ui::components::{
-    Box as BoxComponent, CancellableLoader, Container, Editor, Input, Loader, Markdown, SelectList,
+    Box as BoxComponent, CancellableLoader, Editor, Input, Loader, Markdown, SelectList,
     SettingsList, Spacer, Text, TruncatedText,
 };
 use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
@@ -287,17 +287,18 @@ impl DemoApp {
     }
 
     fn load_page(&mut self) {
-        self.tui.clear_children();
-        self.tui.clear_overlays();
+        self.tui.reset();
 
-        // Header with page indicator
-        let header = format!(
-            " Photon UI Demo  |  Page {}/6  |  1-6=pages  Tab=focus  q=quit ",
-            self.page
-        );
-        self.tui
-            .mount(std::boxed::Box::new(Text::new(&header, 0, 0)));
-        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+        // Header with page indicator (skip on page 6 where layout owns all children)
+        if self.page != 6 {
+            let header = format!(
+                " Photon UI Demo  |  Page {}/6  |  1-6=pages  Tab=focus  q=quit ",
+                self.page
+            );
+            self.tui
+                .mount(std::boxed::Box::new(Text::new(&header, 0, 0)));
+            self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+        }
 
         match self.page {
             1 => self.load_page_layout(),
@@ -475,23 +476,19 @@ impl DemoApp {
     }
 
     fn load_page_layout_engine(&mut self) {
-        self.tui.mount(std::boxed::Box::new(Text::new(
-            "Layout Engine — Cassowary solver (colored panels = assigned rects):",
-            0,
-            0,
+        self.tui.set_layout(Layout::vertical([
+            Constraint::Length(4),
+            Constraint::Min(3),
+            Constraint::Length(4),
+        ]));
+        self.tui.mount(Box::new(ColoredPanel::new(
+            "Photon UI Demo  |  Page 6/6  |  1-6=pages  Tab=focus  q=quit",
+            44,
         )));
-
-        let mut container = Container::new(
-            Layout::vertical([
-                Constraint::Length(4),
-                Constraint::Min(3),
-                Constraint::Length(4),
-            ])
-        );
-        container.push(Box::new(ColoredPanel::new("Top panel (Length 4)", 44))); // blue
-        container.push(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42))); // green
-        container.push(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41))); // red
-        self.tui.mount(std::boxed::Box::new(container));
+        self.tui
+            .mount(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42)));
+        self.tui
+            .mount(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41)));
     }
 
     /// Advance animation frames. Call periodically from the event loop.
