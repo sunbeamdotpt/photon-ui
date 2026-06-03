@@ -94,12 +94,14 @@ impl Rendered {
             if target_line.len() < col {
                 target_line.push_str(&" ".repeat(col - target_line.len()));
             }
-            let source = if line.len() > rect.width as usize {
-                &line[..rect.width as usize]
+            let truncated = if crate::utils::visible_width(line) > rect.width as usize {
+                Some(crate::utils::truncate_to_width(line, rect.width, ""))
             } else {
-                line.as_str()
+                None
             };
-            let end = col + source.len();
+            let source = truncated.as_deref().unwrap_or(line);
+            let vw = crate::utils::visible_width(source);
+            let end = col + vw;
             if end > target_line.len() {
                 target_line.push_str(&" ".repeat(end - target_line.len()));
             }
@@ -127,7 +129,7 @@ impl Renderer {
     pub fn render(&mut self, term: &mut dyn Terminal, rendered: &Rendered) -> io::Result<()> {
         match self.strategy {
             RenderStrategy::FirstRender => {
-                let mut buffer = String::from("\x1b[?2026h\x1b[H");
+                let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
                         buffer.push_str("\r\n");
@@ -138,7 +140,7 @@ impl Renderer {
                 term.write(&buffer)?;
             }
             RenderStrategy::FullRedraw => {
-                let mut buffer = String::from("\x1b[?2026h\x1b[2J\x1b[H\x1b[3J");
+                let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H\x1b[3J");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
                         buffer.push_str("\r\n");
@@ -178,7 +180,7 @@ impl Renderer {
                                 buffer.push_str("\x1b[1B");
                             }
                             for i in 0..extra {
-                                buffer.push_str("\r\x1b[2K");
+                                buffer.push_str("\r\x1b[0m\x1b[2K");
                                 if i < extra - 1 {
                                     buffer.push_str("\x1b[1B");
                                 }
@@ -201,7 +203,7 @@ impl Renderer {
                             if i > start {
                                 buffer.push_str("\r\n");
                             }
-                            buffer.push_str("\x1b[2K");
+                            buffer.push_str("\x1b[0m\x1b[2K");
                             buffer.push_str(&rendered.lines[i]);
                         }
 
@@ -209,7 +211,7 @@ impl Renderer {
                         if prev.lines.len() > rendered.lines.len() {
                             let extra = prev.lines.len() - rendered.lines.len();
                             for _ in 0..extra {
-                                buffer.push_str("\r\n\x1b[2K");
+                                buffer.push_str("\r\n\x1b[0m\x1b[2K");
                             }
                             // Move cursor back to end of new content
                             if extra > 0 {
@@ -300,9 +302,9 @@ mod tests {
         let written = term.written().join("");
         assert!(written.contains("hello"));
         assert!(written.contains("\x1b[?2026h"));
-        // First render homes cursor but does NOT clear screen
+        // First render clears screen and homes cursor
         assert!(written.contains("\x1b[H"));
-        assert!(!written.contains("\x1b[2J"));
+        assert!(written.contains("\x1b[2J"));
         assert!(!written.contains("\x1b[2K"));
     }
 
@@ -373,7 +375,7 @@ mod tests {
         // Should move cursor to line 2 and only rewrite from there
         assert!(written.contains("\x1b[2;1H"), "cursor should jump to first changed line");
         // Should use \r (not \r\n) after positioning
-        assert!(written.contains("\x1b[2;1H\r\x1b[2K"), "should use \\r after positioning");
+        assert!(written.contains("\x1b[2;1H\r\x1b[0m\x1b[2K"), "should use \\r after positioning");
         // Should NOT rewrite line 3 (unchanged)
         let after_line2 = written.split("\x1b[2;1H").nth(1).unwrap_or("");
         assert!(!after_line2.contains("\r\nc"), "should not rewrite unchanged line 3");
@@ -503,5 +505,87 @@ mod tests {
         };
         source.blit_into_rect(&mut target, Rect::new(5, 0, 10, 1));
         assert_eq!(target.lines[0], "hi   XY");
+    }
+
+    /// Regression: blit_into_rect must use visible width, not byte length,
+    /// so ANSI-coded lines aren't incorrectly truncated.
+    #[test]
+    fn blit_into_rect_preserves_ansi_reset() {
+        let mut target = Rendered::empty();
+        // 10 visible chars but 19 bytes (9 ANSI + 10 text + reset)
+        let source = Rendered {
+            lines: vec!["\x1b[44mhello     \x1b[0m".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        source.blit_into_rect(&mut target, Rect::new(0, 0, 10, 1));
+        // Must NOT truncate the \x1b[0m reset
+        assert!(target.lines[0].contains("\x1b[0m"), "reset code should survive blit");
+        // Visible width should be exactly 10
+        assert_eq!(crate::utils::visible_width(&target.lines[0]), 10);
+    }
+
+    /// Regression: diff mode must reset ANSI attributes before clearing lines.
+    #[test]
+    fn diff_resets_ansi_before_clear() {
+        let mut term = TestTerminal::new(80, 24);
+        let mut renderer = Renderer::new();
+
+        let frame1 = Rendered {
+            lines: vec!["\x1b[41mred bg\x1b[0m".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        renderer.render(&mut term, &frame1).unwrap();
+
+        renderer.set_strategy(RenderStrategy::Diff);
+        let frame2 = Rendered {
+            lines: vec!["plain".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        renderer.render(&mut term, &frame2).unwrap();
+
+        let written = term.written().join("");
+        // Every \x1b[2K must be preceded by \x1b[0m
+        for chunk in written.split("\x1b[2K") {
+            if !chunk.is_empty() && chunk.contains("\x1b[") {
+                assert!(
+                    chunk.ends_with("\x1b[0m") || !chunk.contains("\x1b[2K"),
+                    "clear must be preceded by reset: {}", chunk
+                );
+            }
+        }
+    }
+
+    /// Regression: FirstRender must reset ANSI attributes before clearing.
+    #[test]
+    fn first_render_resets_before_clear() {
+        let mut term = TestTerminal::new(80, 24);
+        let mut renderer = Renderer::new();
+        let rendered = Rendered {
+            lines: vec!["hello".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        renderer.render(&mut term, &rendered).unwrap();
+        let written = term.written().join("");
+        assert!(written.contains("\x1b[0m\x1b[2J"), "reset must precede screen clear");
+    }
+
+    /// Regression: FullRedraw must reset ANSI attributes before clearing.
+    #[test]
+    fn full_redraw_resets_before_clear() {
+        let mut term = TestTerminal::new(80, 24);
+        let mut renderer = Renderer::new();
+        renderer.set_strategy(RenderStrategy::FullRedraw);
+        let rendered = Rendered {
+            lines: vec!["hello".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        renderer.render(&mut term, &rendered).unwrap();
+        let written = term.written().join("");
+        assert!(written.contains("\x1b[0m\x1b[2J"), "reset must precede screen clear");
     }
 }
