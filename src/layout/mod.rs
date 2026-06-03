@@ -1,3 +1,4 @@
+pub mod border;
 pub mod constraint;
 pub mod direction;
 pub mod flex;
@@ -10,6 +11,7 @@ pub mod spacing;
 pub mod layout;
 pub mod strengths;
 
+pub use border::{Border, draw_border};
 pub use constraint::Constraint;
 pub use direction::Direction;
 pub use flex::Flex;
