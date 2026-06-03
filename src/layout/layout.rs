@@ -171,12 +171,10 @@ impl Layout {
                 Constraint::Min(m) => {
                     let target = *m as f64 * FLOAT_PRECISION_MULTIPLIER;
                     solver.add_constraint(var | GE(kasuari::Strength::new(strengths::MIN_SIZE_GE)) | target).ok()?;
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::MIN_SIZE_EQ)) | target).ok()?;
                 }
                 Constraint::Max(m) => {
                     let target = *m as f64 * FLOAT_PRECISION_MULTIPLIER;
                     solver.add_constraint(var | LE(kasuari::Strength::new(strengths::MAX_SIZE_LE)) | target).ok()?;
-                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::MAX_SIZE_EQ)) | target).ok()?;
                 }
                 Constraint::Fill(_) => {
                     // Fill is handled by the flex/grow constraints below.
@@ -265,19 +263,26 @@ impl Layout {
             }
         }
 
-        // Grow constraints for Fill segments.
+        // Grow constraints for Fill and Min segments.
+        // Weak EQ(total) pushes Cassowary to expand these segments to fill available space.
         for (i, constraint) in self.constraints.iter().enumerate() {
-            if let Constraint::Fill(priority) = constraint {
-                let var = segment_vars[i];
-                let strength = kasuari::Strength::new(strengths::FILL_GROW * (*priority as f64));
-                solver.add_constraint(var | GE(strength) | 0.0).ok()?;
+            let var = segment_vars[i];
+            match constraint {
+                Constraint::Fill(priority) => {
+                    let strength = kasuari::Strength::new(strengths::FILL_GROW * (*priority as f64));
+                    solver.add_constraint(var | EQ(strength) | total as f64).ok()?;
+                }
+                Constraint::Min(_) => {
+                    solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::GROW)) | total as f64).ok()?;
+                }
+                _ => {}
             }
         }
 
-        // Grow all segments weakly so that Fill segments without explicit size can expand.
+        // Weak grow for all segments so non-fixed ones can expand.
         if self.flex != Flex::Legacy {
             for &var in &segment_vars {
-                solver.add_constraint(var | GE(kasuari::Strength::new(strengths::ALL_SEGMENT_GROW)) | 0.0).ok()?;
+                solver.add_constraint(var | EQ(kasuari::Strength::new(strengths::ALL_SEGMENT_GROW)) | total as f64).ok()?;
             }
         }
 
