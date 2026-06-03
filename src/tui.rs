@@ -225,6 +225,18 @@ impl TUI {
         self.layout = None;
     }
 
+    /// Reset the TUI for a fresh page / screen.
+    ///
+    /// Clears all children, overlays, and layout, and schedules a full
+    /// screen redraw so no stale content or ANSI attributes bleed through.
+    pub fn reset(&mut self) {
+        self.children.clear();
+        self.focused_index = None;
+        self.overlays.clear();
+        self.layout = None;
+        self.renderer.set_strategy(crate::renderer::RenderStrategy::FullRedraw);
+    }
+
     /// Restore the terminal (leave alternate screen, disable raw mode, show cursor).
     pub fn stop(&mut self) -> io::Result<()> {
         self.terminal.stop()
@@ -835,6 +847,46 @@ mod tests {
         assert!(screen.lines[5].starts_with("  Option 2"), "row 5 should be unselected list item: got {:?}", screen.lines[5]);
         assert!(screen.lines[6].starts_with("  Option 3"), "row 6 should be unselected list item: got {:?}", screen.lines[6]);
         assert_eq!(screen.lines[7].trim_end(), "", "row 7 should be empty input line");
+    }
+
+    /// Regression: reset() must clear children, overlays, layout, focus,
+    /// and schedule a FullRedraw so stale content doesn't bleed through.
+    #[test]
+    fn tui_reset_clears_all_and_schedules_redraw() {
+        let term = TestTerminal::new(80, 24);
+        let mut tui = TUI::new(Box::new(term));
+
+        tui.mount(Box::new(crate::components::Text::new("hello", 0, 0)));
+        tui.set_focus(0);
+        tui.add_overlay(Overlay {
+            content: Box::new(crate::components::Text::new("popup", 0, 0)),
+            position: OverlayPosition::Anchor(Anchor::Center),
+            constraints: OverlayConstraints {
+                min_width: 10,
+                max_height: 3,
+                margin: 2,
+                offset_x: 0,
+                offset_y: 0,
+                visible: None,
+            },
+        });
+        tui.set_layout(crate::layout::layout::Layout::vertical([
+            crate::layout::Constraint::Length(1),
+        ]));
+        tui.render_frame().unwrap();
+
+        // Verify preconditions: screen has content
+        let screen_before = tui.compose_screen(80, 24);
+        assert!(!screen_before.lines.is_empty(), "precondition: screen should have content");
+
+        tui.reset();
+
+        // After reset, compose_screen should be empty
+        let screen = tui.compose_screen(80, 24);
+        assert!(screen.lines.is_empty(), "reset should clear all children");
+
+        // render_frame should not panic after reset (FullRedraw is scheduled internally)
+        tui.render_frame().unwrap();
     }
 
 }
