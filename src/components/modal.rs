@@ -95,13 +95,17 @@ impl Component for Modal {
 
         let mut screen = Rendered::empty();
 
+        let fill_w = inner_w as usize;
+
         // Top border
         {
             let mut top = String::new();
+            // Left corner
             top.push_str(&border_prefix);
             top.push(self.border.top_left);
-            let fill_w = inner_w as usize;
-            let fill = if let Some(ref title) = self.title {
+            top.push_str(suffix);
+
+            if let Some(ref title) = self.title {
                 let indicator = if self.focused { "▼ " } else { "▶ " };
                 let max_title = fill_w.saturating_sub(2);
                 let t = if title.len() > max_title {
@@ -113,13 +117,21 @@ impl Component for Modal {
                 let label_styled = stylize(&label, &Style::new().fg(theme.text_primary()).bold());
                 let t_visible = crate::utils::visible_width(&label_styled);
                 let fill_count = fill_w.saturating_sub(t_visible);
-                let mut s = label_styled;
-                s.push_str(&self.border.top.to_string().repeat(fill_count));
-                s
+
+                top.push_str(&label_styled);
+                if fill_count > 0 {
+                    top.push_str(&border_prefix);
+                    top.push_str(&self.border.top.to_string().repeat(fill_count));
+                    top.push_str(suffix);
+                }
             } else {
-                self.border.top.to_string().repeat(fill_w)
-            };
-            top.push_str(&fill);
+                top.push_str(&border_prefix);
+                top.push_str(&self.border.top.to_string().repeat(fill_w));
+                top.push_str(suffix);
+            }
+
+            // Right corner
+            top.push_str(&border_prefix);
             top.push(self.border.top_right);
             top.push_str(suffix);
             screen.lines.push(top);
@@ -150,7 +162,11 @@ impl Component for Modal {
             let mut bottom = String::new();
             bottom.push_str(&border_prefix);
             bottom.push(self.border.bottom_left);
-            bottom.push_str(&self.border.bottom.to_string().repeat(inner_w as usize));
+            bottom.push_str(suffix);
+            bottom.push_str(&border_prefix);
+            bottom.push_str(&self.border.bottom.to_string().repeat(fill_w));
+            bottom.push_str(suffix);
+            bottom.push_str(&border_prefix);
             bottom.push(self.border.bottom_right);
             bottom.push_str(suffix);
             screen.lines.push(bottom);

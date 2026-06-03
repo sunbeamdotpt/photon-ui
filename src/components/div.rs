@@ -340,10 +340,13 @@ impl Component for Div {
                     let label = format!(" {}{} ", indicator, title);
                     let label_styled = crate::theme::stylize(&label, &title_style);
                     let top = &mut screen.lines[0];
-                    let start = 2usize.min(top.len());
-                    let end = (start + crate::utils::visible_width(&label_styled)).min(top.len());
-                    if start < top.len() {
-                        top.replace_range(start..end, &label_styled);
+                    let start_byte = crate::utils::byte_index_at_visual_pos(top, 2);
+                    let end_byte = crate::utils::byte_index_at_visual_pos(
+                        top,
+                        2 + crate::utils::visible_width(&label_styled),
+                    );
+                    if start_byte < top.len() {
+                        top.replace_range(start_byte..end_byte.min(top.len()), &label_styled);
                     }
                 }
             }

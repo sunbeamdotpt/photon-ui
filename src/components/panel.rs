@@ -122,17 +122,22 @@ impl Component for Panel {
                 format!(" {} ", t)
             });
 
-            let fill = if let Some(ref t) = title_text {
+            if let Some(ref t) = title_text {
+                top.push_str(t);
                 let t_visible = crate::utils::visible_width(t);
                 let fill_count = total_width.saturating_sub(t_visible);
-                let mut s = t.clone();
-                s.push_str(&self.border.top.to_string().repeat(fill_count));
-                s
+                if fill_count > 0 {
+                    top.push_str(&prefix);
+                    top.push_str(&self.border.top.to_string().repeat(fill_count));
+                    top.push_str(suffix);
+                }
             } else {
-                self.border.top.to_string().repeat(total_width)
-            };
+                top.push_str(&prefix);
+                top.push_str(&self.border.top.to_string().repeat(total_width));
+                top.push_str(suffix);
+            }
 
-            top.push_str(&fill);
+            top.push_str(&prefix);
             top.push(self.border.top_right);
             top.push_str(suffix);
             rendered.lines.push(top);
