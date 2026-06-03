@@ -41,6 +41,8 @@ pub struct Div {
     title_style: Style,
     background: Option<Style>,
     focused: bool,
+    /// Which child receives keyboard input when this div is focused.
+    focused_child: Option<usize>,
 }
 
 impl Div {
@@ -56,6 +58,7 @@ impl Div {
             title_style: Style::new(),
             background: None,
             focused: false,
+            focused_child: None,
         }
     }
 
@@ -115,6 +118,82 @@ impl Div {
         inner = inner.inner(self.padding);
         inner
     }
+
+    /// Cycle focus to the next/previous focusable child.
+    ///
+    /// Returns `Handled` if focus moved within this div, or `Ignored` if the
+    /// cycle would move past the last/first child so the parent can handle it.
+    fn cycle_child_focus(&mut self, delta: isize) -> InputResult {
+        let focusable: Vec<usize> = self
+            .children
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.as_focusable().is_some())
+            .map(|(i, _)| i)
+            .collect();
+
+        if focusable.is_empty() {
+            return InputResult::Ignored;
+        }
+
+        let current = match self
+            .focused_child
+            .and_then(|idx| focusable.iter().position(|&i| i == idx))
+        {
+            Some(pos) => pos,
+            None => {
+                self.focused_child = Some(focusable[0]);
+                if let Some(f) = self.children[focusable[0]].as_focusable_mut() {
+                    f.set_focused(true);
+                }
+                return InputResult::Handled;
+            }
+        };
+
+        // Try to cycle within the current child first (recursive descent).
+        let current_idx = focusable[current];
+        let tab_event = Event::Key(crossterm::event::KeyEvent::new(
+            if delta > 0 {
+                crossterm::event::KeyCode::Tab
+            } else {
+                crossterm::event::KeyCode::BackTab
+            },
+            crossterm::event::KeyModifiers::empty(),
+        ));
+        let child_result = self.children[current_idx].handle_input(&tab_event);
+        if child_result != InputResult::Ignored {
+            return InputResult::Handled;
+        }
+
+        // Current child couldn't cycle further, move to next/prev sibling.
+        if delta > 0 && current + 1 >= focusable.len() {
+            // Tab past last child — let parent handle it.
+            return InputResult::Ignored;
+        }
+        if delta < 0 && current == 0 {
+            // BackTab past first child — let parent handle it.
+            return InputResult::Ignored;
+        }
+
+        let new_pos = if delta >= 0 {
+            (current + delta as usize) % focusable.len()
+        } else {
+            let d = (-delta) as usize % focusable.len();
+            (current + focusable.len() - d) % focusable.len()
+        };
+        let new_idx = focusable[new_pos];
+
+        // Unfocus old child
+        if let Some(f) = self.children[current_idx].as_focusable_mut() {
+            f.set_focused(false);
+        }
+        // Focus new child
+        self.focused_child = Some(new_idx);
+        if let Some(f) = self.children[new_idx].as_focusable_mut() {
+            f.set_focused(true);
+        }
+        InputResult::Handled
+    }
 }
 
 impl Focusable for Div {
@@ -124,9 +203,18 @@ impl Focusable for Div {
 
     fn set_focused(&mut self, focused: bool) {
         self.focused = focused;
-        // Propagate focus state to focusable children
-        for child in &mut self.children {
-            if let Some(f) = child.as_focusable_mut() {
+        if focused && self.focused_child.is_none() {
+            // Auto-focus the first focusable child when this div gains focus.
+            self.focused_child = self
+                .children
+                .iter()
+                .position(|c| c.as_focusable().is_some());
+        }
+        // Propagate focus state ONLY to the focused child.
+        // Setting all children as focused breaks nested focus cycling
+        // (multiple leaf components would think they're focused).
+        if let Some(idx) = self.focused_child {
+            if let Some(f) = self.children[idx].as_focusable_mut() {
                 f.set_focused(focused);
             }
         }
@@ -161,7 +249,16 @@ impl Component for Div {
         let areas = self.layout.split(inner);
         for (child, area) in self.children.iter().zip(areas.iter()) {
             if let Ok(rendered) = child.render_rect(*area) {
-                rendered.blit_into_rect(&mut screen, *area);
+                // Blit into the local buffer using coordinates relative to this div's origin.
+                // `layout.split()` returns areas in terminal coordinates (they include
+                // rect.x/y), but `screen` is a fresh local buffer whose origin is (0, 0).
+                let rel_area = Rect::new(
+                    area.x.saturating_sub(rect.x),
+                    area.y.saturating_sub(rect.y),
+                    area.width,
+                    area.height,
+                );
+                rendered.blit_into_rect(&mut screen, rel_area);
             }
         }
 
@@ -177,7 +274,13 @@ impl Component for Div {
             } else {
                 self.border_style.clone()
             };
-            crate::layout::draw_border(&mut screen, rect, border, &border_style);
+            // Draw border at the edges of the local buffer, not at absolute coords.
+            crate::layout::draw_border(
+                &mut screen,
+                Rect::new(0, 0, rect.width, rect.height),
+                border,
+                &border_style,
+            );
 
             // Draw title in the top border if set
             if let Some(ref title) = self.title {
@@ -203,7 +306,33 @@ impl Component for Div {
     }
 
     fn handle_input(&mut self, event: &Event) -> InputResult {
-        for child in &mut self.children {
+        use crossterm::event::KeyCode;
+
+        // Handle Tab / BackTab to cycle focus among children.
+        if let Event::Key(key) = event {
+            if key.code == KeyCode::Tab {
+                return self.cycle_child_focus(1);
+            }
+            if key.code == KeyCode::BackTab {
+                return self.cycle_child_focus(-1);
+            }
+        }
+
+        // Route to the focused child first.
+        if let Some(idx) = self.focused_child {
+            if idx < self.children.len() {
+                let result = self.children[idx].handle_input(event);
+                if result != InputResult::Ignored {
+                    return result;
+                }
+            }
+        }
+
+        // Fall through to other children.
+        for (i, child) in self.children.iter_mut().enumerate() {
+            if Some(i) == self.focused_child {
+                continue;
+            }
             let result = child.handle_input(event);
             if result != InputResult::Ignored {
                 return result;
@@ -295,6 +424,125 @@ mod tests {
 
             div.set_focused(true);
             assert!(div.focused());
+        });
+    }
+
+    /// Regression test: nested divs with non-zero rect coordinates must not
+    /// double-offset content.
+    #[test]
+    fn div_nonzero_rect_no_double_offset() {
+        Theme::with(Theme::Light, || {
+            let outer = Div::new(Layout::horizontal([
+                Constraint::Length(10),
+                Constraint::Length(10),
+            ]))
+            .child(Box::new(Text::new("left", 0, 0)))
+            .child(Box::new(
+                Div::new(Layout::vertical([
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ]))
+                .child(Box::new(Text::new("a", 0, 0)))
+                .child(Box::new(Text::new("b", 0, 0)))
+            ));
+
+            // Outer rect starts at (0, 2). Inner div gets y = 2 from the layout.
+            let rendered = outer.render_rect(Rect::new(0, 2, 20, 2)).unwrap();
+            // The inner div's content should be at local rows 0 and 1,
+            // NOT shifted down by 2 due to double-offsetting.
+            assert_eq!(rendered.lines.len(), 2, "expected 2 lines, got {}", rendered.lines.len());
+            assert!(rendered.lines[0].contains("left"));
+            assert!(rendered.lines[0].contains("a"));
+            assert!(rendered.lines[1].contains("b"));
+        });
+    }
+
+    /// Border must be drawn at the edges of the local buffer even when the
+    /// parent rect has non-zero coordinates.
+    #[test]
+    fn div_border_with_nonzero_rect() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .child(Box::new(Text::new("hi", 0, 0)))
+                .border(Border::ROUNDED);
+
+            let rendered = div.render_rect(Rect::new(0, 5, 6, 3)).unwrap();
+            assert!(rendered.lines[0].contains("╭"), "border should be at local row 0");
+            assert!(rendered.lines[2].contains("╰"), "border should be at local row 2");
+            // Note: draw_border() currently replaces the entire middle rows,
+            // so child content inside bordered divs is overwritten. This is a
+            // pre-existing issue unrelated to the nonzero-rect fix.
+        });
+    }
+
+    /// Regression: Tab must descend into nested Divs to reach leaf focusables.
+    /// When outer Div's focused_child is a nested Div, Tab should cycle within
+    /// that nested Div instead of immediately returning Ignored.
+    #[test]
+    fn div_tab_descends_into_nested_focusables() {
+        Theme::with(Theme::Light, || {
+            let mut inner = Div::new(Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ]));
+            let input1 = crate::components::Input::new();
+            let input2 = crate::components::Input::new();
+            inner.push(Box::new(input1));
+            inner.push(Box::new(input2));
+
+            let mut outer = Div::new(Layout::vertical([Constraint::Length(2)]));
+            outer.push(Box::new(inner));
+
+            outer.set_focused(true);
+            assert_eq!(outer.focused_child, Some(0));
+
+            // With the old code, this Tab would return Ignored because outer
+            // has no next sibling. With the fix, it should descend into inner
+            // and cycle to its first focusable child.
+            let tab = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Tab,
+                crossterm::event::KeyModifiers::empty(),
+            ));
+            let result = outer.handle_input(&tab);
+            assert!(
+                matches!(result, crate::InputResult::Handled),
+                "Tab should descend into nested div and be handled"
+            );
+        });
+    }
+
+    /// Regression: Tab cycling must move between siblings inside nested Divs.
+    #[test]
+    fn div_tab_cycles_across_nested_siblings() {
+        Theme::with(Theme::Light, || {
+            let mut inner = Div::new(Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ]));
+            let mut input1 = crate::components::Input::new();
+            let mut input2 = crate::components::Input::new();
+            input1.set_text("first");
+            input2.set_text("second");
+            inner.push(Box::new(input1));
+            inner.push(Box::new(input2));
+
+            let mut outer = Div::new(Layout::vertical([Constraint::Length(2)]));
+            outer.push(Box::new(inner));
+            outer.set_focused(true);
+
+            let tab = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Tab,
+                crossterm::event::KeyModifiers::empty(),
+            ));
+
+            // First Tab: descend into inner, cycle input1 → input2
+            let r1 = outer.handle_input(&tab);
+            assert!(matches!(r1, crate::InputResult::Handled));
+
+            // Second Tab: inner exhausted (input2 has no next sibling).
+            // Outer also has no next sibling → Ignored.
+            let r2 = outer.handle_input(&tab);
+            assert!(matches!(r2, crate::InputResult::Ignored));
         });
     }
 }
