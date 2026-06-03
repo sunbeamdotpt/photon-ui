@@ -11,14 +11,14 @@ use super::Color;
 // ── Thread-local active theme ─────────────────────────────────────
 
 thread_local! {
-    static ACTIVE_THEME: RefCell<Theme> = RefCell::new(Theme::Light);
+    static ACTIVE_THEME: RefCell<Theme> = RefCell::new(Theme::Dark);
 }
 
 /// The active theme variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash)]
 pub enum Theme {
-    #[default]
     Light,
+    #[default]
     Dark,
 }
 

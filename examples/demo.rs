@@ -789,9 +789,97 @@ impl DemoApp {
     }
 }
 
+/// Attempt to detect terminal background color via OSC 11 query.
+/// Returns `true` for dark, `false` for light, `None` if detection fails.
+fn detect_dark_background() -> Option<bool> {
+    use std::io::{self, Read, Write};
+    use std::time::{Duration, Instant};
+
+    // Send OSC 11 query
+    let mut stdout = io::stdout();
+    stdout.write_all(b"\x1b]11;?\x07").ok()?;
+    stdout.flush().ok()?;
+
+    // Give the terminal a moment to respond
+    std::thread::sleep(Duration::from_millis(50));
+
+    let mut response = Vec::new();
+    let mut buf = [0u8; 128];
+    let start = Instant::now();
+
+    while start.elapsed() < Duration::from_millis(200) {
+        match io::stdin().read(&mut buf) {
+            Ok(0) => break,
+            Ok(n) => {
+                response.extend_from_slice(&buf[..n]);
+                if response.contains(&0x07) {
+                    break;
+                }
+            }
+            Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(_) => break,
+        }
+    }
+
+    if response.is_empty() {
+        return None;
+    }
+
+    let s = String::from_utf8_lossy(&response);
+
+    // Parse \x1b]11;rgb:RRRR/GGGG/BBBB\x07 or \x1b]11;rgb:RR/GG/BB\x07
+    let rgb_idx = s.find("rgb:")?;
+    let rgb_part = &s[rgb_idx + 4..];
+    let end_idx = rgb_part
+        .find(|c: char| c == '\x07' || c == '\x1b')
+        .unwrap_or(rgb_part.len());
+    let rgb = &rgb_part[..end_idx];
+
+    let channels: Vec<&str> = rgb.split('/').collect();
+    if channels.len() != 3 {
+        return None;
+    }
+
+    let hex2 = |s: &str| u8::from_str_radix(&s[..2.min(s.len())], 16).ok();
+    let r = hex2(channels[0])? as f32 / 255.0;
+    let g = hex2(channels[1])? as f32 / 255.0;
+    let b = hex2(channels[2])? as f32 / 255.0;
+
+    // Relative luminance (sRGB)
+    let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    Some(luminance < 0.5)
+}
+
+/// Detect the terminal's background color and return the matching theme.
+fn detect_terminal_theme() -> Theme {
+    // Try OSC 11 query first
+    if let Some(is_dark) = detect_dark_background() {
+        return if is_dark { Theme::Dark } else { Theme::Light };
+    }
+
+    // Fall back to COLORFGBG (xterm, rxvt, etc.)
+    if let Ok(fgbg) = std::env::var("COLORFGBG") {
+        let parts: Vec<&str> = fgbg.split(';').collect();
+        if let Some(bg) = parts.get(1) {
+            if let Ok(n) = bg.parse::<u8>() {
+                // xterm: 0-7 are dark colors, 8-15 are light
+                return if n <= 7 { Theme::Dark } else { Theme::Light };
+            }
+        }
+    }
+
+    Theme::Dark
+}
+
 fn main() -> std::io::Result<()> {
     let mut term = ProcessTerminal::new();
     term.start()?;
+
+    // Auto-detect terminal background and set theme before rendering
+    let detected = detect_terminal_theme();
+    Theme::set(detected);
 
     let tui = TUI::new(std::boxed::Box::new(term));
     let mut app = DemoApp::new(tui);
