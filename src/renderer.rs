@@ -70,13 +70,20 @@ impl Rendered {
                 break;
             }
             let col_usize = col as usize;
-            let target_len = target.lines[target_row].len();
+            let target_vw = crate::utils::visible_width(&target.lines[target_row]);
             // Pad target line so the overlay has something to overwrite.
-            if target_len < col_usize {
-                target.lines[target_row].push_str(&" ".repeat(col_usize - target_len));
+            if target_vw < col_usize {
+                target.lines[target_row].push_str(&" ".repeat(col_usize - target_vw));
             }
-            let end = (col_usize + line.len()).min(target.lines[target_row].len());
-            target.lines[target_row].replace_range(col_usize..end, line);
+            let source_vw = crate::utils::visible_width(line);
+            let end = col_usize + source_vw;
+            let target_vw_after = crate::utils::visible_width(&target.lines[target_row]);
+            if end > target_vw_after {
+                target.lines[target_row].push_str(&" ".repeat(end - target_vw_after));
+            }
+            let start_byte = crate::utils::byte_index_at_visual_pos(&target.lines[target_row], col_usize);
+            let end_byte = crate::utils::byte_index_at_visual_pos(&target.lines[target_row], end);
+            target.lines[target_row].replace_range(start_byte..end_byte, line);
         }
         if let Some((r, c)) = self.cursor {
             target.cursor = Some((row as usize + r, col as usize + c));
@@ -98,8 +105,9 @@ impl Rendered {
             }
             let col = rect.x as usize;
             let target_line = &mut target.lines[target_row];
-            if target_line.len() < col {
-                target_line.push_str(&" ".repeat(col - target_line.len()));
+            let target_vw = crate::utils::visible_width(target_line);
+            if target_vw < col {
+                target_line.push_str(&" ".repeat(col - target_vw));
             }
             let truncated = if crate::utils::visible_width(line) > rect.width as usize {
                 Some(crate::utils::truncate_to_width(line, rect.width, ""))
@@ -109,10 +117,13 @@ impl Rendered {
             let source = truncated.as_deref().unwrap_or(line);
             let vw = crate::utils::visible_width(source);
             let end = col + vw;
-            if end > target_line.len() {
-                target_line.push_str(&" ".repeat(end - target_line.len()));
+            let target_vw_after = crate::utils::visible_width(target_line);
+            if end > target_vw_after {
+                target_line.push_str(&" ".repeat(end - target_vw_after));
             }
-            target_line.replace_range(col..end, source);
+            let start_byte = crate::utils::byte_index_at_visual_pos(target_line, col);
+            let end_byte = crate::utils::byte_index_at_visual_pos(target_line, end);
+            target_line.replace_range(start_byte..end_byte, source);
         }
         if let Some((r, c)) = self.cursor {
             target.cursor = Some((rect.y as usize + r, rect.x as usize + c));
@@ -563,6 +574,44 @@ mod tests {
         );
         // Visible width should be exactly 10
         assert_eq!(crate::utils::visible_width(&target.lines[0]), 10);
+    }
+
+    /// Regression: blit_into_rect must not panic when target contains ANSI codes.
+    #[test]
+    fn blit_into_rect_ansi_target() {
+        let mut target = Rendered {
+            lines: vec!["\x1b[31mred text here\x1b[0m".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["XY".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        // Blit at visual position 4 — byte index would be inside the ANSI prefix
+        source.blit_into_rect(&mut target, Rect::new(4, 0, 10, 1));
+        assert!(target.lines[0].contains("XY"));
+        assert_eq!(crate::utils::visible_width(&target.lines[0]), 13);
+    }
+
+    /// Regression: blit_onto must not panic when target contains ANSI codes.
+    #[test]
+    fn blit_onto_ansi_target() {
+        let mut target = Rendered {
+            lines: vec!["\x1b[31mred text\x1b[0m".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        let source = Rendered {
+            lines: vec!["XY".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        // Overlay at visual column 4 — byte index is inside ANSI prefix
+        source.blit_onto(&mut target, 0, 4);
+        assert!(target.lines[0].contains("XY"));
+        assert_eq!(crate::utils::visible_width(&target.lines[0]), 8);
     }
 
     /// Regression: diff mode must reset ANSI attributes before clearing lines.

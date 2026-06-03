@@ -44,6 +44,68 @@ pub fn visible_width(s: &str) -> usize {
     width
 }
 
+/// Return the byte index in `s` that corresponds to visual position `target_pos`.
+///
+/// ANSI escape sequences are skipped (they contribute 0 width). If `target_pos`
+/// is beyond the visible width of `s`, the byte index after the last visible
+/// character is returned.
+pub fn byte_index_at_visual_pos(s: &str, target_pos: usize) -> usize {
+    let mut width = 0;
+    let mut byte_idx = 0;
+    let mut chars = s.chars().peekable();
+
+    while let Some(&ch) = chars.peek() {
+        let ch_len = ch.len_utf8();
+        if ch == '\x1b' {
+            chars.next();
+            byte_idx += ch_len;
+            match chars.peek() {
+                | Some(&'[') => {
+                    chars.next();
+                    byte_idx += '['.len_utf8();
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        byte_idx += c.len_utf8();
+                        if c.is_alphabetic() {
+                            break;
+                        }
+                    }
+                },
+                | Some(&']') => {
+                    chars.next();
+                    byte_idx += ']'.len_utf8();
+                    while let Some(&c) = chars.peek() {
+                        chars.next();
+                        byte_idx += c.len_utf8();
+                        if c == '\x07' {
+                            break;
+                        }
+                        if c == '\x1b' {
+                            if let Some(&'\\') = chars.peek() {
+                                chars.next();
+                                byte_idx += '\\'.len_utf8();
+                                break;
+                            }
+                        }
+                    }
+                },
+                | _ => {},
+            }
+            continue;
+        }
+        if width >= target_pos {
+            return byte_idx;
+        }
+        chars.next();
+        width += ch.width().unwrap_or(0);
+        byte_idx += ch_len;
+        if width >= target_pos {
+            return byte_idx;
+        }
+    }
+    byte_idx
+}
+
 /// Truncate a string so its visible width does not exceed `max_width`.
 ///
 /// If truncation is necessary, `ellipsis` is appended at the end. The result
@@ -486,5 +548,44 @@ mod tests {
         eprintln!("truncated vw: {}", vw);
         assert!(vw <= 80, "truncated width {} exceeds 80", vw);
         assert!(truncated.ends_with("…"));
+    }
+
+    #[test]
+    fn byte_index_at_visual_pos_plain() {
+        assert_eq!(byte_index_at_visual_pos("hello", 0), 0);
+        assert_eq!(byte_index_at_visual_pos("hello", 3), 3);
+        assert_eq!(byte_index_at_visual_pos("hello", 5), 5);
+        assert_eq!(byte_index_at_visual_pos("hello", 10), 5);
+    }
+
+    #[test]
+    fn byte_index_at_visual_pos_with_ansi_prefix() {
+        let s = "\x1b[31mhello\x1b[0m";
+        // "\x1b[31m" is 5 bytes, visible width 0
+        assert_eq!(byte_index_at_visual_pos(s, 0), 5);
+        assert_eq!(byte_index_at_visual_pos(s, 3), 8);
+        assert_eq!(byte_index_at_visual_pos(s, 5), 10);
+        // Past end → byte index after last visible char (including trailing ANSI)
+        assert_eq!(byte_index_at_visual_pos(s, 10), 14);
+    }
+
+    #[test]
+    fn byte_index_at_visual_pos_with_ansi_infix() {
+        let s = "hi\x1b[31mred\x1b[0mlo";
+        // visible: h i r e d l o = 7
+        assert_eq!(byte_index_at_visual_pos(s, 0), 0);
+        assert_eq!(byte_index_at_visual_pos(s, 2), 2);
+        // Position 3 is 'e' which starts at byte 8 (after "hi\x1b[31mr")
+        assert_eq!(byte_index_at_visual_pos(s, 3), 8);
+        // Past end
+        assert_eq!(byte_index_at_visual_pos(s, 7), 16);
+    }
+
+    #[test]
+    fn byte_index_at_visual_pos_with_hyperlink() {
+        let s = "\x1b]8;;https://example.com\x07hello";
+        // OSC hyperlink is 25 bytes, visible width 0
+        assert_eq!(byte_index_at_visual_pos(s, 0), 25);
+        assert_eq!(byte_index_at_visual_pos(s, 3), 28);
     }
 }
