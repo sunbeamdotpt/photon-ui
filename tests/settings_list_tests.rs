@@ -58,6 +58,39 @@ fn settings_list_up_navigation() {
 }
 
 #[test]
+fn settings_list_j_k_navigation() {
+    let mut list = SettingsList::new(vec![
+        ("A".into(), false),
+        ("B".into(), false),
+        ("C".into(), false),
+    ]);
+    list.set_focused(true);
+
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('j'), crossterm::event::KeyModifiers::empty())));
+    let r = list.render(80).unwrap();
+    assert!(r.lines[1].contains("> "));
+
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('j'), crossterm::event::KeyModifiers::empty())));
+    let r = list.render(80).unwrap();
+    assert!(r.lines[2].contains("> "));
+
+    // Should not go past end
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('j'), crossterm::event::KeyModifiers::empty())));
+    let r = list.render(80).unwrap();
+    assert!(r.lines[2].contains("> "));
+
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('k'), crossterm::event::KeyModifiers::empty())));
+    let r = list.render(80).unwrap();
+    assert!(r.lines[1].contains("> "));
+
+    // Should not go above 0
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('k'), crossterm::event::KeyModifiers::empty())));
+    list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(KeyCode::Char('k'), crossterm::event::KeyModifiers::empty())));
+    let r = list.render(80).unwrap();
+    assert!(r.lines[0].contains("> "));
+}
+
+#[test]
 fn settings_list_toggle() {
     let mut list = SettingsList::new(vec![
         ("A".into(), false),
