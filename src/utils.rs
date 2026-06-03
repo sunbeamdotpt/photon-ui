@@ -1,7 +1,4 @@
-use unicode_width::{
-    UnicodeWidthChar,
-    UnicodeWidthStr,
-};
+use unicode_width::UnicodeWidthChar;
 
 /// Compute the visible display width of a string.
 ///
