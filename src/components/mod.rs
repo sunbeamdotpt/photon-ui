@@ -10,8 +10,10 @@ pub mod settings_list;
 pub mod image_widget;
 pub mod editor;
 pub mod markdown;
+pub mod button;
 pub mod container;
 
+pub use button::Button;
 pub use spacer::Spacer;
 pub use text::Text;
 pub use truncated_text::TruncatedText;
