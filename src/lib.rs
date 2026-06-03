@@ -22,6 +22,21 @@
 //! tui.render_frame().unwrap();
 //! ```
 
+#![deny(dead_code)]
+#![deny(unused)]
+#![deny(unused_mut)]
+#![deny(clippy::missing_safety_doc)]
+#![deny(clippy::undocumented_unsafe_blocks)]
+#![cfg_attr(not(test), deny(clippy::expect_used))]
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+// for @siennathesane's sanity and to make it clear the scope of error handling. and because it's
+// super fucking subtle and i'll miss it in code reviews sorry not sorry
+#![deny(clippy::question_mark_used)]
+// just keeps syntax consistent
+#![deny(clippy::needless_borrow)]
+// personal preference.
+#![allow(bindings_with_variant_name)]
+
 pub mod autocomplete;
 pub mod components;
 pub mod events;
