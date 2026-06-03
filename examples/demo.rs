@@ -54,7 +54,8 @@ use photon_ui::{
         Breadcrumbs,
         Button,
         CancellableLoader,
-        Container,
+        Div,
+        Divider,
         Editor,
         Header,
         ImageWidget,
@@ -667,7 +668,7 @@ impl DemoApp {
             .mount(Box::new(Breadcrumbs::new(vec!["Home", "Dashboard", "Overview"])));
 
         // ── DashboardBody: Sidebar + MainContent ──
-        let mut dashboard_body = Container::new(Layout::horizontal([
+        let mut dashboard_body = Div::new(Layout::horizontal([
             Constraint::Length(16), // Sidebar
             Constraint::Min(10),    // MainContent
         ]));
@@ -680,31 +681,40 @@ impl DemoApp {
         ]);
         dashboard_body.push(Box::new(sidebar));
 
-        // ── MainContent (vertical) ──
-        let mut main_content = Container::new(Layout::vertical([
+        // ── MainContent (vertical) with Dividers ──
+        let mut main_content = Div::new(Layout::vertical([
             Constraint::Length(1), // Tabs
+            Constraint::Length(1), // Divider
             Constraint::Length(1), // ProgressBar row
-            Constraint::Length(5), // DataRow
-            Constraint::Length(3), // FormsRow
-            Constraint::Length(4), // ListsRow
+            Constraint::Length(1), // Divider
+            Constraint::Length(4), // DataRow
+            Constraint::Length(1), // Divider
+            Constraint::Length(2), // FormsRow
+            Constraint::Length(1), // Divider
+            Constraint::Length(3), // ListsRow
+            Constraint::Length(1), // Divider
             Constraint::Length(1), // ButtonsRow
-            Constraint::Length(4), // ContentRow
+            Constraint::Length(1), // Divider
+            Constraint::Length(3), // ContentRow
+            Constraint::Length(1), // Divider
             Constraint::Length(2), // SystemRow
         ]));
 
         main_content.push(Box::new(Tabs::new(vec!["Overview", "Resources", "Logs"])));
+        main_content.push(Box::new(Divider::horizontal()));
 
         // ProgressBar row
-        let mut progress_row = Container::new(Layout::horizontal([
+        let mut progress_row = Div::new(Layout::horizontal([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ]));
         progress_row.push(Box::new(ProgressBar::new("CPU", 0.45).width(15)));
         progress_row.push(Box::new(ProgressBar::new("RAM", 1.0).width(15)));
         main_content.push(Box::new(progress_row));
+        main_content.push(Box::new(Divider::horizontal().labeled("Data")));
 
         // DataRow: Table + TreeView
-        let mut data_row = Container::new(Layout::horizontal([
+        let mut data_row = Div::new(Layout::horizontal([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ]));
@@ -741,9 +751,10 @@ impl DemoApp {
         ]);
         data_row.push(Box::new(tree));
         main_content.push(Box::new(data_row));
+        main_content.push(Box::new(Divider::horizontal().labeled("Forms")));
 
         // FormsRow: Input + Editor
-        let mut forms_row = Container::new(Layout::horizontal([
+        let mut forms_row = Div::new(Layout::horizontal([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ]));
@@ -754,9 +765,10 @@ impl DemoApp {
         editor.set_text("fn main() {\n    println!(\"Hello\");\n}");
         forms_row.push(Box::new(editor));
         main_content.push(Box::new(forms_row));
+        main_content.push(Box::new(Divider::horizontal().labeled("Lists")));
 
         // ListsRow: SelectList + SettingsList
-        let mut lists_row = Container::new(Layout::horizontal([
+        let mut lists_row = Div::new(Layout::horizontal([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ]));
@@ -781,9 +793,10 @@ impl DemoApp {
         settings.set_selected(0);
         lists_row.push(Box::new(settings));
         main_content.push(Box::new(lists_row));
+        main_content.push(Box::new(Divider::horizontal()));
 
         // ButtonsRow
-        let mut buttons_row = Container::new(Layout::horizontal([
+        let mut buttons_row = Div::new(Layout::horizontal([
             Constraint::Length(12),
             Constraint::Length(12),
             Constraint::Length(12),
@@ -794,9 +807,10 @@ impl DemoApp {
         buttons_row.push(Box::new(Button::ghost("Ghost")));
         buttons_row.push(Box::new(Button::text("Text")));
         main_content.push(Box::new(buttons_row));
+        main_content.push(Box::new(Divider::horizontal().labeled("Content")));
 
         // ContentRow: Markdown + Panel
-        let mut content_row = Container::new(Layout::horizontal([
+        let mut content_row = Div::new(Layout::horizontal([
             Constraint::Percentage(50),
             Constraint::Percentage(50),
         ]));
@@ -811,9 +825,10 @@ impl DemoApp {
                 ]),
         ));
         main_content.push(Box::new(content_row));
+        main_content.push(Box::new(Divider::horizontal().labeled("System")));
 
         // SystemRow: Loader + CancellableLoader + ImageWidget + Box + TruncatedText
-        let mut system_row = Container::new(Layout::horizontal([
+        let mut system_row = Div::new(Layout::horizontal([
             Constraint::Length(14),
             Constraint::Length(20),
             Constraint::Length(10),

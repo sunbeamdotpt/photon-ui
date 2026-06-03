@@ -65,6 +65,11 @@ impl Div {
         self
     }
 
+    /// Add a child component (imperative style).
+    pub fn push(&mut self, child: Box<dyn Component>) {
+        self.children.push(child);
+    }
+
     /// Set the outer border.
     pub fn border(mut self, border: Border) -> Self {
         self.border = Some(border);
