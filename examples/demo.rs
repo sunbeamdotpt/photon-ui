@@ -5,32 +5,32 @@
 //! cargo run --example demo
 //! ```
 //!
-//! Showcases **every** Photon UI component across six pages:
+//! Showcases **every** Photon UI component across four pages:
 //!
 //! | Page | Components |
 //! |------|-----------|
-//! | 1    | Text, TruncatedText, Spacer, Box, Markdown |
-//! | 2    | Input (Emacs/vim), Editor (Emacs/vim) |
-//! | 3    | SelectList, SettingsList |
-//! | 4    | Loader, CancellableLoader, Overlay |
-//! | 5    | Layout primitives (Rect, Position, Margin, blit_into_rect) |
-//! | 6    | Layout engine (Layout::split, render_rect) |
+//! | 1    | Text, TruncatedText, Box, Markdown, Spacer + Layout primitives |
+//! | 2    | Input, Editor, SelectList, SettingsList |
+//! | 3    | Loader, CancellableLoader, Overlay |
+//! | 4    | Layout engine, Theme + Button, Panel |
 //!
 //! # Keybindings
 //!
 //! | Key | Action |
 //! |-----|--------|
-//! | `1`–`6` | Switch demo page |
+//! | `1`–`4` | Switch demo page |
 //! | `Tab` / `Shift+Tab` | Cycle focus |
+//! | `t` | Toggle light/dark theme (on page 4) |
 //! | `q` | Quit |
 //! | `Ctrl+C` | Quit |
 //!
 //! Page-specific bindings are shown on each page.
 
 use photon_ui::components::{
-    Box as BoxComponent, CancellableLoader, Editor, Input, Loader, Markdown, SelectList,
-    SettingsList, Spacer, Text, TruncatedText,
+    Box as BoxComponent, Button, CancellableLoader, Editor, Input, Loader, Markdown, Panel,
+    SelectList, SettingsList, Spacer, Text, TruncatedText,
 };
+use photon_ui::theme::{Theme, Palette};
 use photon_ui::layout::{Constraint, Direction, Flex, Margin, Offset, Position, Rect, Size, Spacing};
 use photon_ui::layout::layout::Layout;
 use photon_ui::terminal::ProcessTerminal;
@@ -252,10 +252,13 @@ struct DemoApp {
     settings_selected: usize,
     settings_values: Vec<bool>,
 
-    // Page 4: Loader / Overlay state
+    // Page 3: Loader / Overlay state
     loader: Rc<RefCell<Loader>>,
     cancellable: Rc<RefCell<CancellableLoader>>,
     show_overlay: bool,
+
+    // Page 4: Design system sub-page (false = buttons/panels, true = layout engine)
+    design_subpage: bool,
 }
 
 impl DemoApp {
@@ -281,6 +284,7 @@ impl DemoApp {
                 Some("\x1b[90m".into()),
             ))),
             show_overlay: false,
+            design_subpage: false,
         };
         app.load_page();
         app
@@ -289,10 +293,10 @@ impl DemoApp {
     fn load_page(&mut self) {
         self.tui.reset();
 
-        // Header with page indicator (skip on page 6 where layout owns all children)
-        if self.page != 6 {
+        // Header with page indicator (skip on page 4 layout section where layout owns all children)
+        if self.page != 4 {
             let header = format!(
-                " Photon UI Demo  |  Page {}/6  |  1-6=pages  Tab=focus  q=quit ",
+                " Photon UI Demo  |  Page {}/4  |  1-4=pages  Tab=focus  q=quit ",
                 self.page
             );
             self.tui
@@ -301,17 +305,16 @@ impl DemoApp {
         }
 
         match self.page {
-            1 => self.load_page_layout(),
-            2 => self.load_page_input(),
-            3 => self.load_page_lists(),
-            4 => self.load_page_dynamic(),
-            5 => self.load_page_primitives(),
-            6 => self.load_page_layout_engine(),
+            1 => self.load_page_basics(),
+            2 => self.load_page_input_and_lists(),
+            3 => self.load_page_dynamic(),
+            4 => self.load_page_design_system(),
             _ => {}
         }
     }
 
-    fn load_page_layout(&mut self) {
+    fn load_page_basics(&mut self) {
+        // ── Text components ──
         self.tui.mount(std::boxed::Box::new(Text::new(
             "Text component with pad_x=2, pad_y=1:",
             0,
@@ -346,9 +349,18 @@ impl DemoApp {
             .mount(std::boxed::Box::new(Text::new("Markdown rendering:", 0, 0)));
         self.tui
             .mount(std::boxed::Box::new(Markdown::new(DEMO_MARKDOWN)));
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+
+        self.tui.mount(std::boxed::Box::new(Text::new(
+            "Layout Primitives — blit_into_rect demo:",
+            0,
+            0,
+        )));
+        self.tui.mount(std::boxed::Box::new(LayoutDemo));
     }
 
-    fn load_page_input(&mut self) {
+    fn load_page_input_and_lists(&mut self) {
+        // ── Input ──
         let help = if self.input_vim {
             "Input: vim mode (i=insert, Esc=normal, h/l=move, x=delete) | v=toggle mode"
         } else {
@@ -378,9 +390,9 @@ impl DemoApp {
             editor.set_vim_mode_enabled(true);
         }
         self.tui.mount(std::boxed::Box::new(editor));
-    }
+        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
-    fn load_page_lists(&mut self) {
+        // ── Lists ──
         self.tui.mount(std::boxed::Box::new(Text::new(
             "SelectList — j/k or arrows to navigate, Enter to select:",
             0,
@@ -466,34 +478,77 @@ impl DemoApp {
         }
     }
 
-    fn load_page_primitives(&mut self) {
-        self.tui.mount(std::boxed::Box::new(Text::new(
-            "Layout Primitives — every Phase-1 type rendered with blit_into_rect:",
-            0,
-            0,
-        )));
-        self.tui.mount(std::boxed::Box::new(LayoutDemo));
-    }
+    fn load_page_design_system(&mut self) {
+        if self.design_subpage {
+            // ── Layout engine demo ──
+            self.tui.set_layout(Layout::vertical([
+                Constraint::Length(4),
+                Constraint::Min(3),
+                Constraint::Length(4),
+            ]));
+            self.tui.mount(Box::new(ColoredPanel::new(
+                "Photon UI Demo  |  Page 4/4  |  l=toggle  Tab=focus  q=quit",
+                44,
+            )));
+            self.tui
+                .mount(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42)));
+            self.tui
+                .mount(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41)));
+        } else {
+            // ── Buttons ──
+            let theme_name = match Theme::current() {
+                Theme::Light => "Light",
+                Theme::Dark => "Dark",
+            };
+            self.tui.mount(Box::new(Text::new(
+                &format!("Beam Design System  |  Theme: {}  |  Press 't' to toggle, 'l' for layout demo", theme_name),
+                0,
+                0,
+            )));
+            self.tui.mount(Box::new(Spacer::new(1)));
 
-    fn load_page_layout_engine(&mut self) {
-        self.tui.set_layout(Layout::vertical([
-            Constraint::Length(4),
-            Constraint::Min(3),
-            Constraint::Length(4),
-        ]));
-        self.tui.mount(Box::new(ColoredPanel::new(
-            "Photon UI Demo  |  Page 6/6  |  1-6=pages  Tab=focus  q=quit",
-            44,
-        )));
-        self.tui
-            .mount(Box::new(ColoredPanel::new("Middle (Min 3) — fills remaining", 42)));
-        self.tui
-            .mount(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41)));
+            self.tui.mount(Box::new(Text::new("Primary:", 0, 0)));
+            self.tui.mount(Box::new(Button::primary("Primary button")));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            self.tui.mount(Box::new(Text::new("Dark:", 0, 0)));
+            self.tui.mount(Box::new(Button::dark("Dark button")));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            self.tui.mount(Box::new(Text::new("Cream:", 0, 0)));
+            self.tui.mount(Box::new(Button::cream("Cream button")));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            self.tui.mount(Box::new(Text::new("Ghost:", 0, 0)));
+            self.tui.mount(Box::new(Button::ghost("Ghost button")));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            self.tui.mount(Box::new(Text::new("Text:", 0, 0)));
+            self.tui.mount(Box::new(Button::text("Text button")));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            // ── Panels ──
+            self.tui.mount(Box::new(Panel::new()
+                .title("Rounded")
+                .lines(vec![
+                    "Default rounded corners".into(),
+                    "╭─╮ │ │ ╰─╯".into(),
+                ])));
+            self.tui.mount(Box::new(Spacer::new(1)));
+
+            self.tui.mount(Box::new(Panel::new()
+                .border(photon_ui::layout::Border::THIN)
+                .title("Thin")
+                .lines(vec![
+                    "Sharp corners with thin lines".into(),
+                    "┌─┐ │ │ └─┘".into(),
+                ])));
+        }
     }
 
     /// Advance animation frames. Call periodically from the event loop.
     fn tick(&mut self) {
-        if self.page == 4 {
+        if self.page == 3 {
             self.loader.borrow_mut().tick();
             self.cancellable.borrow_mut().tick();
         }
@@ -524,16 +579,6 @@ impl DemoApp {
                     self.load_page();
                     return true;
                 }
-                KeyCode::Char('5') => {
-                    self.page = 5;
-                    self.load_page();
-                    return true;
-                }
-                KeyCode::Char('6') => {
-                    self.page = 6;
-                    self.load_page();
-                    return true;
-                }
                 KeyCode::Char('q') if key.modifiers.is_empty() => return false,
                 KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     return false;
@@ -560,10 +605,29 @@ impl DemoApp {
             }
         }
 
-        if self.page == 4 {
+        if self.page == 3 {
             if let Event::Key(key) = event {
                 if key.code == KeyCode::Char('o') && key.modifiers.is_empty() {
                     self.show_overlay = !self.show_overlay;
+                    self.load_page();
+                    return true;
+                }
+            }
+        }
+
+        if self.page == 4 {
+            if let Event::Key(key) = event {
+                if key.code == KeyCode::Char('t') && key.modifiers.is_empty() {
+                    let next = match Theme::current() {
+                        Theme::Light => Theme::Dark,
+                        Theme::Dark => Theme::Light,
+                    };
+                    Theme::set(next);
+                    self.load_page();
+                    return true;
+                }
+                if key.code == KeyCode::Char('l') && key.modifiers.is_empty() {
+                    self.design_subpage = !self.design_subpage;
                     self.load_page();
                     return true;
                 }
