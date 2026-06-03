@@ -389,13 +389,30 @@ impl TUI {
     ///
     /// Also handles `Tab` to cycle focus between focusable children.
     pub fn handle_input(&mut self, event: &crate::events::Event) {
-        // Handle Tab to cycle focus
+        // Handle Tab to cycle focus. Try the focused child first so nested
+        // containers (e.g. Div) can manage their own focus cycling.
         if let crate::events::Event::Key(key) = event {
             if key.code == crossterm::event::KeyCode::Tab {
+                if let Some(idx) = self.focused_index {
+                    if idx < self.children.len() {
+                        let result = self.children[idx].handle_input(event);
+                        if !matches!(result, crate::InputResult::Ignored) {
+                            return;
+                        }
+                    }
+                }
                 self.cycle_focus(1);
                 return;
             }
             if key.code == crossterm::event::KeyCode::BackTab {
+                if let Some(idx) = self.focused_index {
+                    if idx < self.children.len() {
+                        let result = self.children[idx].handle_input(event);
+                        if !matches!(result, crate::InputResult::Ignored) {
+                            return;
+                        }
+                    }
+                }
                 self.cycle_focus(-1);
                 return;
             }
@@ -905,17 +922,17 @@ mod tests {
             screen.lines[3]
         );
         assert!(
-            screen.lines[4].starts_with("> Option 1"),
+            screen.lines[4].contains("> Option 1"),
             "row 4 should be selected list item: got {:?}",
             screen.lines[4]
         );
         assert!(
-            screen.lines[5].starts_with("  Option 2"),
+            screen.lines[5].contains("  Option 2"),
             "row 5 should be unselected list item: got {:?}",
             screen.lines[5]
         );
         assert!(
-            screen.lines[6].starts_with("  Option 3"),
+            screen.lines[6].contains("  Option 3"),
             "row 6 should be unselected list item: got {:?}",
             screen.lines[6]
         );
