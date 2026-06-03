@@ -382,9 +382,8 @@ impl DemoApp {
     fn load_page(&mut self) {
         self.tui.reset();
 
-        // Header with page indicator (skip on page 4 layout section where layout owns
-        // all children)
-        if self.page != 4 {
+        // Header with page indicator (skip on pages 4-5 where layout owns all children)
+        if self.page != 4 && self.page != 5 {
             let header = format!(
                 " Photon UI Demo  |  Page {}/5  |  1-5=pages  Tab=focus  q=quit ",
                 self.page
