@@ -18,6 +18,7 @@ pub mod status_bar;
 pub mod table;
 pub mod tabs;
 pub mod text;
+pub mod tree_view;
 pub mod truncated_text;
 
 pub use box_component::Box;
@@ -40,4 +41,5 @@ pub use status_bar::{Segment, StatusBar};
 pub use table::{Column, Row, Table};
 pub use tabs::Tabs;
 pub use text::Text;
+pub use tree_view::{TreeNode, TreeView};
 pub use truncated_text::TruncatedText;
