@@ -225,7 +225,7 @@ mod tests {
         Theme,
     };
 
-    fn empty_rendered(width: u16, height: u16) -> Rendered {
+    fn empty_rendered(_width: u16, height: u16) -> Rendered {
         Rendered {
             lines: vec![String::new(); height as usize],
             cursor: None,

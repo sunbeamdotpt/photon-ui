@@ -162,10 +162,7 @@ impl Component for Button {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theme::{
-        Color,
-        Theme,
-    };
+    use crate::theme::Theme;
 
     #[test]
     fn primary_button_renders() {
