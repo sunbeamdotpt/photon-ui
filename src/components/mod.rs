@@ -1,28 +1,59 @@
+//! UI components provided by photon-ui.
+//!
+//! Each submodule implements a specific [`Component`] trait for rendering
+//! and interacting with a distinct UI element.
+
+/// A box that draws a border around its content.
 pub mod box_component;
+/// Hierarchical breadcrumb navigation.
 pub mod breadcrumbs;
+/// Clickable button.
 pub mod button;
+/// Loading spinner that can be cancelled.
 pub mod cancellable_loader;
+/// Generic container component.
 pub mod container;
+/// Layout container that splits space among children.
 pub mod div;
+/// Horizontal or vertical divider line.
 pub mod divider;
+/// Multi-line text editor with vim/emacs modes.
 pub mod editor;
+/// Page header component.
 pub mod header;
+/// Terminal image display widget.
 pub mod image_widget;
+/// Single-line text input with vim/emacs modes.
 pub mod input;
+/// Loading spinner.
 pub mod loader;
+/// Markdown renderer.
 pub mod markdown;
+/// Modal dialog overlay.
 pub mod modal;
+/// Panel container with optional border.
 pub mod panel;
+/// Progress bar.
 pub mod progress_bar;
+/// Selectable list of items.
 pub mod select_list;
+/// Settings key/value list.
 pub mod settings_list;
+/// Sidebar navigation.
 pub mod sidebar;
+/// Empty spacer for layout padding.
 pub mod spacer;
+/// Status bar with segments.
 pub mod status_bar;
+/// Table with sortable columns and row selection.
 pub mod table;
+/// Tab bar.
 pub mod tabs;
+/// Static text label.
 pub mod text;
+/// Collapsible tree view.
 pub mod tree_view;
+/// Text truncated to fit a width.
 pub mod truncated_text;
 
 pub use box_component::Box;

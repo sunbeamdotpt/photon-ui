@@ -19,9 +19,13 @@ use crate::{
 
 /// A column definition for the [`Table`] component.
 pub struct Column {
+    /// Unique identifier for this column, used as a key into row data.
     pub key: String,
+    /// Display label shown in the table header.
     pub label: String,
+    /// Fixed width in columns, or `None` to distribute space automatically.
     pub width: Option<u16>,
+    /// Whether the column can be sorted.
     pub sortable: bool,
 }
 

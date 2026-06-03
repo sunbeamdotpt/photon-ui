@@ -3,19 +3,26 @@ use std::fmt;
 /// Dimensions in the terminal (width × height).
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Size {
+    /// Width in columns.
     pub width: u16,
+    /// Height in rows.
     pub height: u16,
 }
 
 impl Size {
+    /// The largest possible size.
     pub const MAX: Self = Self::new(u16::MAX, u16::MAX);
+    /// The smallest possible size (same as [`ZERO`](Size::ZERO)).
     pub const MIN: Self = Self::ZERO;
+    /// Zero width and height.
     pub const ZERO: Self = Self::new(0, 0);
 
+    /// Create a new size with the given width and height.
     pub const fn new(width: u16, height: u16) -> Self {
         Self { width, height }
     }
 
+    /// Total number of cells (`width * height`).
     pub const fn area(self) -> u32 {
         self.width as u32 * self.height as u32
     }

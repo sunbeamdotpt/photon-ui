@@ -32,6 +32,7 @@ pub struct Layout {
 }
 
 impl Layout {
+    /// Create a new layout with the given direction and constraints.
     pub fn new<I>(direction: Direction, constraints: I) -> Self
     where
         I: IntoIterator,
@@ -45,6 +46,7 @@ impl Layout {
         }
     }
 
+    /// Shorthand for [`Layout::new`] with [`Direction::Vertical`].
     pub fn vertical<I>(constraints: I) -> Self
     where
         I: IntoIterator,
@@ -52,6 +54,7 @@ impl Layout {
         Self::new(Direction::Vertical, constraints)
     }
 
+    /// Shorthand for [`Layout::new`] with [`Direction::Horizontal`].
     pub fn horizontal<I>(constraints: I) -> Self
     where
         I: IntoIterator,
@@ -59,11 +62,13 @@ impl Layout {
         Self::new(Direction::Horizontal, constraints)
     }
 
+    /// Set the layout direction.
     pub fn direction(mut self, direction: Direction) -> Self {
         self.direction = direction;
         self
     }
 
+    /// Replace the current constraints.
     pub fn constraints<I>(mut self, constraints: I) -> Self
     where
         I: IntoIterator,
@@ -72,26 +77,31 @@ impl Layout {
         self
     }
 
+    /// Set uniform margin on all sides.
     pub fn margin(mut self, margin: u16) -> Self {
         self.margin = Margin::new(margin, margin);
         self
     }
 
+    /// Set horizontal margin (left and right).
     pub fn horizontal_margin(mut self, margin: u16) -> Self {
         self.margin.horizontal = margin;
         self
     }
 
+    /// Set vertical margin (top and bottom).
     pub fn vertical_margin(mut self, margin: u16) -> Self {
         self.margin.vertical = margin;
         self
     }
 
+    /// Set how excess space is distributed.
     pub fn flex(mut self, flex: Flex) -> Self {
         self.flex = flex;
         self
     }
 
+    /// Set the spacing between layout segments.
     pub fn spacing<T: Into<Spacing>>(mut self, spacing: T) -> Self {
         self.spacing = spacing.into();
         self
@@ -121,13 +131,21 @@ impl Hash for Layout {
 }
 
 impl Layout {
+    /// Split `area` into sub-rects according to this layout's constraints.
     pub fn split(&self, area: Rect) -> Vec<Rect> {
         self.try_split(area).unwrap_or_default()
     }
 
+    /// Like [`split`](Layout::split), but returns a fixed-size array.
+    ///
+    /// Missing segments are filled with [`Rect::ZERO`].
     pub fn areas<const N: usize>(&self, area: Rect) -> [Rect; N] {
         let rects = self.split(area);
-        rects.try_into().expect("constraint count must match N")
+        let mut iter = rects.into_iter();
+        [(); N].map(|_| match iter.next() {
+            | Some(r) => r,
+            | None => Rect::ZERO,
+        })
     }
 
     fn try_split(&self, area: Rect) -> Option<Vec<Rect>> {

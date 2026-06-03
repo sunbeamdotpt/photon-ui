@@ -1,14 +1,19 @@
 /// Relative movement in the terminal coordinate system.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Offset {
+    /// Horizontal offset (positive = right, negative = left).
     pub x: i16,
+    /// Vertical offset (positive = down, negative = up).
     pub y: i16,
 }
 
 impl Offset {
+    /// The largest possible offset.
     pub const MAX: Self = Self::new(i16::MAX, i16::MAX);
+    /// The smallest possible offset.
     pub const MIN: Self = Self::new(i16::MIN, i16::MIN);
 
+    /// Create a new offset with the given x and y values.
     pub const fn new(x: i16, y: i16) -> Self {
         Self { x, y }
     }

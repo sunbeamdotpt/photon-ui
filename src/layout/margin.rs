@@ -3,11 +3,14 @@ use std::fmt;
 /// Spacing around a rectangular area.
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Margin {
+    /// Horizontal margin (left and right) in columns.
     pub horizontal: u16,
+    /// Vertical margin (top and bottom) in rows.
     pub vertical: u16,
 }
 
 impl Margin {
+    /// Create a new margin with the given horizontal and vertical values.
     pub const fn new(horizontal: u16, vertical: u16) -> Self {
         Self {
             horizontal,

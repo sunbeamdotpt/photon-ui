@@ -1,7 +1,7 @@
 //! Border drawing primitives for terminal UIs.
 //!
 //! Provides [`Border`] — a set of characters for drawing rectangular
-//! outlines — and [`draw_border`] for rendering them into a [`Rendered`]
+//! outlines — and [`draw_border`] for rendering them into a `Rendered`
 //! buffer with ANSI styling.
 
 use crate::{
@@ -16,13 +16,21 @@ use crate::{
 /// Characters used to draw a rectangular border.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Border {
+    /// Character drawn on the left edge.
     pub left: char,
+    /// Character drawn on the right edge.
     pub right: char,
+    /// Character drawn on the top edge.
     pub top: char,
+    /// Character drawn on the bottom edge.
     pub bottom: char,
+    /// Character drawn at the top-left corner.
     pub top_left: char,
+    /// Character drawn at the top-right corner.
     pub top_right: char,
+    /// Character drawn at the bottom-left corner.
     pub bottom_left: char,
+    /// Character drawn at the bottom-right corner.
     pub bottom_right: char,
 }
 

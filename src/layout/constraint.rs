@@ -3,45 +3,57 @@ use std::fmt;
 /// A size constraint for layout elements.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Constraint {
+    /// Minimum size in terminal columns or rows.
     Min(u16),
+    /// Maximum size in terminal columns or rows.
     Max(u16),
+    /// Exact size in terminal columns or rows.
     Length(u16),
+    /// Percentage of the total available space.
     Percentage(u16),
+    /// Proportional fraction of the total space (numerator, denominator).
     Ratio(u32, u32),
+    /// Grows to fill remaining space with the given priority.
     Fill(u16),
 }
 
 impl Constraint {
+    /// Create a vector of [`Constraint::Length`] values.
     pub fn from_lengths<T>(lengths: T) -> Vec<Self>
     where
         T: IntoIterator<Item = u16>, {
         lengths.into_iter().map(Self::Length).collect()
     }
 
+    /// Create a vector of [`Constraint::Ratio`] values.
     pub fn from_ratios<T>(ratios: T) -> Vec<Self>
     where
         T: IntoIterator<Item = (u32, u32)>, {
         ratios.into_iter().map(|(n, d)| Self::Ratio(n, d)).collect()
     }
 
+    /// Create a vector of [`Constraint::Percentage`] values.
     pub fn from_percentages<T>(percentages: T) -> Vec<Self>
     where
         T: IntoIterator<Item = u16>, {
         percentages.into_iter().map(Self::Percentage).collect()
     }
 
+    /// Create a vector of [`Constraint::Min`] values.
     pub fn from_mins<T>(mins: T) -> Vec<Self>
     where
         T: IntoIterator<Item = u16>, {
         mins.into_iter().map(Self::Min).collect()
     }
 
+    /// Create a vector of [`Constraint::Max`] values.
     pub fn from_maxes<T>(maxes: T) -> Vec<Self>
     where
         T: IntoIterator<Item = u16>, {
         maxes.into_iter().map(Self::Max).collect()
     }
 
+    /// Create a vector of [`Constraint::Fill`] values.
     pub fn from_fills<T>(fills: T) -> Vec<Self>
     where
         T: IntoIterator<Item = u16>, {

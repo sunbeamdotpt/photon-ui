@@ -16,17 +16,26 @@ use super::{
 /// A rectangular area in the terminal.
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Rect {
+    /// Column of the top-left corner.
     pub x: u16,
+    /// Row of the top-left corner.
     pub y: u16,
+    /// Width in columns.
     pub width: u16,
+    /// Height in rows.
     pub height: u16,
 }
 
 impl Rect {
+    /// A rect that covers the entire addressable terminal area.
     pub const MAX: Self = Self::new(0, 0, u16::MAX, u16::MAX);
+    /// The smallest possible rect (same as [`ZERO`](Rect::ZERO)).
     pub const MIN: Self = Self::ZERO;
+    /// A zero-width, zero-height rect at the origin.
     pub const ZERO: Self = Self::new(0, 0, 0, 0);
 
+    /// Create a new rect, clamping width/height so the rect does not overflow
+    /// `u16`.
     pub const fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         let width = x.saturating_add(width).saturating_sub(x);
         let height = y.saturating_add(height).saturating_sub(y);
@@ -38,38 +47,47 @@ impl Rect {
         }
     }
 
+    /// Total number of cells inside this rect.
     pub const fn area(self) -> u32 {
         self.width as u32 * self.height as u32
     }
 
+    /// Returns `true` if the rect has zero width or height.
     pub const fn is_empty(self) -> bool {
         self.width == 0 || self.height == 0
     }
 
+    /// The leftmost column (same as `x`).
     pub const fn left(self) -> u16 {
         self.x
     }
 
+    /// The first column after the right edge (`x + width`).
     pub const fn right(self) -> u16 {
         self.x.saturating_add(self.width)
     }
 
+    /// The topmost row (same as `y`).
     pub const fn top(self) -> u16 {
         self.y
     }
 
+    /// The first row after the bottom edge (`y + height`).
     pub const fn bottom(self) -> u16 {
         self.y.saturating_add(self.height)
     }
 
+    /// The row of the top edge (same as `y`).
     pub const fn row(self) -> u16 {
         self.y
     }
 
+    /// The column of the left edge (same as `x`).
     pub const fn col(self) -> u16 {
         self.x
     }
 
+    /// Shrink this rect by the given margin on all sides.
     pub const fn inner(self, margin: Margin) -> Self {
         let doubled_h = margin.horizontal.saturating_mul(2);
         let doubled_v = margin.vertical.saturating_mul(2);
@@ -85,6 +103,7 @@ impl Rect {
         }
     }
 
+    /// Expand this rect by the given margin on all sides.
     pub const fn outer(self, margin: Margin) -> Self {
         let x = self.x.saturating_sub(margin.horizontal);
         let y = self.y.saturating_sub(margin.vertical);
@@ -104,10 +123,12 @@ impl Rect {
         }
     }
 
+    /// Move this rect by the given offset, clamping to the valid `u16` range.
     pub fn offset(self, offset: Offset) -> Self {
         self + offset
     }
 
+    /// Resize this rect to the given dimensions, keeping the top-left corner.
     pub const fn resize(self, size: Size) -> Self {
         Self {
             width: self.x.saturating_add(size.width).saturating_sub(self.x),
@@ -116,6 +137,7 @@ impl Rect {
         }
     }
 
+    /// The smallest rect that contains both `self` and `other`.
     pub fn union(self, other: Self) -> Self {
         let x1 = min(self.x, other.x);
         let y1 = min(self.y, other.y);
@@ -129,6 +151,9 @@ impl Rect {
         }
     }
 
+    /// The overlap between `self` and `other`.
+    ///
+    /// Returns a zero-area rect if they do not intersect.
     pub fn intersection(self, other: Self) -> Self {
         let x1 = max(self.x, other.x);
         let y1 = max(self.y, other.y);
@@ -142,6 +167,7 @@ impl Rect {
         }
     }
 
+    /// Returns `true` if `self` and `other` overlap.
     pub const fn intersects(self, other: Self) -> bool {
         self.x < other.right() &&
             self.right() > other.x &&
@@ -149,6 +175,7 @@ impl Rect {
             self.bottom() > other.y
     }
 
+    /// Returns `true` if the given position lies inside this rect.
     pub const fn contains(self, position: Position) -> bool {
         position.x >= self.x &&
             position.x < self.right() &&
@@ -156,6 +183,7 @@ impl Rect {
             position.y < self.bottom()
     }
 
+    /// Clamp this rect so it fits entirely inside `other`.
     pub fn clamp(self, other: Self) -> Self {
         let width = self.width.min(other.width);
         let height = self.height.min(other.height);
@@ -164,18 +192,22 @@ impl Rect {
         Self::new(x, y, width, height)
     }
 
+    /// Iterate over each row in this rect as a 1-cell-high [`Rect`].
     pub const fn rows(self) -> Rows {
         Rows::new(self)
     }
 
+    /// Iterate over each column in this rect as a 1-cell-wide [`Rect`].
     pub const fn columns(self) -> Columns {
         Columns::new(self)
     }
 
+    /// Iterate over every cell position in this rect.
     pub const fn positions(self) -> Positions {
         Positions::new(self)
     }
 
+    /// Return the top-left corner as a [`Position`].
     pub const fn as_position(self) -> Position {
         Position {
             x: self.x,
@@ -183,6 +215,7 @@ impl Rect {
         }
     }
 
+    /// Return the dimensions as a [`Size`].
     pub const fn as_size(self) -> Size {
         Size {
             width: self.width,
@@ -251,12 +284,14 @@ impl std::ops::Sub<Offset> for Rect {
 
 /// Iterator over rows within a Rect.
 #[derive(Debug, Clone)]
+/// Iterator over rows within a Rect.
 pub struct Rows {
     rect: Rect,
     current: u16,
 }
 
 impl Rows {
+    /// Create a new row iterator for the given rect.
     pub const fn new(rect: Rect) -> Self {
         Self { rect, current: 0 }
     }
@@ -282,12 +317,14 @@ impl Iterator for Rows {
 
 /// Iterator over columns within a Rect.
 #[derive(Debug, Clone)]
+/// Iterator over columns within a Rect.
 pub struct Columns {
     rect: Rect,
     current: u16,
 }
 
 impl Columns {
+    /// Create a new column iterator for the given rect.
     pub const fn new(rect: Rect) -> Self {
         Self { rect, current: 0 }
     }
@@ -313,12 +350,14 @@ impl Iterator for Columns {
 
 /// Iterator over all positions within a Rect.
 #[derive(Debug, Clone)]
+/// Iterator over all positions within a Rect.
 pub struct Positions {
     rect: Rect,
     current: u16,
 }
 
 impl Positions {
+    /// Create a new position iterator for the given rect.
     pub const fn new(rect: Rect) -> Self {
         Self { rect, current: 0 }
     }

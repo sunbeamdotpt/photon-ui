@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-/// A component that lays out its children using a [`Layout`].
+/// A component that lays out its children using a `Layout`.
 ///
 /// Each child is rendered into the rect assigned by the layout via
 /// [`render_rect`](Component::render_rect).

@@ -13,44 +13,57 @@ use super::{
 /// A terminal text style: colors + attributes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Style {
+    /// Foreground color.
     pub fg: Option<Color>,
+    /// Background color.
     pub bg: Option<Color>,
+    /// Bold text attribute.
     pub bold: bool,
+    /// Italic text attribute.
     pub italic: bool,
+    /// Underline text attribute.
     pub underline: bool,
+    /// Dim / faint text attribute.
     pub dim: bool,
 }
 
 impl Style {
+    /// Create a new default style.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Set the foreground color.
     pub fn fg(mut self, color: Color) -> Self {
         self.fg = Some(color);
         self
     }
 
+    /// Set the background color.
     pub fn bg(mut self, color: Color) -> Self {
         self.bg = Some(color);
         self
     }
 
+    /// Enable bold text.
     pub fn bold(mut self) -> Self {
         self.bold = true;
         self
     }
 
+    /// Enable italic text.
     pub fn italic(mut self) -> Self {
         self.italic = true;
         self
     }
 
+    /// Enable underlined text.
     pub fn underline(mut self) -> Self {
         self.underline = true;
         self
     }
 
+    /// Enable dim text.
     pub fn dim(mut self) -> Self {
         self.dim = true;
         self

@@ -19,6 +19,7 @@ pub enum Flex {
 }
 
 impl Flex {
+    /// Returns `true` if this is [`Flex::Legacy`].
     pub const fn is_legacy(self) -> bool {
         matches!(self, Self::Legacy)
     }

@@ -14,19 +14,26 @@ use crate::tui::Rect;
 /// A point in the terminal coordinate system.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct Position {
+    /// Column index (0-based).
     pub x: u16,
+    /// Row index (0-based).
     pub y: u16,
 }
 
 impl Position {
+    /// The largest possible position.
     pub const MAX: Self = Self::new(u16::MAX, u16::MAX);
+    /// The smallest possible position (same as [`ORIGIN`](Position::ORIGIN)).
     pub const MIN: Self = Self::ORIGIN;
+    /// The origin `(0, 0)`.
     pub const ORIGIN: Self = Self::new(0, 0);
 
+    /// Create a new position with the given x and y values.
     pub const fn new(x: u16, y: u16) -> Self {
         Self { x, y }
     }
 
+    /// Apply an offset, clamping to valid `u16` range.
     pub fn offset(self, offset: Offset) -> Self {
         self + offset
     }

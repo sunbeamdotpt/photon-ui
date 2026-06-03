@@ -6,8 +6,11 @@ pub enum RenderError {
     /// A rendered line exceeds the allowed width.
     #[error("width overflow: line width {actual} exceeds {width}")]
     WidthOverflow {
+        /// The offending line content.
         line: String,
+        /// The maximum allowed width.
         width: u16,
+        /// The measured width of the line.
         actual: usize,
     },
 }

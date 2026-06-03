@@ -1,7 +1,9 @@
 /** Gap or overlap between layout segments. */
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Spacing {
+    /// Positive gap between layout segments.
     Space(u16),
+    /// Negative overlap that causes segments to encroach on each other.
     Overlap(u16),
 }
 

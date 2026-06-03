@@ -37,20 +37,35 @@
 // personal preference.
 #![allow(bindings_with_variant_name)]
 
+/// Fuzzy autocomplete engine.
 pub mod autocomplete;
+/// UI components (text, input, editor, table, etc.).
 pub mod components;
+/// Event abstraction over crossterm.
 pub mod events;
+/// Fuzzy matching logic.
 pub mod fuzzy;
+/// Terminal image protocol encoding.
 pub mod image;
+/// Keybindings manager and default action maps.
 pub mod keybindings;
+/// Clipboard / kill-ring for editors.
 pub mod kill_ring;
+/// Constraint-based layout engine.
 pub mod layout;
+/// Differential terminal renderer.
 pub mod renderer;
+/// Terminal trait and test double.
 pub mod terminal;
+/// Beam Design Language theme system.
 pub mod theme;
+/// TUI runtime and focus management.
 pub mod tui;
+/// Undo / redo stacks.
 pub mod undo_stack;
+/// ANSI-aware text wrapping and width measurement.
 pub mod utils;
+/// Word-boundary navigation helpers.
 pub mod word_navigation;
 
 pub use crossterm::event::KeyEvent;

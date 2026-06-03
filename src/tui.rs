@@ -14,14 +14,23 @@ use crate::{
 /// Anchor point for positioning an overlay on the terminal screen.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Anchor {
+    /// Center of the screen.
     Center,
+    /// Top-left corner.
     TopLeft,
+    /// Top-right corner.
     TopRight,
+    /// Bottom-left corner.
     BottomLeft,
+    /// Bottom-right corner.
     BottomRight,
+    /// Top edge, centered horizontally.
     TopCenter,
+    /// Bottom edge, centered horizontally.
     BottomCenter,
+    /// Left edge, centered vertically.
     LeftCenter,
+    /// Right edge, centered vertically.
     RightCenter,
 }
 
@@ -440,7 +449,7 @@ impl TUI {
     }
 
     /// Dispatch an event to the focused component, falling back to other
-    /// children if the focused one returns [`InputResult::Ignored`].
+    /// children if the focused one returns [`crate::InputResult::Ignored`].
     ///
     /// Also handles `Tab` to cycle focus between focusable children.
     pub fn handle_input(&mut self, event: &crate::events::Event) {

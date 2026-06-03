@@ -17,7 +17,9 @@ thread_local! {
 /// The active theme variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Hash)]
 pub enum Theme {
+    /// Light variant of the Beam Design Language.
     Light,
+    /// Dark variant of the Beam Design Language (default).
     #[default]
     Dark,
 }
@@ -47,27 +49,45 @@ impl Theme {
 
 /// A color palette that resolves semantic tokens to RGB values.
 pub trait Palette {
+    /// Background color for the main page / screen.
     fn bg_page(&self) -> Color;
+    /// Background color for elevated cards or panels.
     fn bg_card(&self) -> Color;
+    /// Background color for navigation bars.
     fn bg_nav(&self) -> Color;
+    /// Background color for input fields.
     fn bg_input(&self) -> Color;
 
+    /// Primary text color.
     fn text_primary(&self) -> Color;
+    /// Secondary text color.
     fn text_secondary(&self) -> Color;
+    /// Muted / placeholder text color.
     fn text_muted(&self) -> Color;
+    /// Text color rendered on top of the accent color.
     fn text_on_accent(&self) -> Color;
 
+    /// Accent / brand color.
     fn accent(&self) -> Color;
+    /// Accent color when hovered.
     fn accent_hover(&self) -> Color;
+    /// Color for section labels or headings.
     fn section_label(&self) -> Color;
 
+    /// Default border color.
     fn border_default(&self) -> Color;
+    /// Subtle border color for dividers.
     fn border_subtle(&self) -> Color;
+    /// Border color when an element has focus.
     fn border_focus(&self) -> Color;
 
+    /// Success / positive state color.
     fn success(&self) -> Color;
+    /// Warning / caution state color.
     fn warning(&self) -> Color;
+    /// Error / negative state color.
     fn error(&self) -> Color;
+    /// Informational state color.
     fn info(&self) -> Color;
 }
 

@@ -1,12 +1,15 @@
 /// Layout direction.
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Direction {
+    /// Arrange children left-to-right.
     Horizontal,
+    /// Arrange children top-to-bottom.
     #[default]
     Vertical,
 }
 
 impl Direction {
+    /// Return the direction orthogonal to this one.
     pub const fn perpendicular(self) -> Self {
         match self {
             | Self::Horizontal => Self::Vertical,

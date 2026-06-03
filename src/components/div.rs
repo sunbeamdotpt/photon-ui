@@ -1,6 +1,6 @@
 //! A flexible container with optional borders, padding, title, and background.
 //!
-//! `Div` is a general-purpose layout box. It accepts a [`Layout`] and renders
+//! `Div` is a general-purpose layout box. It accepts a `Layout` and renders
 //! its children into the layout's areas, then draws optional chrome around the
 //! result. Think of it as the TUI equivalent of an HTML `<div>`.
 //!
