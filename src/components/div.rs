@@ -43,6 +43,10 @@ pub struct Div {
     focused: bool,
     /// Which child receives keyboard input when this div is focused.
     focused_child: Option<usize>,
+    /// Whether this div can be collapsed/expanded via keyboard.
+    collapsible: bool,
+    /// Whether this div is currently collapsed.
+    collapsed: bool,
 }
 
 impl Div {
@@ -59,6 +63,8 @@ impl Div {
             background: None,
             focused: false,
             focused_child: None,
+            collapsible: false,
+            collapsed: false,
         }
     }
 
@@ -107,6 +113,23 @@ impl Div {
     pub fn background(mut self, style: Style) -> Self {
         self.background = Some(style);
         self
+    }
+
+    /// Make this div collapsible via Enter/Space when focused.
+    pub fn collapsible(mut self, value: bool) -> Self {
+        self.collapsible = value;
+        self
+    }
+
+    /// Set the collapsed state (only meaningful when collapsible).
+    pub fn collapsed(mut self, value: bool) -> Self {
+        self.collapsed = value;
+        self
+    }
+
+    /// Toggle the collapsed state.
+    pub fn toggle_collapsed(&mut self) {
+        self.collapsed = !self.collapsed;
     }
 
     /// Compute the inner content rect after subtracting border and padding.
@@ -232,6 +255,29 @@ impl Component for Div {
         let theme = Theme::current();
         let mut screen = Rendered::empty();
 
+        // ── Collapsed state: render only a single-line header ──
+        if self.collapsed {
+            let indicator = if self.collapsible { "▶ " } else { "" };
+            let title_text = self.title.as_ref().map(|t| format!("{}{}", indicator, t)).unwrap_or_else(|| "▶".into());
+            let header_style = if self.focused {
+                Style::new().fg(theme.accent()).bold()
+            } else {
+                Style::new().fg(theme.text_secondary())
+            };
+            let mut header = crate::theme::stylize(&title_text, &header_style);
+            header = crate::utils::truncate_to_width(&header, rect.width, "…");
+            let pad = rect.width as usize - crate::utils::visible_width(&header);
+            if pad > 0 {
+                header.push_str(&" ".repeat(pad));
+            }
+            screen.lines.push(header);
+            // Pad to requested height so parent layout isn't disrupted
+            while screen.lines.len() < rect.height as usize {
+                screen.lines.push(String::new());
+            }
+            return Ok(screen);
+        }
+
         // Fill background if requested
         if let Some(ref bg) = self.background {
             let prefix = bg.prefix(crate::theme::ColorMode::detect());
@@ -290,7 +336,8 @@ impl Component for Div {
                     } else {
                         self.title_style.clone()
                     };
-                    let label = format!(" {} ", title);
+                    let indicator = if self.collapsible { "▼ " } else { "" };
+                    let label = format!(" {}{} ", indicator, title);
                     let label_styled = crate::theme::stylize(&label, &title_style);
                     let top = &mut screen.lines[0];
                     let start = 2usize.min(top.len());
@@ -307,6 +354,21 @@ impl Component for Div {
 
     fn handle_input(&mut self, event: &Event) -> InputResult {
         use crossterm::event::KeyCode;
+
+        // Toggle collapsed state on Enter or Space when collapsible.
+        if self.collapsible {
+            if let Event::Key(key) = event {
+                if key.code == KeyCode::Enter || key.code == KeyCode::Char(' ') {
+                    self.collapsed = !self.collapsed;
+                    return InputResult::Handled;
+                }
+            }
+        }
+
+        // When collapsed, don't route input to children.
+        if self.collapsed {
+            return InputResult::Ignored;
+        }
 
         // Handle Tab / BackTab to cycle focus among children.
         if let Event::Key(key) = event {
@@ -543,6 +605,70 @@ mod tests {
             // Outer also has no next sibling → Ignored.
             let r2 = outer.handle_input(&tab);
             assert!(matches!(r2, crate::InputResult::Ignored));
+        });
+    }
+
+    #[test]
+    fn div_collapsible_renders_header_when_collapsed() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .border(Border::ROUNDED)
+                .title("Panel")
+                .collapsible(true)
+                .collapsed(true)
+                .child(Box::new(Text::new("hidden", 0, 0)));
+
+            let rendered = div.render_rect(Rect::new(0, 0, 20, 5)).unwrap();
+            assert_eq!(rendered.lines.len(), 5);
+            assert!(rendered.lines[0].contains("▶"));
+            assert!(rendered.lines[0].contains("Panel"));
+            // Child content should not be visible
+            assert!(!rendered.lines.iter().any(|l| l.contains("hidden")));
+        });
+    }
+
+    #[test]
+    fn div_collapsible_toggles_on_enter() {
+        Theme::with(Theme::Light, || {
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .border(Border::ROUNDED)
+                .title("Panel")
+                .collapsible(true)
+                .collapsed(true)
+                .child(Box::new(Text::new("content", 0, 0)));
+
+            let enter = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Enter,
+                crossterm::event::KeyModifiers::empty(),
+            ));
+
+            assert!(div.collapsed);
+            let result = div.handle_input(&enter);
+            assert!(matches!(result, crate::InputResult::Handled));
+            assert!(!div.collapsed);
+
+            // Second Enter should collapse again
+            div.handle_input(&enter);
+            assert!(div.collapsed);
+        });
+    }
+
+    #[test]
+    fn div_collapsible_ignores_child_input_when_collapsed() {
+        Theme::with(Theme::Light, || {
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .collapsible(true)
+                .collapsed(true)
+                .child(Box::new(crate::components::Input::new()));
+
+            let a_key = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Char('a'),
+                crossterm::event::KeyModifiers::empty(),
+            ));
+
+            // Should return Ignored because collapsed div doesn't route to children
+            let result = div.handle_input(&a_key);
+            assert!(matches!(result, crate::InputResult::Ignored));
         });
     }
 }
