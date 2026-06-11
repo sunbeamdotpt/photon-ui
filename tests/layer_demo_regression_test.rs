@@ -78,7 +78,6 @@ impl Component for Card {
             self.title.chars().take(text_w).collect::<String>(),
             text_w = text_w
         ));
-        lines.push(format!("├{:─<inner$}┤", "", inner = inner));
         for line in &self.lines {
             lines.push(format!(
                 "│ {: <text_w$} │",
@@ -208,7 +207,6 @@ fn dim_card_renders_as_a_contiguous_box() {
     let expected = [
         "┌──────────────────────┐",
         "│ Dim Shadow           │",
-        "├──────────────────────┤",
         "│ This layer dims the  │",
         "│ background that is   │",
         "│ hidden behind it.    │",

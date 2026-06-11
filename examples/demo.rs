@@ -247,7 +247,6 @@ impl photon_ui::Component for Card {
             self.title.chars().take(text_w).collect::<String>(),
             text_w = text_w
         ));
-        lines.push(format!("├{:─<inner$}┤", "", inner = inner));
         for line in &self.lines {
             lines.push(format!(
                 "│ {: <text_w$} │",
