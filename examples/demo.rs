@@ -1064,30 +1064,37 @@ impl DemoApp {
         let drop_shadow = match self.layer_shadow_idx % 4 {
             | 0 => Shadow::Drop {
                 style: "\x1b[48;5;240m".into(),
-                offset_x: 3,
-                offset_y: 2,
+                offset_x: 2,
+                offset_y: 1,
             },
             | 1 => Shadow::Drop {
                 style: "\x1b[48;5;88m".into(),
-                offset_x: 3,
-                offset_y: 2,
+                offset_x: 2,
+                offset_y: 1,
             },
             | 2 => Shadow::Drop {
                 style: "\x1b[48;5;26m".into(),
-                offset_x: 3,
-                offset_y: 2,
+                offset_x: 2,
+                offset_y: 1,
             },
             | _ => Shadow::Drop {
                 style: "\x1b[48;5;28m".into(),
-                offset_x: 3,
-                offset_y: 2,
+                offset_x: 2,
+                offset_y: 1,
             },
         };
-        let drop_card = Card::new("Drop Shadow", &["Casts a colored", "shadow offset."], 20);
-        // Center the drop-shadow card inside the dim card so the dim card's
-        // border frames the higher layer, making the stacking obvious.
+        let drop_card = Card::new(
+            "Drop Shadow",
+            &[
+                "This layer casts a",
+                "shadow offset from",
+                "its bounding box.",
+            ],
+            24,
+        );
+        // Overlap the dim card so the layering is obvious.
         let mut drop_layer =
-            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 10, 7)));
+            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 24, 9)));
         drop_layer.shadow = drop_shadow;
         drop_layer.visible = self.layer_show_drop;
         self.tui.add_layer(drop_layer);
