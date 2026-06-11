@@ -5,7 +5,7 @@
 //! cargo run --example demo
 //! ```
 //!
-//! Showcases **every** Photon UI component across five pages:
+//! Showcases **every** Photon UI component across six pages:
 //!
 //! | Page | Components |
 //! |------|-----------|
@@ -14,12 +14,13 @@
 //! | 3    | Loader, CancellableLoader, Overlay |
 //! | 4    | Layout engine, Theme + Button, Panel |
 //! | 5    | Full dashboard — all components |
+//! | 6    | Layer compositor + shadows |
 //!
 //! # Keybindings
 //!
 //! | Key | Action |
 //! |-----|--------|
-//! | `1`–`5` | Switch demo page |
+//! | `1`–`6` | Switch demo page |
 //! | `Tab` / `Shift+Tab` | Cycle focus |
 //! | `t` | Toggle light/dark theme (on page 4) |
 //! | `q` | Quit |
@@ -42,11 +43,13 @@ use photon_ui::{
     Anchor,
     Event,
     InputResult,
+    Layer,
     Overlay,
     OverlayConstraints,
     OverlayPosition,
     RenderError,
     Rendered,
+    Shadow,
     TUI,
     Terminal,
     components::{
@@ -88,13 +91,13 @@ use photon_ui::{
         Constraint,
         Direction,
         Flex,
+        Layout,
         Margin,
         Offset,
         Position,
         Rect,
         Size,
         Spacing,
-        layout::Layout,
     },
     terminal::ProcessTerminal,
     theme::Theme,
@@ -165,6 +168,51 @@ impl photon_ui::Component for ColoredPanel {
             lines,
             cursor: None,
             images: Vec::new(),
+        })
+    }
+}
+
+/// Positions a child component at an absolute `(x, y)` offset within the
+/// terminal. Leading empty rows and columns are transparent so lower layers
+/// remain visible around the positioned content.
+struct Positioned {
+    child: Box<dyn photon_ui::Component>,
+    x: u16,
+    y: u16,
+}
+
+impl Positioned {
+    fn new(child: Box<dyn photon_ui::Component>, x: u16, y: u16) -> Self {
+        Self { child, x, y }
+    }
+}
+
+impl photon_ui::Component for Positioned {
+    fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let mut lines = Vec::new();
+        let empty_line = " ".repeat(width as usize);
+        for _ in 0..self.y {
+            lines.push(empty_line.clone());
+        }
+
+        let inner_width = width.saturating_sub(self.x);
+        let child_rendered = self.child.render(inner_width)?;
+        let left_pad = " ".repeat(self.x as usize);
+
+        for line in child_rendered.lines {
+            let mut final_line = left_pad.clone();
+            final_line.push_str(&line);
+            let vw = photon_ui::utils::visible_width(&final_line);
+            if vw < width as usize {
+                final_line.push_str(&" ".repeat(width as usize - vw));
+            }
+            lines.push(final_line);
+        }
+
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: child_rendered.images,
         })
     }
 }
@@ -280,7 +328,7 @@ impl photon_ui::Component for LayoutDemo {
             4,
         );
         let s = Size::new(width / 3, 3);
-        let constraints = vec![
+        let constraints = [
             Constraint::Length(10),
             Constraint::Min(5),
             Constraint::Max(20),
@@ -356,6 +404,11 @@ struct DemoApp {
 
     // Page 4: Design system sub-page (false = buttons/panels, true = layout engine)
     design_subpage: bool,
+
+    // Page 6: Layer compositor demo state
+    layer_show_dim: bool,
+    layer_show_drop: bool,
+    layer_shadow_idx: usize,
 }
 
 impl DemoApp {
@@ -382,6 +435,9 @@ impl DemoApp {
             ))),
             show_overlay: false,
             design_subpage: false,
+            layer_show_dim: true,
+            layer_show_drop: true,
+            layer_shadow_idx: 0,
         };
         app.load_page();
         app
@@ -393,7 +449,7 @@ impl DemoApp {
         // Header with page indicator (skip on pages 4-5 where layout owns all children)
         if self.page != 4 && self.page != 5 {
             let header = format!(
-                " Photon UI Demo  |  Page {}/5  |  1-5=pages  Tab=focus  q=quit ",
+                " Photon UI Demo  |  Page {}/6  |  1-6=pages  Tab=focus  q=quit ",
                 self.page
             );
             self.tui
@@ -407,6 +463,7 @@ impl DemoApp {
             | 3 => self.load_page_dynamic(),
             | 4 => self.load_page_design_system(),
             | 5 => self.load_page_dashboard(),
+            | 6 => self.load_page_layers(),
             | _ => {},
         }
     }
@@ -605,7 +662,7 @@ impl DemoApp {
                 | Theme::Dark => "Dark",
             };
             self.tui.mount(Box::new(Text::new(
-                &format!(
+                format!(
                     "Beam Design System  |  Theme: {}  |  Press 't' to toggle, 'l' for layout demo",
                     theme_name
                 ),
@@ -869,8 +926,75 @@ impl DemoApp {
         self.tui.mount(Box::new(
             StatusBar::new()
                 .left(Segment::new("MODE: normal"))
-                .right(Segment::new("1-5:pages  q:quit")),
+                .right(Segment::new("1-6:pages  q:quit")),
         ));
+    }
+
+    fn load_page_layers(&mut self) {
+        // ── Base layer: patterned background so transparency is visible ──
+        self.tui.mount(Box::new(Text::new(
+            "Layer 0 (base): every cell below the cards is preserved and visible through gaps.",
+            0,
+            0,
+        )));
+        self.tui.mount(Box::new(Text::new(
+            "Transparent padding around the floating cards lets this text peek through.",
+            0,
+            0,
+        )));
+        self.tui.mount(Box::new(Text::new(
+            "Try: d=toggle dim layer  D=toggle drop layer  s=cycle drop shadow",
+            0,
+            0,
+        )));
+
+        // ── Layer 1: a card with a dim shadow over everything behind it ──
+        let dim_card = Panel::new().title("Dim Shadow").lines(vec![
+            "This layer dims the".into(),
+            "background that is".into(),
+            "hidden behind it.".into(),
+        ]);
+        let mut dim_layer =
+            Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 4, 6)));
+        dim_layer.shadow = Shadow::Dim {
+            style: "\x1b[2m".into(),
+        };
+        dim_layer.visible = self.layer_show_dim;
+        self.tui.add_layer(dim_layer);
+
+        // ── Layer 2: a card with a drop shadow ──
+        let drop_shadow = match self.layer_shadow_idx % 4 {
+            | 0 => Shadow::Drop {
+                style: "\x1b[2m".into(),
+                offset_x: 2,
+                offset_y: 1,
+            },
+            | 1 => Shadow::Drop {
+                style: "\x1b[90m".into(),
+                offset_x: 3,
+                offset_y: 2,
+            },
+            | 2 => Shadow::Drop {
+                style: "\x1b[34m".into(),
+                offset_x: 1,
+                offset_y: 1,
+            },
+            | _ => Shadow::Drop {
+                style: "\x1b[7m".into(),
+                offset_x: 2,
+                offset_y: 2,
+            },
+        };
+        let drop_card = Panel::new().title("Drop Shadow").lines(vec![
+            "This layer casts a".into(),
+            "shadow offset from".into(),
+            "its bounding box.".into(),
+        ]);
+        let mut drop_layer =
+            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 36, 10)));
+        drop_layer.shadow = drop_shadow;
+        drop_layer.visible = self.layer_show_drop;
+        self.tui.add_layer(drop_layer);
     }
 
     /// Advance animation frames. Call periodically from the event loop.
@@ -911,6 +1035,11 @@ impl DemoApp {
                     self.load_page();
                     return true;
                 },
+                | KeyCode::Char('6') => {
+                    self.page = 6;
+                    self.load_page();
+                    return true;
+                },
                 | KeyCode::Char('q') if key.modifiers.is_empty() => return false,
                 | KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                     return false;
@@ -920,72 +1049,87 @@ impl DemoApp {
         }
 
         // Page-specific global keys
-        if self.page == 2 {
-            if let Event::Key(key) = event {
-                if key.code == KeyCode::Char('v') && key.modifiers.is_empty() {
-                    self.input_vim = !self.input_vim;
-                    self.load_page();
-                    return true;
-                }
-                if key.code == KeyCode::Char('V') && key.modifiers.contains(KeyModifiers::SHIFT) {
-                    self.editor_vim = !self.editor_vim;
-                    self.load_page();
-                    return true;
-                }
+        if self.page == 2 &&
+            let Event::Key(key) = event
+        {
+            if key.code == KeyCode::Char('v') && key.modifiers.is_empty() {
+                self.input_vim = !self.input_vim;
+                self.load_page();
+                return true;
+            }
+            if key.code == KeyCode::Char('V') && key.modifiers.contains(KeyModifiers::SHIFT) {
+                self.editor_vim = !self.editor_vim;
+                self.load_page();
+                return true;
             }
         }
 
-        if self.page == 3 {
-            if let Event::Key(key) = event {
-                if key.code == KeyCode::Char('o') && key.modifiers.is_empty() {
-                    self.show_overlay = !self.show_overlay;
-                    self.load_page();
-                    return true;
-                }
+        if self.page == 3 &&
+            let Event::Key(key) = event &&
+            key.code == KeyCode::Char('o') &&
+            key.modifiers.is_empty()
+        {
+            self.show_overlay = !self.show_overlay;
+            self.load_page();
+            return true;
+        }
+
+        if self.page == 4 &&
+            let Event::Key(key) = event
+        {
+            if key.code == KeyCode::Char('t') && key.modifiers.is_empty() {
+                let next = match Theme::current() {
+                    | Theme::Light => Theme::Dark,
+                    | Theme::Dark => Theme::Light,
+                };
+                Theme::set(next);
+                self.load_page();
+                return true;
+            }
+            if key.code == KeyCode::Char('l') && key.modifiers.is_empty() {
+                self.design_subpage = !self.design_subpage;
+                self.load_page();
+                return true;
             }
         }
 
-        if self.page == 4 {
-            if let Event::Key(key) = event {
-                if key.code == KeyCode::Char('t') && key.modifiers.is_empty() {
-                    let next = match Theme::current() {
-                        | Theme::Light => Theme::Dark,
-                        | Theme::Dark => Theme::Light,
-                    };
-                    Theme::set(next);
-                    self.load_page();
-                    return true;
-                }
-                if key.code == KeyCode::Char('l') && key.modifiers.is_empty() {
-                    self.design_subpage = !self.design_subpage;
-                    self.load_page();
-                    return true;
-                }
+        if self.page == 5 &&
+            let Event::Key(key) = event &&
+            key.code == KeyCode::Char('m') &&
+            key.modifiers.is_empty()
+        {
+            if self.tui.modal_active() {
+                self.tui.dismiss_modal();
+            } else {
+                let modal_content = Div::new(Layout::vertical([
+                    Constraint::Length(1),
+                    Constraint::Length(1),
+                ]))
+                .child(Box::new(Text::new("This is a modal dialog.", 0, 0)))
+                .child(Box::new(Text::new("Press Esc to dismiss.", 0, 0)));
+                self.tui
+                    .show_modal(Box::new(Modal::new(Box::new(modal_content)).title("Modal")));
             }
+            return true;
         }
 
-        if self.page == 5 {
-            if let Event::Key(key) = event {
-                if key.code == KeyCode::Char('m') && key.modifiers.is_empty() {
-                    if self.tui.modal_active() {
-                        self.tui.dismiss_modal();
-                    } else {
-                        let modal_content = Div::new(Layout::vertical([
-                            Constraint::Length(1),
-                            Constraint::Length(1),
-                        ]))
-                        .child(Box::new(Text::new("This is a modal dialog.", 0, 0)))
-                        .child(Box::new(Text::new(
-                            "Press Esc to dismiss.",
-                            0,
-                            0,
-                        )));
-                        self.tui.show_modal(Box::new(
-                            Modal::new(Box::new(modal_content)).title("Modal"),
-                        ));
-                    }
-                    return true;
-                }
+        if self.page == 6 &&
+            let Event::Key(key) = event
+        {
+            if key.code == KeyCode::Char('d') && key.modifiers.is_empty() {
+                self.layer_show_dim = !self.layer_show_dim;
+                self.load_page();
+                return true;
+            }
+            if key.code == KeyCode::Char('D') && key.modifiers.contains(KeyModifiers::SHIFT) {
+                self.layer_show_drop = !self.layer_show_drop;
+                self.load_page();
+                return true;
+            }
+            if key.code == KeyCode::Char('s') && key.modifiers.is_empty() {
+                self.layer_shadow_idx += 1;
+                self.load_page();
+                return true;
             }
         }
 
@@ -1050,9 +1194,7 @@ fn detect_dark_background() -> Option<bool> {
     // Parse \x1b]11;rgb:RRRR/GGGG/BBBB\x07 or \x1b]11;rgb:RR/GG/BB\x07
     let rgb_idx = s.find("rgb:")?;
     let rgb_part = &s[rgb_idx + 4..];
-    let end_idx = rgb_part
-        .find(|c: char| c == '\x07' || c == '\x1b')
-        .unwrap_or(rgb_part.len());
+    let end_idx = rgb_part.find(['\x07', '\x1b']).unwrap_or(rgb_part.len());
     let rgb = &rgb_part[..end_idx];
 
     let channels: Vec<&str> = rgb.split('/').collect();
@@ -1080,11 +1222,11 @@ fn detect_terminal_theme() -> Theme {
     // Fall back to COLORFGBG (xterm, rxvt, etc.)
     if let Ok(fgbg) = std::env::var("COLORFGBG") {
         let parts: Vec<&str> = fgbg.split(';').collect();
-        if let Some(bg) = parts.get(1) {
-            if let Ok(n) = bg.parse::<u8>() {
-                // xterm: 0-7 are dark colors, 8-15 are light
-                return if n <= 7 { Theme::Dark } else { Theme::Light };
-            }
+        if let Some(bg) = parts.get(1) &&
+            let Ok(n) = bg.parse::<u8>()
+        {
+            // xterm: 0-7 are dark colors, 8-15 are light
+            return if n <= 7 { Theme::Dark } else { Theme::Light };
         }
     }
 
