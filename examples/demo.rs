@@ -217,6 +217,99 @@ impl photon_ui::Component for Positioned {
     }
 }
 
+/// A fixed-width bordered card for the layer demo.
+struct Card {
+    title: String,
+    lines: Vec<String>,
+    width: u16,
+}
+
+impl Card {
+    fn new(title: &str, lines: &[&str], width: u16) -> Self {
+        Self {
+            title: title.into(),
+            lines: lines.iter().map(|s| s.to_string()).collect(),
+            width,
+        }
+    }
+}
+
+impl photon_ui::Component for Card {
+    fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
+        let w = self.width.max(4) as usize;
+        let inner = w - 2;
+        let text_w = inner.saturating_sub(2);
+        let mut lines = Vec::new();
+
+        lines.push(format!("┌{:─<inner$}┐", "", inner = inner));
+        lines.push(format!(
+            "│ {: <text_w$} │",
+            self.title.chars().take(text_w).collect::<String>(),
+            text_w = text_w
+        ));
+        lines.push(format!("├{:─<inner$}┤", "", inner = inner));
+        for line in &self.lines {
+            lines.push(format!(
+                "│ {: <text_w$} │",
+                line.chars().take(text_w).collect::<String>(),
+                text_w = text_w
+            ));
+        }
+        lines.push(format!("└{:─<inner$}┘", "", inner = inner));
+
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
+    }
+}
+
+/// A bounded box filled with a repeating pattern, used as a limited
+/// background so layer shadows have something to fall onto.
+struct PatternBox {
+    x: u16,
+    y: u16,
+    width: u16,
+    height: u16,
+}
+
+impl PatternBox {
+    fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+}
+
+impl photon_ui::Component for PatternBox {
+    fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
+        let mut lines = Vec::new();
+        let inner = self.width.saturating_sub(2) as usize;
+        let body_h = self.height.saturating_sub(2) as usize;
+        let left = " ".repeat(self.x as usize);
+        let row = format!("{:~<inner$}", "", inner = inner);
+
+        for _ in 0..self.y {
+            lines.push(String::new());
+        }
+        lines.push(format!("{}┌{:─<inner$}┐", left, "", inner = inner));
+        for _ in 0..body_h {
+            lines.push(format!("{}│{}│", left, row));
+        }
+        lines.push(format!("{}└{:─<inner$}┘", left, "", inner = inner));
+
+        Ok(Rendered {
+            lines,
+            cursor: None,
+            images: Vec::new(),
+        })
+    }
+}
+
 /// A component that renders a visual demonstration of layout primitives.
 struct LayoutDemo;
 
@@ -931,14 +1024,14 @@ impl DemoApp {
     }
 
     fn load_page_layers(&mut self) {
-        // ── Base layer: patterned background so transparency is visible ──
+        // ── Base layer: header text plus a bounded patterned background ──
         self.tui.mount(Box::new(Text::new(
-            "Layer 0 (base): every cell below the cards is preserved and visible through gaps.",
+            "Layer 0 (base): a limited background so shadows are visible.",
             0,
             0,
         )));
         self.tui.mount(Box::new(Text::new(
-            "Transparent padding around the floating cards lets this text peek through.",
+            "The two cards overlap to show how higher layers occlude lower ones.",
             0,
             0,
         )));
@@ -947,51 +1040,54 @@ impl DemoApp {
             0,
             0,
         )));
+        self.tui.mount(Box::new(PatternBox::new(2, 4, 70, 16)));
 
         // ── Layer 1: a card with a dim shadow over everything behind it ──
-        let dim_card = Panel::new().title("Dim Shadow").lines(vec![
-            "This layer dims the".into(),
-            "background that is".into(),
-            "hidden behind it.".into(),
-        ]);
+        let dim_card = Card::new(
+            "Dim Shadow",
+            &[
+                "This layer dims the",
+                "background that is",
+                "hidden behind it.",
+            ],
+            24,
+        );
         let mut dim_layer =
-            Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 4, 6)));
+            Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 6)));
         dim_layer.shadow = Shadow::Dim {
             style: "\x1b[2m".into(),
         };
         dim_layer.visible = self.layer_show_dim;
         self.tui.add_layer(dim_layer);
 
-        // ── Layer 2: a card with a drop shadow ──
+        // ── Layer 2: a card with a drop shadow, overlapping the dim card ──
         let drop_shadow = match self.layer_shadow_idx % 4 {
             | 0 => Shadow::Drop {
-                style: "\x1b[2m".into(),
-                offset_x: 2,
-                offset_y: 1,
+                style: "\x1b[48;5;240m".into(),
+                offset_x: 3,
+                offset_y: 2,
             },
             | 1 => Shadow::Drop {
-                style: "\x1b[90m".into(),
+                style: "\x1b[48;5;88m".into(),
                 offset_x: 3,
                 offset_y: 2,
             },
             | 2 => Shadow::Drop {
-                style: "\x1b[34m".into(),
-                offset_x: 1,
-                offset_y: 1,
+                style: "\x1b[48;5;26m".into(),
+                offset_x: 3,
+                offset_y: 2,
             },
             | _ => Shadow::Drop {
-                style: "\x1b[7m".into(),
-                offset_x: 2,
+                style: "\x1b[48;5;28m".into(),
+                offset_x: 3,
                 offset_y: 2,
             },
         };
-        let drop_card = Panel::new().title("Drop Shadow").lines(vec![
-            "This layer casts a".into(),
-            "shadow offset from".into(),
-            "its bounding box.".into(),
-        ]);
+        let drop_card = Card::new("Drop Shadow", &["Casts a colored", "shadow offset."], 20);
+        // Center the drop-shadow card inside the dim card so the dim card's
+        // border frames the higher layer, making the stacking obvious.
         let mut drop_layer =
-            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 36, 10)));
+            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 10, 7)));
         drop_layer.shadow = drop_shadow;
         drop_layer.visible = self.layer_show_drop;
         self.tui.add_layer(drop_layer);
