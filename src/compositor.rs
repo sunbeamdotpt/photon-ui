@@ -295,14 +295,66 @@ impl Compositor {
             } => {
                 let cell_style = parse_style_string(style);
                 if let Some(rect) = compute_bbox(layer_covered) {
-                    let x = (rect.x as i16).saturating_add(*offset_x);
-                    let y = (rect.y as i16).saturating_add(*offset_y);
-                    let shadow_rect =
-                        Rect::new(x.max(0) as u16, y.max(0) as u16, rect.width, rect.height);
-                    self.shadows.push(ShadowMask {
-                        region: ShadowRegion::Rect(shadow_rect),
-                        style: cell_style,
-                    });
+                    let right = (rect.x as i16).saturating_add(rect.width as i16);
+                    let bottom = (rect.y as i16).saturating_add(rect.height as i16);
+                    let ox = *offset_x;
+                    let oy = *offset_y;
+
+                    if ox > 0 {
+                        let x = right;
+                        let y = (rect.y as i16).saturating_add(oy);
+                        let shadow_rect = Rect::new(
+                            x.max(0) as u16,
+                            y.max(0) as u16,
+                            ox as u16,
+                            rect.height,
+                        );
+                        self.shadows.push(ShadowMask {
+                            region: ShadowRegion::Rect(shadow_rect),
+                            style: cell_style.clone(),
+                        });
+                    } else if ox < 0 {
+                        let x = (rect.x as i16).saturating_add(ox);
+                        let y = (rect.y as i16).saturating_add(oy);
+                        let shadow_rect = Rect::new(
+                            x.max(0) as u16,
+                            y.max(0) as u16,
+                            ox.unsigned_abs(),
+                            rect.height,
+                        );
+                        self.shadows.push(ShadowMask {
+                            region: ShadowRegion::Rect(shadow_rect),
+                            style: cell_style.clone(),
+                        });
+                    }
+
+                    if oy > 0 {
+                        let x = (rect.x as i16).saturating_add(ox);
+                        let y = bottom;
+                        let shadow_rect = Rect::new(
+                            x.max(0) as u16,
+                            y.max(0) as u16,
+                            rect.width,
+                            oy as u16,
+                        );
+                        self.shadows.push(ShadowMask {
+                            region: ShadowRegion::Rect(shadow_rect),
+                            style: cell_style.clone(),
+                        });
+                    } else if oy < 0 {
+                        let x = (rect.x as i16).saturating_add(ox);
+                        let y = (rect.y as i16).saturating_add(oy);
+                        let shadow_rect = Rect::new(
+                            x.max(0) as u16,
+                            y.max(0) as u16,
+                            rect.width,
+                            oy.unsigned_abs(),
+                        );
+                        self.shadows.push(ShadowMask {
+                            region: ShadowRegion::Rect(shadow_rect),
+                            style: cell_style,
+                        });
+                    }
                 }
             },
         }
@@ -760,7 +812,10 @@ mod tests {
             &Shadow::None,
         );
         let out = comp.finalize();
-        // Shadow should appear at row 2, columns 2-4.
+        // Drop shadow is rendered as an offset fringe. For a 2x1 object at
+        // (1, 1) with offset (1, 1), only the bottom strip at row 2 is shaded.
+        assert!(!out.lines[0].contains("\x1b[2m"));
+        assert!(!out.lines[1].contains("\x1b[2m"));
         assert!(out.lines[2].contains("\x1b[2m"));
     }
 
