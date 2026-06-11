@@ -27,11 +27,11 @@ pub fn visible_width(s: &str) -> usize {
                         if c == '\x07' {
                             break;
                         }
-                        if c == '\x1b' {
-                            if let Some(&'\\') = chars.peek() {
-                                chars.next();
-                                break;
-                            }
+                        if c == '\x1b' &&
+                            let Some(&'\\') = chars.peek()
+                        {
+                            chars.next();
+                            break;
                         }
                     }
                     continue;
@@ -81,12 +81,12 @@ pub fn byte_index_at_visual_pos(s: &str, target_pos: usize) -> usize {
                         if c == '\x07' {
                             break;
                         }
-                        if c == '\x1b' {
-                            if let Some(&'\\') = chars.peek() {
-                                chars.next();
-                                byte_idx += '\\'.len_utf8();
-                                break;
-                            }
+                        if c == '\x1b' &&
+                            let Some(&'\\') = chars.peek()
+                        {
+                            chars.next();
+                            byte_idx += '\\'.len_utf8();
+                            break;
                         }
                     }
                 },
@@ -158,12 +158,12 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
                         if c == '\x07' {
                             break;
                         }
-                        if c == '\x1b' {
-                            if let Some(&'\\') = chars.peek() {
-                                chars.next();
-                                result.push('\\');
-                                break;
-                            }
+                        if c == '\x1b' &&
+                            let Some(&'\\') = chars.peek()
+                        {
+                            chars.next();
+                            result.push('\\');
+                            break;
                         }
                     }
                     continue;
@@ -224,6 +224,10 @@ pub struct AnsiCodeTracker {
     pub italic: bool,
     /// Underline (SGR 4) is active.
     pub underline: bool,
+    /// Faint / dim (SGR 2) is active.
+    pub faint: bool,
+    /// Reverse video (SGR 7) is active.
+    pub reverse: bool,
     /// Active foreground color SGR parameter, e.g. `"31"` or `"38;5;240"`.
     pub fg_color: Option<String>,
     /// Active background color SGR parameter, e.g. `"41"` or `"48;5;240"`.
@@ -243,16 +247,25 @@ impl AnsiCodeTracker {
     /// Returns `Some(Some(link))` on open, `Some(None)` on close, and
     /// `None` if the sequence is not a valid OSC 8 hyperlink.
     fn parse_osc8(seq: &str) -> Option<Option<ActiveHyperlink>> {
-        let body = seq.strip_prefix("\x1b]")?;
-        let (body, terminator) = if body.ends_with("\x1b\\") {
-            (&body[..body.len() - 2], "\x1b\\".to_string())
-        } else if body.ends_with('\x07') {
-            (&body[..body.len() - 1], "\x07".to_string())
+        let body = match seq.strip_prefix("\x1b]") {
+            | Some(b) => b,
+            | None => return None,
+        };
+        let (body, terminator) = if let Some(body) = body.strip_suffix("\x1b\\") {
+            (body, "\x1b\\".to_string())
+        } else if let Some(body) = body.strip_suffix('\x07') {
+            (body, "\x07".to_string())
         } else {
             return None;
         };
-        let rest = body.strip_prefix("8;")?;
-        let sep = rest.find(';')?;
+        let rest = match body.strip_prefix("8;") {
+            | Some(r) => r,
+            | None => return None,
+        };
+        let sep = match rest.find(';') {
+            | Some(s) => s,
+            | None => return None,
+        };
         let params = rest[..sep].to_string();
         let url = rest[sep + 1..].to_string();
         if url.is_empty() {
@@ -282,11 +295,17 @@ impl AnsiCodeTracker {
         for code in body.split(';') {
             match code {
                 | "1" => self.bold = true,
+                | "2" => self.faint = true,
                 | "3" => self.italic = true,
                 | "4" => self.underline = true,
-                | "22" => self.bold = false,
+                | "7" => self.reverse = true,
+                | "22" => {
+                    self.bold = false;
+                    self.faint = false;
+                },
                 | "23" => self.italic = false,
                 | "24" => self.underline = false,
+                | "27" => self.reverse = false,
                 | "39" => self.fg_color = None,
                 | "49" => self.bg_color = None,
                 | c if c.starts_with('3') && c.len() >= 2 => self.fg_color = Some(c.to_string()),
@@ -304,11 +323,17 @@ impl AnsiCodeTracker {
         if self.bold {
             parts.push("1");
         }
+        if self.faint {
+            parts.push("2");
+        }
         if self.italic {
             parts.push("3");
         }
         if self.underline {
             parts.push("4");
+        }
+        if self.reverse {
+            parts.push("7");
         }
         if let Some(ref fg) = self.fg_color {
             parts.push(fg.as_str());
@@ -340,6 +365,9 @@ impl AnsiCodeTracker {
         if self.underline {
             result.push_str("\x1b[24m");
         }
+        if self.reverse {
+            result.push_str("\x1b[27m");
+        }
         if let Some(ref link) = self.hyperlink {
             result.push_str(&format!("\x1b]8;;{}", link.terminator));
         }
@@ -349,8 +377,10 @@ impl AnsiCodeTracker {
     /// Returns `true` if any SGR or OSC 8 code is currently active.
     pub fn has_active_codes(&self) -> bool {
         self.bold ||
+            self.faint ||
             self.italic ||
             self.underline ||
+            self.reverse ||
             self.fg_color.is_some() ||
             self.bg_color.is_some() ||
             self.hyperlink.is_some()
@@ -405,12 +435,12 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
                         if c == '\x07' {
                             break;
                         }
-                        if c == '\x1b' {
-                            if let Some(&'\\') = chars.peek() {
-                                seq.push('\\');
-                                chars.next();
-                                break;
-                            }
+                        if c == '\x1b' &&
+                            let Some(&'\\') = chars.peek()
+                        {
+                            seq.push('\\');
+                            chars.next();
+                            break;
                         }
                     }
                     tracker.process(&seq);

@@ -18,6 +18,8 @@
 pub mod autocomplete;
 /// UI components (text, input, editor, table, etc.).
 pub mod components;
+/// Layer compositor.
+pub mod compositor;
 /// Event abstraction over crossterm.
 pub mod events;
 /// Fuzzy matching logic.
@@ -28,6 +30,8 @@ pub mod image;
 pub mod keybindings;
 /// Clipboard / kill-ring for editors.
 pub mod kill_ring;
+/// Full-terminal-size stacking surfaces.
+pub mod layer;
 /// Constraint-based layout engine.
 pub mod layout;
 /// Differential terminal renderer.
@@ -55,6 +59,10 @@ pub use events::{
 pub use keybindings::{
     KeybindingsManager,
     default_bindings,
+};
+pub use layer::{
+    Layer,
+    Shadow,
 };
 pub use renderer::{
     InputResult,
