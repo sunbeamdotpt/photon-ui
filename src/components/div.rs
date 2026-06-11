@@ -11,7 +11,7 @@
 //!     components::Div,
 //!     layout::{
 //!         Constraint,
-//!         layout::Layout,
+//!         Layout,
 //!     },
 //! };
 //!
@@ -37,9 +37,9 @@ use crate::{
     Rendered,
     layout::{
         Border,
+        Layout,
         Margin,
         Rect,
-        layout::Layout,
     },
     theme::{
         Palette,
@@ -254,10 +254,10 @@ impl Focusable for Div {
         // Propagate focus state ONLY to the focused child.
         // Setting all children as focused breaks nested focus cycling
         // (multiple leaf components would think they're focused).
-        if let Some(idx) = self.focused_child {
-            if let Some(f) = self.children[idx].as_focusable_mut() {
-                f.set_focused(focused);
-            }
+        if let Some(idx) = self.focused_child &&
+            let Some(f) = self.children[idx].as_focusable_mut()
+        {
+            f.set_focused(focused);
         }
     }
 }
@@ -346,7 +346,7 @@ impl Component for Div {
             let border_style = if self.border_style == Style::new() {
                 Style::new().fg(theme.border_default())
             } else {
-                self.border_style.clone()
+                self.border_style
             };
             // Draw border at the edges of the local buffer, not at absolute coords.
             crate::layout::draw_border(
@@ -357,25 +357,25 @@ impl Component for Div {
             );
 
             // Draw title in the top border if set
-            if let Some(ref title) = self.title {
-                if !screen.lines.is_empty() {
-                    let title_style = if self.title_style == Style::new() {
-                        Style::new().fg(theme.text_primary()).bold()
-                    } else {
-                        self.title_style.clone()
-                    };
-                    let indicator = if self.collapsible { "▼ " } else { "" };
-                    let label = format!(" {}{} ", indicator, title);
-                    let label_styled = crate::theme::stylize(&label, &title_style);
-                    let top = &mut screen.lines[0];
-                    let start_byte = crate::utils::byte_index_at_visual_pos(top, 2);
-                    let end_byte = crate::utils::byte_index_at_visual_pos(
-                        top,
-                        2 + crate::utils::visible_width(&label_styled),
-                    );
-                    if start_byte < top.len() {
-                        top.replace_range(start_byte..end_byte.min(top.len()), &label_styled);
-                    }
+            if let Some(ref title) = self.title &&
+                !screen.lines.is_empty()
+            {
+                let title_style = if self.title_style == Style::new() {
+                    Style::new().fg(theme.text_primary()).bold()
+                } else {
+                    self.title_style
+                };
+                let indicator = if self.collapsible { "▼ " } else { "" };
+                let label = format!(" {}{} ", indicator, title);
+                let label_styled = crate::theme::stylize(&label, &title_style);
+                let top = &mut screen.lines[0];
+                let start_byte = crate::utils::byte_index_at_visual_pos(top, 2);
+                let end_byte = crate::utils::byte_index_at_visual_pos(
+                    top,
+                    2 + crate::utils::visible_width(&label_styled),
+                );
+                if start_byte < top.len() {
+                    top.replace_range(start_byte..end_byte.min(top.len()), &label_styled);
                 }
             }
         }
@@ -387,13 +387,12 @@ impl Component for Div {
         use crossterm::event::KeyCode;
 
         // Toggle collapsed state on Enter or Space when collapsible.
-        if self.collapsible {
-            if let Event::Key(key) = event {
-                if key.code == KeyCode::Enter || key.code == KeyCode::Char(' ') {
-                    self.collapsed = !self.collapsed;
-                    return InputResult::Handled;
-                }
-            }
+        if self.collapsible &&
+            let Event::Key(key) = event &&
+            (key.code == KeyCode::Enter || key.code == KeyCode::Char(' '))
+        {
+            self.collapsed = !self.collapsed;
+            return InputResult::Handled;
         }
 
         // When collapsed, don't route input to children.
@@ -412,12 +411,12 @@ impl Component for Div {
         }
 
         // Route to the focused child first.
-        if let Some(idx) = self.focused_child {
-            if idx < self.children.len() {
-                let result = self.children[idx].handle_input(event);
-                if result != InputResult::Ignored {
-                    return result;
-                }
+        if let Some(idx) = self.focused_child &&
+            idx < self.children.len()
+        {
+            let result = self.children[idx].handle_input(event);
+            if result != InputResult::Ignored {
+                return result;
             }
         }
 

@@ -34,7 +34,7 @@ fn constraint_from_percentages_vec() {
 
 #[test]
 fn constraint_all_variants_display() {
-    let variants = vec![
+    let variants = [
         Constraint::Min(1),
         Constraint::Max(2),
         Constraint::Length(3),

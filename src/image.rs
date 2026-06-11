@@ -12,7 +12,9 @@ pub fn encode_kitty(id: u32, data: &[u8], _mime_type: &str) -> String {
     let mut seq = format!("\x1b_Ga=T,f=100,i={},m=1;", id);
     const CHUNK_SIZE: usize = 4096;
     for chunk in b64.as_bytes().chunks(CHUNK_SIZE) {
-        seq.push_str(std::str::from_utf8(chunk).unwrap());
+        if let Ok(s) = std::str::from_utf8(chunk) {
+            seq.push_str(s);
+        }
         seq.push_str("\x1b\\");
     }
     seq

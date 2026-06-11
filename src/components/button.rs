@@ -138,7 +138,10 @@ impl Component for Button {
 
     fn render_rect(&self, rect: Rect) -> Result<Rendered, RenderError> {
         // Center the button vertically within the rect
-        let mut rendered = self.render(rect.width)?;
+        let mut rendered = match self.render(rect.width) {
+            | Ok(r) => r,
+            | Err(e) => return Err(e),
+        };
         let height = rendered.lines.len();
         let pad_top = (rect.height as usize).saturating_sub(height) / 2;
 

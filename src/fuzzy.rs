@@ -63,6 +63,6 @@ pub fn fuzzy_filter<'a, T>(items: &'a [T], query: &str, get_text: fn(&T) -> &str
         })
         .filter(|(score, _)| *score > 0)
         .collect();
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.sort_by_key(|b| std::cmp::Reverse(b.0));
     scored.into_iter().map(|(_, item)| item).collect()
 }

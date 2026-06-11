@@ -3,7 +3,6 @@ use photon_ui::image::{
     encode_iterm2,
     encode_kitty,
     get_gif_dimensions,
-    get_jpeg_dimensions,
     get_png_dimensions,
 };
 

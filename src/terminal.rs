@@ -1,5 +1,14 @@
 use std::io;
 
+macro_rules! try_io {
+    ($expr:expr) => {
+        match $expr {
+            | Ok(v) => v,
+            | Err(e) => return Err(e),
+        }
+    };
+}
+
 /// Abstraction over a terminal device.
 ///
 /// Both real terminals ([`ProcessTerminal`]) and test doubles
@@ -108,6 +117,12 @@ pub struct ProcessTerminal {
     is_tty: bool,
 }
 
+impl Default for ProcessTerminal {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ProcessTerminal {
     /// Create a terminal connected to the process stdout.
     pub fn new() -> Self {
@@ -130,32 +145,32 @@ impl ProcessTerminal {
 impl Terminal for ProcessTerminal {
     fn start(&mut self) -> io::Result<()> {
         if self.is_tty {
-            crossterm::terminal::enable_raw_mode()?;
+            try_io!(crossterm::terminal::enable_raw_mode());
         }
-        crossterm::execute!(
+        try_io!(crossterm::execute!(
             self.stdout,
             crossterm::terminal::EnterAlternateScreen,
             crossterm::cursor::Hide
-        )?;
+        ));
         Ok(())
     }
 
     fn stop(&mut self) -> io::Result<()> {
-        crossterm::execute!(
+        try_io!(crossterm::execute!(
             self.stdout,
             crossterm::cursor::Show,
             crossterm::terminal::LeaveAlternateScreen
-        )?;
+        ));
         if self.is_tty {
-            crossterm::terminal::disable_raw_mode()?;
+            try_io!(crossterm::terminal::disable_raw_mode());
         }
         Ok(())
     }
 
     fn write(&mut self, data: &str) -> io::Result<()> {
         use std::io::Write;
-        self.stdout.write_all(data.as_bytes())?;
-        self.stdout.flush()?;
+        try_io!(self.stdout.write_all(data.as_bytes()));
+        try_io!(self.stdout.flush());
         Ok(())
     }
 
@@ -168,17 +183,20 @@ impl Terminal for ProcessTerminal {
     }
 
     fn move_cursor(&mut self, row: u16, col: u16) -> io::Result<()> {
-        crossterm::execute!(self.stdout, crossterm::cursor::MoveTo(col, row))?;
+        try_io!(crossterm::execute!(
+            self.stdout,
+            crossterm::cursor::MoveTo(col, row)
+        ));
         Ok(())
     }
 
     fn hide_cursor(&mut self) -> io::Result<()> {
-        crossterm::execute!(self.stdout, crossterm::cursor::Hide)?;
+        try_io!(crossterm::execute!(self.stdout, crossterm::cursor::Hide));
         Ok(())
     }
 
     fn show_cursor(&mut self) -> io::Result<()> {
-        crossterm::execute!(self.stdout, crossterm::cursor::Show)?;
+        try_io!(crossterm::execute!(self.stdout, crossterm::cursor::Show));
         Ok(())
     }
 }

@@ -104,7 +104,10 @@ impl Component for Modal {
 
         // Render content inside the modal
         let content_rect = Rect::new(1, 1, inner_w, inner_h);
-        let content_rendered = self.content.render_rect(content_rect)?;
+        let content_rendered = match self.content.render_rect(content_rect) {
+            | Ok(r) => r,
+            | Err(e) => return Err(e),
+        };
 
         let content_h = content_rendered.lines.len().min(inner_h as usize) as u16;
         let _total_h = content_h + 2;
@@ -193,10 +196,10 @@ impl Component for Modal {
         }
 
         // Propagate cursor
-        if let Some((r, c)) = content_rendered.cursor {
-            if ((r + 1) as usize) < screen.lines.len() {
-                screen.cursor = Some((r + 1, c + 1));
-            }
+        if let Some((r, c)) = content_rendered.cursor &&
+            r + 1 < screen.lines.len()
+        {
+            screen.cursor = Some((r + 1, c + 1));
         }
 
         Ok(screen)

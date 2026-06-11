@@ -42,7 +42,7 @@ fn status_bar_aligns_zones() {
 
         // Center should be roughly in the middle (40 - 6) / 2 = 17 (visual)
         let center_visual = visible_width(&line[..center_pos]);
-        assert!(center_visual >= 15 && center_visual <= 19);
+        assert!((15..=19).contains(&center_visual));
     });
 }
 

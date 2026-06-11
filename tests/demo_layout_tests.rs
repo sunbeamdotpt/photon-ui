@@ -121,7 +121,7 @@ impl photon_ui::Component for LayoutDemo {
             4,
         );
         let s = Size::new(width / 3, 3);
-        let constraints = vec![
+        let constraints = [
             Constraint::Length(10),
             Constraint::Min(5),
             Constraint::Max(20),

@@ -152,7 +152,7 @@ fn settings_list_toggle() {
 #[test]
 fn settings_list_on_change() {
     use std::cell::Cell;
-    let called = Cell::new(false);
+    let _called = Cell::new(false);
     let mut list = SettingsList::new(vec![("A".into(), false)]).on_change(|idx, val| {
         assert_eq!(idx, 0);
         assert!(val);

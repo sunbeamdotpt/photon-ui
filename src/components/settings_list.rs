@@ -34,7 +34,7 @@ impl SettingsList {
     /// Create a new settings list from `(name, value)` pairs.
     pub fn new(items: Vec<(String, bool)>) -> Self {
         Self {
-            items: items,
+            items,
             selected: 0,
             focused: false,
             on_change: None,

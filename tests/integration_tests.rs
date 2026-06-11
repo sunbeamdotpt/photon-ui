@@ -20,8 +20,8 @@ use photon_ui::{
 
 #[test]
 fn full_render_pipeline() {
-    let mut term = TestTerminal::new(80, 24);
-    let mut tui = TUI::new(Box::new(term));
+    let term = TestTerminal::new(80, 24);
+    let _tui = TUI::new(Box::new(term));
     // We can't access term after passing to TUI, so test via direct component
 }
 

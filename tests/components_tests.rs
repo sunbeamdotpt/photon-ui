@@ -9,11 +9,7 @@ use photon_ui::{
         Text,
         TruncatedText,
     },
-    events::{
-        Event,
-        Key,
-        matches_key,
-    },
+    events::Event,
 };
 
 #[test]

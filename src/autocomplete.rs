@@ -26,7 +26,7 @@ impl AutocompleteProvider for SimpleAutocomplete {
             return self.items.clone();
         }
         let filtered = fuzzy_filter(&self.items, query, |s| s.as_str());
-        filtered.into_iter().map(|s| s.clone()).collect()
+        filtered.into_iter().cloned().collect()
     }
 }
 
@@ -52,15 +52,15 @@ impl CombinedAutocompleteProvider {
 
 impl AutocompleteProvider for CombinedAutocompleteProvider {
     fn suggest(&self, query: &str) -> Vec<String> {
-        if query.starts_with('/') {
-            fuzzy_filter(&self.commands, &query[1..], |s| s.as_str())
+        if let Some(stripped) = query.strip_prefix('/') {
+            fuzzy_filter(&self.commands, stripped, |s| s.as_str())
                 .into_iter()
                 .map(|s| format!("/{}", s))
                 .collect()
         } else {
             fuzzy_filter(&self.commands, query, |s| s.as_str())
                 .into_iter()
-                .map(|s| s.clone())
+                .cloned()
                 .collect()
         }
     }

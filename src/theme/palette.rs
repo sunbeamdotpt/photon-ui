@@ -11,7 +11,7 @@ use super::Color;
 // ── Thread-local active theme ─────────────────────────────────────
 
 thread_local! {
-    static ACTIVE_THEME: RefCell<Theme> = RefCell::new(Theme::Dark);
+    static ACTIVE_THEME: RefCell<Theme> = const { RefCell::new(Theme::Dark) };
 }
 
 /// The active theme variant.

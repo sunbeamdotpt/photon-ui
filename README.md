@@ -134,8 +134,7 @@ The [`Renderer`] tracks the previous frame and computes a minimal set of cursor 
 The layout system uses the `kasuari` Cassowary constraint solver. A [`Layout`] splits a [`Rect`] into sub-rects based on [`Constraint`] values ([`Length`], [`Min`], [`Max`], [`Percentage`], [`Ratio`], [`Fill`]) with configurable [`Direction`], [`Flex`], [`Margin`], and [`Spacing`].
 
 ```rust,no_run
-use photon_ui::layout::{Constraint, Direction, Rect};
-use photon_ui::layout::layout::Layout;
+use photon_ui::layout::{Constraint, Direction, Layout, Rect};
 
 let layout = Layout::vertical([
     Constraint::Length(3),   // header

@@ -61,7 +61,7 @@ impl Component for Divider {
         let style = if self.style == Style::new() {
             Style::new().fg(theme.border_default())
         } else {
-            self.style.clone()
+            self.style
         };
 
         let line = match self.direction {
@@ -105,7 +105,7 @@ impl Component for Divider {
             let style = if self.style == Style::new() {
                 Style::new().fg(theme.border_default())
             } else {
-                self.style.clone()
+                self.style
             };
             let ch = crate::theme::stylize("│", &style);
             let mut lines = Vec::new();

@@ -103,13 +103,13 @@ impl KeybindingsManager {
     ///
     /// Returns an error if `key` is already bound to a *different* action.
     pub fn set(&mut self, action: &str, key: Key) -> Result<(), KeybindingError> {
-        if let Some(existing_action) = self.reverse.get(&key) {
-            if existing_action != action {
-                return Err(KeybindingError::Conflict(
-                    format!("{:?}", key),
-                    existing_action.clone(),
-                ));
-            }
+        if let Some(existing_action) = self.reverse.get(&key) &&
+            existing_action != action
+        {
+            return Err(KeybindingError::Conflict(
+                format!("{:?}", key),
+                existing_action.clone(),
+            ));
         }
         if let Some(old_key) = self.bindings.get(action) {
             self.reverse.remove(old_key);

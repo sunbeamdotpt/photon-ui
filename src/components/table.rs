@@ -17,6 +17,9 @@ use crate::{
     },
 };
 
+/// Callback type for table filter input.
+type FilterCallback = Box<dyn Fn(&str)>;
+
 /// A column definition for the [`Table`] component.
 pub struct Column {
     /// Unique identifier for this column, used as a key into row data.
@@ -100,7 +103,7 @@ pub struct Table {
     display_indices: Vec<usize>,
     on_select: Option<Box<dyn Fn(usize)>>,
     on_sort: Option<Box<dyn Fn(usize, bool)>>,
-    on_filter: Option<Box<dyn Fn(&str)>>,
+    on_filter: Option<FilterCallback>,
     on_filter_char: Option<Box<dyn Fn(char) -> Option<char>>>,
 }
 
@@ -235,7 +238,9 @@ impl Table {
 
     /// Return a reference to the currently selected visible row.
     pub fn selected_row(&self) -> Option<&Row> {
-        self.display_indices.get(self.selected).map(|idx| &self.rows[*idx])
+        self.display_indices
+            .get(self.selected)
+            .map(|idx| &self.rows[*idx])
     }
 
     /// Replace the rows and recompute the display order.
@@ -316,10 +321,10 @@ impl Table {
             indices.retain(|idx| {
                 let row = &self.rows[*idx];
                 for col in &self.columns {
-                    if let Some(val) = row.get(&col.key) {
-                        if val.to_lowercase().contains(&query_lower) {
-                            return true;
-                        }
+                    if let Some(val) = row.get(&col.key) &&
+                        val.to_lowercase().contains(&query_lower)
+                    {
+                        return true;
                     }
                 }
                 false
@@ -327,23 +332,26 @@ impl Table {
         }
 
         // Apply sort
-        if let Some(sort_col) = self.sort_column {
-            if sort_col < self.columns.len() && self.columns[sort_col].sortable {
-                let key = &self.columns[sort_col].key;
-                let ascending = self.sort_ascending;
-                indices.sort_by(|a, b| {
-                    let val_a = self.rows[*a].get(key).unwrap_or("");
-                    let val_b = self.rows[*b].get(key).unwrap_or("");
-                    match ascending {
-                        true => val_a.cmp(val_b),
-                        false => val_b.cmp(val_a),
-                    }
-                });
-            }
+        if let Some(sort_col) = self.sort_column &&
+            sort_col < self.columns.len() &&
+            self.columns[sort_col].sortable
+        {
+            let key = &self.columns[sort_col].key;
+            let ascending = self.sort_ascending;
+            indices.sort_by(|a, b| {
+                let val_a = self.rows[*a].get(key).unwrap_or("");
+                let val_b = self.rows[*b].get(key).unwrap_or("");
+                match ascending {
+                    | true => val_a.cmp(val_b),
+                    | false => val_b.cmp(val_a),
+                }
+            });
         }
 
         self.display_indices = indices;
-        self.selected = self.selected.min(self.display_indices.len().saturating_sub(1));
+        self.selected = self
+            .selected
+            .min(self.display_indices.len().saturating_sub(1));
     }
 
     fn compute_column_widths(&self, total_width: u16) -> Vec<u16> {
@@ -554,13 +562,11 @@ impl Component for Table {
                         }
                         InputResult::Handled
                     },
-                    | KeyCode::Char(c)
-                        if !key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
+                    | KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                         let ch = if let Some(ref cb) = self.on_filter_char {
                             match cb(c) {
-                                Some(transformed) => transformed,
-                                None => return InputResult::Handled,
+                                | Some(transformed) => transformed,
+                                | None => return InputResult::Handled,
                             }
                         } else {
                             c
@@ -582,25 +588,20 @@ impl Component for Table {
                         self.move_selection_up();
                         InputResult::Handled
                     },
-                    | KeyCode::Char('j')
-                        if !key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
+                    | KeyCode::Char('j') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                         self.move_selection_down();
                         InputResult::Handled
                     },
-                    | KeyCode::Char('k')
-                        if !key.modifiers.contains(KeyModifiers::CONTROL) =>
-                    {
+                    | KeyCode::Char('k') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                         self.move_selection_up();
                         InputResult::Handled
                     },
                     | KeyCode::Char(c)
-                        if c == self.filter_key
-                            && !key.modifiers.contains(KeyModifiers::CONTROL) =>
+                        if c == self.filter_key &&
+                            !key.modifiers.contains(KeyModifiers::CONTROL) =>
                     {
                         self.in_filter_mode = true;
-                        self.filter_buffer =
-                            self.filter_query.clone().unwrap_or_default();
+                        self.filter_buffer = self.filter_query.clone().unwrap_or_default();
                         InputResult::Handled
                     },
                     | _ => InputResult::Ignored,
@@ -622,12 +623,14 @@ impl Component for Table {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::{
-        Cell,
-        RefCell,
+    use std::{
+        cell::{
+            Cell,
+            RefCell,
+        },
+        collections::HashMap,
+        rc::Rc,
     };
-    use std::collections::HashMap;
-    use std::rc::Rc;
 
     use crossterm::event::KeyCode;
 
@@ -845,9 +848,10 @@ mod tests {
     #[test]
     fn table_on_sort_fires() {
         let cols = vec![Column::new("name", "Name").sortable()];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let sort_col = Rc::new(Cell::new(99usize));
         let sort_asc = Rc::new(Cell::new(false));
         let sc = sort_col.clone();
@@ -864,9 +868,10 @@ mod tests {
     #[test]
     fn table_on_filter_fires() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let filter = Rc::new(RefCell::new(String::new()));
         let fi = filter.clone();
         let mut table = Table::new(cols, rows).on_filter(move |q| {
@@ -881,9 +886,10 @@ mod tests {
     #[test]
     fn table_on_filter_char_rejects() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows)
             .on_filter_char(|c| if c.is_alphabetic() { Some(c) } else { None });
         table.set_focused(true);
@@ -943,9 +949,10 @@ mod tests {
     #[test]
     fn table_filter_mode_esc_clears_buffer() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
 
@@ -971,9 +978,10 @@ mod tests {
     #[test]
     fn table_filter_mode_backspace_exits_when_empty() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
 
@@ -996,9 +1004,10 @@ mod tests {
     fn table_filter_mode_renders_input_line() {
         Theme::with(Theme::Light, || {
             let cols = vec![Column::new("name", "Name").width(10)];
-            let rows = vec![
-                Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-            ];
+            let rows = vec![Row::new(HashMap::from([(
+                "name".to_string(),
+                "Alice".to_string(),
+            )]))];
             let mut table = Table::new(cols, rows);
             table.set_focused(true);
             table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
@@ -1019,9 +1028,10 @@ mod tests {
     #[test]
     fn table_custom_filter_key() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows).filter_key('f');
         table.set_focused(true);
 
@@ -1133,10 +1143,7 @@ mod tests {
 
     #[test]
     fn table_render_tiny_width_returns_empty() {
-        let cols = vec![
-            Column::new("a", "A"),
-            Column::new("b", "B"),
-        ];
+        let cols = vec![Column::new("a", "A"), Column::new("b", "B")];
         let rows = vec![Row::new(HashMap::from([(
             "a".to_string(),
             "x".to_string(),
@@ -1190,9 +1197,10 @@ mod tests {
     #[test]
     fn table_filter_mode_enter_empty_buffer() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
         table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
@@ -1211,9 +1219,10 @@ mod tests {
     #[test]
     fn table_filter_mode_unhandled_key_ignored() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
         table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
@@ -1231,9 +1240,10 @@ mod tests {
     #[test]
     fn table_non_key_event_ignored() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         let result = table.handle_input(&Event::Resize(80, 24));
         assert_eq!(result, InputResult::Ignored);
@@ -1242,9 +1252,10 @@ mod tests {
     #[test]
     fn table_as_focusable_returns_some() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         assert!(table.as_focusable().is_some());
         assert!(table.as_focusable_mut().is_some());
@@ -1264,9 +1275,10 @@ mod tests {
     #[test]
     fn table_navigation_clamped_at_edges() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
         // Already at top, Up should not move
@@ -1286,12 +1298,11 @@ mod tests {
     #[test]
     fn table_filter_char_transforms() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
-        let mut table = Table::new(cols, rows).on_filter_char(|c| {
-            Some(c.to_ascii_uppercase())
-        });
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
+        let mut table = Table::new(cols, rows).on_filter_char(|c| Some(c.to_ascii_uppercase()));
         table.set_focused(true);
         table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
             KeyCode::Char('/'),
@@ -1323,9 +1334,10 @@ mod tests {
     #[test]
     fn table_filter_mode_ctrl_char_ignored() {
         let cols = vec![Column::new("name", "Name")];
-        let rows = vec![
-            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
-        ];
+        let rows = vec![Row::new(HashMap::from([(
+            "name".to_string(),
+            "Alice".to_string(),
+        )]))];
         let mut table = Table::new(cols, rows);
         table.set_focused(true);
         table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(

@@ -11,7 +11,6 @@ use photon_ui::{
     TUI,
     events::Event,
     terminal::TestTerminal,
-    tui::Rect,
 };
 
 struct DummyComponent {
@@ -70,7 +69,7 @@ fn tui_set_focus_switches() {
     let term = TestTerminal::new(80, 24);
     let mut tui = TUI::new(Box::new(term));
     let mut c1 = DummyComponent::new(vec!["a".into()]);
-    let mut c2 = DummyComponent::new(vec!["b".into()]);
+    let c2 = DummyComponent::new(vec!["b".into()]);
     c1.set_focused(true);
     tui.mount(Box::new(c1));
     tui.mount(Box::new(c2));

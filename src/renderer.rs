@@ -145,6 +145,15 @@ impl Rendered {
 
 use std::io;
 
+macro_rules! try_io {
+    ($expr:expr) => {
+        match $expr {
+            | Ok(v) => v,
+            | Err(e) => return Err(e),
+        }
+    };
+}
+
 use crate::{
     layout::Rect,
     terminal::Terminal,
@@ -171,7 +180,7 @@ impl Renderer {
                     buffer.push_str(line);
                 }
                 buffer.push_str("\x1b[?2026l");
-                term.write(&buffer)?;
+                try_io!(term.write(&buffer));
             },
             | RenderStrategy::FullRedraw => {
                 let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H\x1b[3J");
@@ -182,7 +191,7 @@ impl Renderer {
                     buffer.push_str(line);
                 }
                 buffer.push_str("\x1b[?2026l");
-                term.write(&buffer)?;
+                try_io!(term.write(&buffer));
             },
             | RenderStrategy::Diff => {
                 if let Some(ref prev) = self.previous {
@@ -201,7 +210,7 @@ impl Renderer {
                     }
 
                     // All changes are in deleted lines (nothing new to render, just clear)
-                    if first_diff.map_or(false, |f| f >= rendered.lines.len()) {
+                    if first_diff.is_some_and(|f| f >= rendered.lines.len()) {
                         if prev.lines.len() > rendered.lines.len() {
                             let mut buffer = String::from("\x1b[?2026h");
                             let target_row = rendered.lines.len().saturating_sub(1);
@@ -223,7 +232,7 @@ impl Renderer {
                                 buffer.push_str(&format!("\x1b[{}A", extra));
                             }
                             buffer.push_str("\x1b[?2026l");
-                            term.write(&buffer)?;
+                            try_io!(term.write(&buffer));
                         }
                     } else if let Some(start) = first_diff {
                         let mut buffer = String::from("\x1b[?2026h");
@@ -254,7 +263,7 @@ impl Renderer {
                         }
 
                         buffer.push_str("\x1b[?2026l");
-                        term.write(&buffer)?;
+                        try_io!(term.write(&buffer));
                     }
                 } else {
                     // No previous frame but Diff strategy: treat as first render
@@ -266,13 +275,13 @@ impl Renderer {
                         buffer.push_str(line);
                     }
                     buffer.push_str("\x1b[?2026l");
-                    term.write(&buffer)?;
+                    try_io!(term.write(&buffer));
                 }
             },
         }
 
         if let Some((row, col)) = rendered.cursor {
-            term.move_cursor(row as u16, col as u16)?;
+            try_io!(term.move_cursor(row as u16, col as u16));
         }
 
         self.previous = Some(rendered.clone());
@@ -282,8 +291,10 @@ impl Renderer {
 }
 
 /// Strategy used by [`Renderer`] to draw a frame.
+#[derive(Default)]
 pub enum RenderStrategy {
     /// Full draw with no previous state; clears and redraws everything.
+    #[default]
     FirstRender,
     /// Force a complete screen clear and redraw.
     FullRedraw,
@@ -296,6 +307,7 @@ pub enum RenderStrategy {
 ///
 /// Tracks the previous frame to enable efficient redrawing. The strategy
 /// is automatically reset to [`Diff`](RenderStrategy::Diff) after each render.
+#[derive(Default)]
 pub struct Renderer {
     previous: Option<Rendered>,
     strategy: RenderStrategy,

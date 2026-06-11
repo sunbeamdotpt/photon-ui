@@ -2,7 +2,6 @@ use crossterm::event::KeyCode;
 use photon_ui::{
     Component,
     Focusable,
-    InputResult,
     components::{
         Input,
         input::InputVimMode,

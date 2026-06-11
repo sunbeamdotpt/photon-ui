@@ -1,7 +1,6 @@
 use crossterm::event::KeyCode;
 use photon_ui::{
     Component,
-    InputResult,
     components::SelectList,
     events::Event,
 };

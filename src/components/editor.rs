@@ -208,8 +208,7 @@ impl Editor {
         let target_line = line - 1;
         let mut current_line = 0;
         let mut current_col = 0;
-        let mut gidx = 0;
-        for g in self.text.graphemes(true) {
+        for (gidx, g) in self.text.graphemes(true).enumerate() {
             if current_line == target_line {
                 if current_col >= col || g == "\n" {
                     self.cursor = gidx;
@@ -220,7 +219,6 @@ impl Editor {
                 current_line += 1;
                 current_col = 0;
             }
-            gidx += 1;
         }
     }
 
@@ -253,8 +251,7 @@ impl Editor {
     fn move_cursor_home(&mut self) {
         let (line, _) = self.cursor_line_col();
         let mut current_line = 0;
-        let mut gidx = 0;
-        for g in self.text.graphemes(true) {
+        for (gidx, g) in self.text.graphemes(true).enumerate() {
             if current_line == line {
                 self.cursor = gidx;
                 return;
@@ -262,7 +259,6 @@ impl Editor {
             if g == "\n" {
                 current_line += 1;
             }
-            gidx += 1;
         }
     }
 
@@ -525,8 +521,7 @@ impl Editor {
     fn cursor_line_col(&self) -> (usize, usize) {
         let mut current_line = 0;
         let mut current_col = 0;
-        let mut graphemes_seen = 0;
-        for g in self.text.graphemes(true) {
+        for (graphemes_seen, g) in self.text.graphemes(true).enumerate() {
             if graphemes_seen >= self.cursor {
                 break;
             }
@@ -536,7 +531,6 @@ impl Editor {
             } else {
                 current_col += g.width();
             }
-            graphemes_seen += 1;
         }
         (current_line, current_col)
     }
@@ -1218,7 +1212,7 @@ mod tests {
     }
 
     #[test]
-    fn vim_gg_and_G() {
+    fn vim_gg_and_g() {
         let mut editor = Editor::new();
         editor.set_vim_mode_enabled(true);
         editor.set_mode(VimMode::Insert);
@@ -1274,7 +1268,7 @@ mod tests {
     }
 
     #[test]
-    fn vim_O_opens_line_above() {
+    fn vim_o_opens_line_above() {
         let mut editor = Editor::new();
         editor.set_vim_mode_enabled(true);
         editor.set_mode(VimMode::Insert);

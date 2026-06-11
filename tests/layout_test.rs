@@ -1,7 +1,7 @@
 use photon_ui::layout::{
     Constraint,
+    Layout,
     Rect,
-    layout::Layout,
 };
 
 #[test]

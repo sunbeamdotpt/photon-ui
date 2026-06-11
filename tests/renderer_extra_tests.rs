@@ -69,6 +69,6 @@ fn renderer_diff_from_none() {
 
 #[test]
 fn renderer_previous_accessor() {
-    let mut renderer = Renderer::new();
+    let renderer = Renderer::new();
     assert!(renderer.previous().is_none());
 }

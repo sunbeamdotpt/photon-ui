@@ -1,7 +1,5 @@
 use photon_ui::{
     Component,
-    RenderError,
-    Rendered,
     components::ImageWidget,
 };
 

@@ -28,8 +28,8 @@ use photon_ui::{
     },
     layout::{
         Constraint,
+        Layout,
         Rect,
-        layout::Layout,
     },
     renderer::{
         RenderStrategy,
@@ -320,7 +320,7 @@ fn dashboard_via_tui_no_wrapping() {
     tui.render_frame().unwrap();
 
     // Access the terminal through the TUI's terminal() method
-    let term = tui.terminal();
+    let _term = tui.terminal();
     // We can't easily inspect the rendered output from TUI, but at least
     // verify it doesn't panic.
 }

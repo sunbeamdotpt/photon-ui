@@ -274,7 +274,7 @@ mod tests {
             let c1_pos = line.find("C1").unwrap();
             // "C1" is 2 chars, centered in 20 -> visual pos around 9
             let visual_pos = visible_width(&line[..c1_pos]);
-            assert!(visual_pos >= 8 && visual_pos <= 10);
+            assert!((8..=10).contains(&visual_pos));
             assert_eq!(visible_width(line), 20);
         });
     }

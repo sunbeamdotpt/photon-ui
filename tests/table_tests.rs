@@ -322,8 +322,10 @@ fn table_interactive_filter_mode() {
 
 #[test]
 fn table_hooks_fire_from_user_input() {
-    use std::cell::Cell;
-    use std::rc::Rc;
+    use std::{
+        cell::Cell,
+        rc::Rc,
+    };
 
     let cols = vec![Column::new("name", "Name").sortable().width(10)];
     let rows = vec![

@@ -9,10 +9,11 @@ pub mod border;
 pub mod constraint;
 /// Horizontal or vertical layout direction.
 pub mod direction;
+/// Layout configuration and splitting.
+pub mod engine;
 /// How excess space is distributed among segments.
 pub mod flex;
-/// Layout configuration and splitting.
-pub mod layout;
+pub use engine::Layout;
 /// Margin around a rectangular area.
 pub mod margin;
 /// Relative offset in terminal coordinates.

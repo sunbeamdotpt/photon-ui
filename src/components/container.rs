@@ -5,8 +5,8 @@ use crate::{
     Rendered,
     events::Event,
     layout::{
+        Layout,
         Rect,
-        layout::Layout,
     },
 };
 

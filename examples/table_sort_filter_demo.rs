@@ -1,5 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    rc::Rc,
+};
 
 use photon_ui::{
     Component,
@@ -21,30 +23,38 @@ fn main() {
         ];
 
         let rows = vec![
-            Row::new([
-                ("name".to_string(), "Charlie".to_string()),
-                ("role".to_string(), "Designer".to_string()),
-                ("status".to_string(), "Active".to_string()),
-            ]
-            .into()),
-            Row::new([
-                ("name".to_string(), "Alice".to_string()),
-                ("role".to_string(), "Engineer".to_string()),
-                ("status".to_string(), "Active".to_string()),
-            ]
-            .into()),
-            Row::new([
-                ("name".to_string(), "Bob".to_string()),
-                ("role".to_string(), "Manager".to_string()),
-                ("status".to_string(), "Away".to_string()),
-            ]
-            .into()),
-            Row::new([
-                ("name".to_string(), "Diana".to_string()),
-                ("role".to_string(), "Engineer".to_string()),
-                ("status".to_string(), "Offline".to_string()),
-            ]
-            .into()),
+            Row::new(
+                [
+                    ("name".to_string(), "Charlie".to_string()),
+                    ("role".to_string(), "Designer".to_string()),
+                    ("status".to_string(), "Active".to_string()),
+                ]
+                .into(),
+            ),
+            Row::new(
+                [
+                    ("name".to_string(), "Alice".to_string()),
+                    ("role".to_string(), "Engineer".to_string()),
+                    ("status".to_string(), "Active".to_string()),
+                ]
+                .into(),
+            ),
+            Row::new(
+                [
+                    ("name".to_string(), "Bob".to_string()),
+                    ("role".to_string(), "Manager".to_string()),
+                    ("status".to_string(), "Away".to_string()),
+                ]
+                .into(),
+            ),
+            Row::new(
+                [
+                    ("name".to_string(), "Diana".to_string()),
+                    ("role".to_string(), "Engineer".to_string()),
+                    ("status".to_string(), "Offline".to_string()),
+                ]
+                .into(),
+            ),
         ];
 
         let last_action = Rc::new(RefCell::new(String::new()));
@@ -114,7 +124,7 @@ fn main() {
         println!("║  {}  ║", pad_right(&last_action.borrow(), 36));
         println!("╚══════════════════════════════════════════╝");
         table.sort_by(0);
-        *last_action.borrow_mut() = format!("filter: 'eng' + sort by column 0 asc");
+        *last_action.borrow_mut() = "filter: 'eng' + sort by column 0 asc".to_string();
         let rendered = table.render(40).unwrap();
         for line in &rendered.lines {
             println!("{}", line);
@@ -141,7 +151,10 @@ fn main() {
         }
         println!();
 
-        println!("Selected row: {:?}", table.selected_row().unwrap().get("name"));
+        println!(
+            "Selected row: {:?}",
+            table.selected_row().unwrap().get("name")
+        );
         println!("Last action: {}", last_action.borrow());
     });
 }

@@ -46,9 +46,18 @@ impl Color {
         if s.len() != 6 {
             return None;
         }
-        let r = u8::from_str_radix(&s[0..2], 0x10).ok()?;
-        let g = u8::from_str_radix(&s[2..4], 0x10).ok()?;
-        let b = u8::from_str_radix(&s[4..6], 0x10).ok()?;
+        let r = match u8::from_str_radix(&s[0..2], 0x10) {
+            | Ok(v) => v,
+            | Err(_) => return None,
+        };
+        let g = match u8::from_str_radix(&s[2..4], 0x10) {
+            | Ok(v) => v,
+            | Err(_) => return None,
+        };
+        let b = match u8::from_str_radix(&s[4..6], 0x10) {
+            | Ok(v) => v,
+            | Err(_) => return None,
+        };
         Some(Self(r, g, b))
     }
 

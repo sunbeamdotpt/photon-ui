@@ -2,9 +2,8 @@ use photon_ui::layout::{
     Constraint,
     Direction,
     Flex,
-    Margin,
+    Layout,
     Rect,
-    layout::Layout,
 };
 
 #[test]
