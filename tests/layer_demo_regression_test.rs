@@ -194,7 +194,7 @@ fn dim_card_renders_as_a_contiguous_box() {
         24,
     );
     let mut dim_layer =
-        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 6)));
+        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
     dim_layer.shadow = Shadow::Dim {
         style: "\x1b[2m".into(),
     };
@@ -214,7 +214,7 @@ fn dim_card_renders_as_a_contiguous_box() {
     ];
 
     for (offset, line) in expected.iter().enumerate() {
-        let row = 6 + offset;
+        let row = 10 + offset;
         let plain = strip_ansi(&out.lines[row]);
         assert!(
             plain.contains(line),
@@ -242,7 +242,7 @@ fn overlapping_drop_card_is_visible() {
         24,
     );
     let mut dim_layer =
-        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 6)));
+        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
     dim_layer.shadow = Shadow::Dim {
         style: "\x1b[2m".into(),
     };
@@ -257,7 +257,7 @@ fn overlapping_drop_card_is_visible() {
         24,
     );
     let mut drop_layer =
-        Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 24, 9)));
+        Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 28, 13)));
     drop_layer.shadow = Shadow::Drop {
         style: "\x1b[48;5;240m".into(),
         offset_x: 2,

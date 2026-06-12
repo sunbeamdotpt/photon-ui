@@ -1052,7 +1052,7 @@ impl DemoApp {
             24,
         );
         let mut dim_layer =
-            Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 6)));
+            Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
         dim_layer.shadow = Shadow::Dim {
             style: "\x1b[2m".into(),
         };
@@ -1093,7 +1093,7 @@ impl DemoApp {
         );
         // Overlap the dim card so the layering is obvious.
         let mut drop_layer =
-            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 24, 9)));
+            Layer::with_component(Box::new(Positioned::new(Box::new(drop_card), 28, 13)));
         drop_layer.shadow = drop_shadow;
         drop_layer.visible = self.layer_show_drop;
         self.tui.add_layer(drop_layer);
