@@ -24,6 +24,8 @@ fn rendered_blit_onto_basic() {
         images: vec![ImageCommand {
             id: 1,
             data: "img".into(),
+            row: 0,
+            col: 0,
         }],
     };
     source.blit_onto(&mut target, 0, 6);

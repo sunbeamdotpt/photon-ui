@@ -43,13 +43,18 @@ pub struct Rendered {
 /// A command to display an image in the terminal.
 ///
 /// Images are identified by an `id` so the renderer can track which images
-/// are still visible and delete stale ones.
+/// are still visible and delete stale ones. `row` and `col` are the screen
+/// cell where the terminal should place the top-left corner of the image.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageCommand {
     /// Unique identifier for this image.
     pub id: u32,
     /// Raw image data or protocol-specific payload.
     pub data: String,
+    /// Target row (0-indexed) for the top-left corner of the image.
+    pub row: u16,
+    /// Target column (0-indexed) for the top-left corner of the image.
+    pub col: u16,
 }
 
 impl Rendered {
@@ -92,7 +97,14 @@ impl Rendered {
         if let Some((r, c)) = self.cursor {
             target.cursor = Some((row as usize + r, col as usize + c));
         }
-        target.images.extend(self.images.clone());
+        for image in &self.images {
+            target.images.push(ImageCommand {
+                id: image.id,
+                data: image.data.clone(),
+                row: row + image.row,
+                col: col + image.col,
+            });
+        }
     }
 
     /// Composite this rendered content into a target at the given rect.
@@ -139,7 +151,14 @@ impl Rendered {
         if let Some((r, c)) = self.cursor {
             target.cursor = Some((rect.y as usize + r, rect.x as usize + c));
         }
-        target.images.extend(self.images.clone());
+        for image in &self.images {
+            target.images.push(ImageCommand {
+                id: image.id,
+                data: image.data.clone(),
+                row: rect.y + image.row,
+                col: rect.x + image.col,
+            });
+        }
     }
 }
 
@@ -158,6 +177,16 @@ use crate::{
     layout::Rect,
     terminal::Terminal,
 };
+
+fn append_images(buffer: &mut String, images: &[ImageCommand]) {
+    for image in images {
+        // Kitty's a=p command places the image at the current cursor position.
+        // Move the cursor to the cell where the component requested the image
+        // so placement stays stable across diff renders.
+        buffer.push_str(&format!("\x1b[{};{}H", image.row + 1, image.col + 1));
+        buffer.push_str(&image.data);
+    }
+}
 
 impl Renderer {
     /// Write the rendered output to the terminal using the current strategy.
@@ -179,6 +208,7 @@ impl Renderer {
                     }
                     buffer.push_str(line);
                 }
+                append_images(&mut buffer, &rendered.images);
                 buffer.push_str("\x1b[?2026l");
                 try_io!(term.write(&buffer));
             },
@@ -190,6 +220,7 @@ impl Renderer {
                     }
                     buffer.push_str(line);
                 }
+                append_images(&mut buffer, &rendered.images);
                 buffer.push_str("\x1b[?2026l");
                 try_io!(term.write(&buffer));
             },
@@ -208,6 +239,7 @@ impl Renderer {
                             last_diff = i;
                         }
                     }
+                    let images_changed = prev.images != rendered.images;
 
                     // All changes are in deleted lines (nothing new to render, just clear)
                     if first_diff.is_some_and(|f| f >= rendered.lines.len()) {
@@ -231,6 +263,7 @@ impl Renderer {
                             if extra > 0 {
                                 buffer.push_str(&format!("\x1b[{}A", extra));
                             }
+                            append_images(&mut buffer, &rendered.images);
                             buffer.push_str("\x1b[?2026l");
                             try_io!(term.write(&buffer));
                         }
@@ -262,6 +295,12 @@ impl Renderer {
                             }
                         }
 
+                        append_images(&mut buffer, &rendered.images);
+                        buffer.push_str("\x1b[?2026l");
+                        try_io!(term.write(&buffer));
+                    } else if images_changed {
+                        let mut buffer = String::from("\x1b[?2026h");
+                        append_images(&mut buffer, &rendered.images);
                         buffer.push_str("\x1b[?2026l");
                         try_io!(term.write(&buffer));
                     }
@@ -274,6 +313,7 @@ impl Renderer {
                         }
                         buffer.push_str(line);
                     }
+                    append_images(&mut buffer, &rendered.images);
                     buffer.push_str("\x1b[?2026l");
                     try_io!(term.write(&buffer));
                 }
@@ -349,11 +389,14 @@ mod tests {
             images: vec![ImageCommand {
                 id: 1,
                 data: "img".into(),
+                row: 0,
+                col: 0,
             }],
         };
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
         assert!(written.contains("hello"));
+        assert!(written.contains("img"));
         assert!(written.contains("\x1b[?2026h"));
         // First render clears screen and homes cursor
         assert!(written.contains("\x1b[H"));
@@ -489,6 +532,35 @@ mod tests {
     }
 
     #[test]
+    fn diff_emits_image_commands() {
+        let mut term = TestTerminal::new(80, 24);
+        let mut renderer = Renderer::new();
+
+        let frame1 = Rendered {
+            lines: vec!["a".into()],
+            cursor: None,
+            images: Vec::new(),
+        };
+        renderer.render(&mut term, &frame1).unwrap();
+
+        renderer.set_strategy(RenderStrategy::Diff);
+        let frame2 = Rendered {
+            lines: vec!["a".into()],
+            cursor: None,
+            images: vec![ImageCommand {
+                id: 5,
+                data: "img".into(),
+                row: 0,
+                col: 0,
+            }],
+        };
+        renderer.render(&mut term, &frame2).unwrap();
+
+        let written = term.written().join("");
+        assert!(written.contains("img"), "diff must emit image commands");
+    }
+
+    #[test]
     fn blit_onto_with_images() {
         let mut target = Rendered {
             lines: vec!["hello world".into()],
@@ -501,10 +573,14 @@ mod tests {
             images: vec![ImageCommand {
                 id: 1,
                 data: "img".into(),
+                row: 0,
+                col: 0,
             }],
         };
         source.blit_onto(&mut target, 0, 6);
         assert_eq!(target.images.len(), 1);
+        assert_eq!(target.images[0].row, 0);
+        assert_eq!(target.images[0].col, 6);
     }
 
     #[test]
@@ -520,6 +596,8 @@ mod tests {
             images: vec![ImageCommand {
                 id: 1,
                 data: "img".into(),
+                row: 0,
+                col: 0,
             }],
         };
         source.blit_into_rect(&mut target, Rect::new(6, 0, 10, 2));
@@ -527,6 +605,8 @@ mod tests {
         assert_eq!(target.lines[1], "secondZline");
         assert_eq!(target.cursor, Some((0, 7)));
         assert_eq!(target.images.len(), 1);
+        assert_eq!(target.images[0].row, 0);
+        assert_eq!(target.images[0].col, 6);
     }
 
     #[test]

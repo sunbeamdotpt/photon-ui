@@ -155,7 +155,14 @@ impl Layer {
                 {
                     rendered.cursor = Some((start_row + r_local, c_local));
                 }
-                rendered.images.extend(child_rendered.images.clone());
+                for image in &child_rendered.images {
+                    rendered.images.push(crate::renderer::ImageCommand {
+                        id: image.id,
+                        data: image.data.clone(),
+                        row: start_row as u16 + image.row,
+                        col: image.col,
+                    });
+                }
             }
         }
 
@@ -261,6 +268,8 @@ mod tests {
                     images: vec![ImageCommand {
                         id: 7,
                         data: "data".into(),
+                        row: 0,
+                        col: 0,
                     }],
                 })
             }

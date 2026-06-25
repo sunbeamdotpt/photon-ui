@@ -14,6 +14,7 @@ use crate::renderer::Rendered;
 use crate::{
     Component,
     compositor::Compositor,
+    image::delete_kitty_image,
     layer::Layer,
     layout::Layout,
     renderer::{
@@ -469,10 +470,7 @@ impl TUI {
             screen.images.iter().map(|i| i.id).collect();
         for id in &self.previous_image_ids {
             if !current_ids.contains(id) {
-                try_io!(
-                    self.terminal
-                        .write(&format!("\x1b_Ga=d,d=I,i={}\x1b\\", id))
-                );
+                try_io!(self.terminal.write(&delete_kitty_image(*id)));
             }
         }
         self.previous_image_ids = current_ids;
@@ -703,6 +701,8 @@ mod tests {
                 images: vec![crate::renderer::ImageCommand {
                     id: 1,
                     data: "data".into(),
+                    row: 0,
+                    col: 0,
                 }],
             })
         }

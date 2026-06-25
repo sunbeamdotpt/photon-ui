@@ -303,12 +303,8 @@ impl Compositor {
                     if ox > 0 {
                         let x = right;
                         let y = (rect.y as i16).saturating_add(oy);
-                        let shadow_rect = Rect::new(
-                            x.max(0) as u16,
-                            y.max(0) as u16,
-                            ox as u16,
-                            rect.height,
-                        );
+                        let shadow_rect =
+                            Rect::new(x.max(0) as u16, y.max(0) as u16, ox as u16, rect.height);
                         self.shadows.push(ShadowMask {
                             region: ShadowRegion::Rect(shadow_rect),
                             style: cell_style.clone(),
@@ -331,12 +327,8 @@ impl Compositor {
                     if oy > 0 {
                         let x = (rect.x as i16).saturating_add(ox);
                         let y = bottom;
-                        let shadow_rect = Rect::new(
-                            x.max(0) as u16,
-                            y.max(0) as u16,
-                            rect.width,
-                            oy as u16,
-                        );
+                        let shadow_rect =
+                            Rect::new(x.max(0) as u16, y.max(0) as u16, rect.width, oy as u16);
                         self.shadows.push(ShadowMask {
                             region: ShadowRegion::Rect(shadow_rect),
                             style: cell_style.clone(),
@@ -766,11 +758,15 @@ mod tests {
         top.images.push(ImageCommand {
             id: 1,
             data: "a".into(),
+            row: 0,
+            col: 0,
         });
         let mut bottom = rendered_from(&["bottom"]);
         bottom.images.push(ImageCommand {
             id: 2,
             data: "b".into(),
+            row: 0,
+            col: 0,
         });
         let mut comp = Compositor::new(5, 1);
         comp.add_layer(&top, &Shadow::None);
