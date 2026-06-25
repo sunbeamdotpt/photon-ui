@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-25
+
+### Added
+
+- **Layer compositor** — new `Compositor`, `Layer`, and `Shadow` abstractions for stacking terminal surfaces with dim and drop-shadow effects.
+- **TUI layer rendering** — `TUI` now composites frames through a stack of layers instead of a single surface.
+- **Layer showcase demo** — new page 6 in `examples/demo.rs` demonstrates overlapping cards, dim backgrounds, and drop shadows.
+- **Integration tests** for the compositor and TUI layer stack.
+- **Image placement coordinates** — `ImageCommand` now carries explicit `row`/`col` screen coordinates, and the renderer positions the cursor before emitting each Kitty `a=p` command.
+- **Kitty cell dimensions** — `encode_kitty` accepts `cols`/`rows` and emits `c=`/`r=` so the terminal scales the image to fit the reserved cell rectangle.
+- **Size-aware `ImageWidget`** — parses image pixel dimensions to compute a default cell size, exposes `.with_size(cols, rows)`, renders placeholder lines that reserve matching screen space, and implements `render_rect` to clip inside Cassowary-layout rectangles.
+- Demo image assets: `examples/reference.jpg` and `examples/reference.png` (copyright-free bee-with-cowboy-hat).
+
+### Changed
+
+- `examples/demo.rs` page 1 now uses a Cassowary-driven `Layout::vertical` that reserves explicit space for Markdown, the image, text samples, and the `blit_into_rect` demo.
+- Updated `AGENTS.md` to reflect current project conventions.
+
+### Fixed
+
+- Drop shadows now render as a proper offset fringe.
+- Layer demo card positioning and internal separator rendering.
+- Resolved clippy warnings and `?`-operator usage to comply with project lints.
+
 ## [0.2.0] - 2026-06-05
 
 ### Added
