@@ -145,7 +145,7 @@ fn strip_ansi(s: &str) -> String {
     while let Some(ch) = chars.next() {
         if ch == '\x1b' {
             match chars.peek() {
-                Some('[') => {
+                | Some('[') => {
                     chars.next();
                     while let Some(c) = chars.peek() {
                         let c2 = *c;
@@ -155,7 +155,7 @@ fn strip_ansi(s: &str) -> String {
                         }
                     }
                 },
-                Some(']') => {
+                | Some(']') => {
                     chars.next();
                     while let Some(c) = chars.peek() {
                         let c2 = *c;
@@ -169,7 +169,7 @@ fn strip_ansi(s: &str) -> String {
                         }
                     }
                 },
-                _ => {},
+                | _ => {},
             }
             continue;
         }
@@ -193,8 +193,7 @@ fn dim_card_renders_as_a_contiguous_box() {
         ],
         24,
     );
-    let mut dim_layer =
-        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
+    let mut dim_layer = Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
     dim_layer.shadow = Shadow::Dim {
         style: "\x1b[2m".into(),
     };
@@ -241,8 +240,7 @@ fn overlapping_drop_card_is_visible() {
         ],
         24,
     );
-    let mut dim_layer =
-        Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
+    let mut dim_layer = Layer::with_component(Box::new(Positioned::new(Box::new(dim_card), 8, 10)));
     dim_layer.shadow = Shadow::Dim {
         style: "\x1b[2m".into(),
     };
