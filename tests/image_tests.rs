@@ -9,7 +9,7 @@ use photon_ui::image::{
 #[test]
 fn kitty_encode_produces_sequence() {
     let data = b"fake_image_data";
-    let seq = encode_kitty(1, data, "image/png");
+    let seq = encode_kitty(1, data, 8, 4);
     assert!(seq.contains("_G"));
 }
 
@@ -41,4 +41,44 @@ fn gif_dimensions_parse() {
     data.extend_from_slice(&100u16.to_le_bytes());
     data.extend_from_slice(&50u16.to_le_bytes());
     assert_eq!(get_gif_dimensions(&data), Some((100, 50)));
+}
+
+#[test]
+fn kitty_encode_uses_transmit_and_placement_actions() {
+    let data = b"fake_image_data";
+    let seq = encode_kitty(1, data, 8, 4);
+    // Transmission uses lowercase 'a=t', responses are suppressed,
+    // and the final chunk plus placement command display the image.
+    assert!(seq.contains("a=t"));
+    assert!(seq.contains("a=p"));
+    assert!(!seq.contains("a=T"));
+    assert!(seq.contains("m=0"));
+    assert!(seq.contains("q=1"));
+    assert!(seq.contains("c=8"));
+    assert!(seq.contains("r=4"));
+}
+
+#[test]
+fn kitty_encode_first_chunk_has_full_keys_continuation_does_not() {
+    // Enough data to force at least one intermediate 4096-byte base64 chunk.
+    let data = vec![0u8; 10000];
+    let seq = encode_kitty(1, &data, 16, 8);
+    let chunks: Vec<&str> = seq.split("\x1b\\").collect();
+    // First chunk: full keys.
+    assert!(chunks[0].contains("a=t"));
+    assert!(chunks[0].contains("f=100"));
+    assert!(chunks[0].contains("i=1"));
+    // An intermediate continuation chunk must only carry q and m.
+    let continuation = chunks
+        .iter()
+        .find(|c| c.starts_with("\x1b_Gq=1,m=1"))
+        .expect("expected an intermediate continuation chunk");
+    assert!(!continuation.contains("a=t"));
+    assert!(!continuation.contains("f=100"));
+    assert!(!continuation.contains("i=1"));
+}
+
+#[test]
+fn kitty_encode_empty_data_returns_empty() {
+    assert!(encode_kitty(1, &[], 1, 1).is_empty());
 }
