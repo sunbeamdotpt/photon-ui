@@ -9,7 +9,7 @@
 //!
 //! | Page | Components |
 //! |------|-----------|
-//! | 1    | Text, TruncatedText, Box, Markdown, Spacer + Layout primitives |
+//! | 1    | Text, TruncatedText, Box, Markdown, ImageWidget, Spacer + Layout primitives |
 //! | 2    | Input, Editor, SelectList, SettingsList |
 //! | 3    | Loader, CancellableLoader, Overlay |
 //! | 4    | Layout engine, Theme + Button, Panel |
@@ -27,7 +27,6 @@
 //! | `Ctrl+C` | Quit |
 //!
 //! Page-specific bindings are shown on each page.
-
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -111,6 +110,13 @@ A **Rust** TUI library with:
 - Headings and paragraphs
 - CommonMark support via pulldown-cmark
 "#;
+
+/// Demo image for the ImageWidget (a copyright-free bee-with-cowboy-hat).
+///
+/// The original JPEG lives at `examples/reference.jpg`; it is converted to a
+/// PNG at build time because the Kitty graphics protocol only accepts PNG
+/// payloads directly (`f=100`).
+const DEMO_IMAGE: &[u8] = include_bytes!("reference.png");
 
 /// Wrapper that lets us tick a shared Loader while it's mounted in the TUI.
 struct SharedLoader(Rc<RefCell<Loader>>);
@@ -314,15 +320,22 @@ struct LayoutDemo;
 
 impl photon_ui::Component for LayoutDemo {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
+        let rect = Rect::new(0, 0, width, 18);
+        self.render_rect(rect)
+    }
+
+    fn render_rect(&self, rect: Rect) -> Result<Rendered, RenderError> {
         let mut screen = Rendered::empty();
 
-        // Fill screen with blank lines up to our demo height
-        let demo_height = 18u16;
+        // Fill screen with blank lines up to our demo height (clamped to the
+        // cell rectangle Cassowary allocated for this component).
+        let demo_height = 18u16.min(rect.height);
         for _ in 0..demo_height {
             screen.lines.push("".to_string());
         }
 
         // ── Panel 1: Rect grid using blit_into_rect ──────────────────────
+        let width = rect.width;
         let grid = Rect::new(0, 0, width / 2, 8);
         let top_left = Rect::new(grid.x, grid.y, grid.width / 2, grid.height / 2);
         let top_right = Rect::new(
@@ -561,53 +574,95 @@ impl DemoApp {
     }
 
     fn load_page_basics(&mut self) {
-        // ── Text components ──
-        self.tui.mount(std::boxed::Box::new(Text::new(
-            "Text component with pad_x=2, pad_y=1:",
-            0,
-            0,
-        )));
-        self.tui.mount(std::boxed::Box::new(Text::new(
-            "  Indented content here",
-            2,
-            1,
-        )));
-        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+        // Use a Cassowary-driven layout for this page so every component,
+        // including the image, gets an explicitly reserved cell rectangle.
+        //
+        // Layout:
+        //   0. Header            (Length 1, mounted by load_page)
+        //   1. Spacer            (Length 1, mounted by load_page)
+        //   2. Top row           (Length 8)  -> Markdown | ImageWidget
+        //   3. Spacer            (Length 1)
+        //   4. Text/Box samples  (Length 5)
+        //   5. LayoutDemo label  (Length 1)
+        //   6. LayoutDemo        (Min 1)
+        self.tui.set_layout(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(8),
+            Constraint::Length(1),
+            Constraint::Length(5),
+            Constraint::Length(1),
+            Constraint::Min(1),
+        ]));
 
-        self.tui.mount(std::boxed::Box::new(Text::new(
+        // ── Top row: Markdown (left) + ImageWidget (right) ──
+        let markdown_column = Div::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(7),
+        ]))
+        .child(Box::new(Text::new("Markdown rendering:", 0, 0)))
+        .child(Box::new(Markdown::new(DEMO_MARKDOWN)));
+
+        let image_column = Div::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(7),
+        ]))
+        .child(Box::new(Text::new("ImageWidget (Kitty):", 0, 0)))
+        .child(Box::new(
+            ImageWidget::new(
+                DEMO_IMAGE.to_vec(),
+                "image/png",
+                Some("[beehaw — 472×238 PNG]".into()),
+            )
+            // 28×7 cells preserves the image's ~2:1 aspect ratio under a
+            // typical 10×20 pixel terminal cell while leaving room for the
+            // blit_into_rect demo below.
+            .with_size(28, 7),
+        ));
+
+        let top_row = Div::new(Layout::horizontal([
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ]))
+        .child(Box::new(markdown_column))
+        .child(Box::new(image_column));
+
+        self.tui.mount(Box::new(top_row));
+        self.tui.mount(Box::new(Spacer::new(1)));
+
+        // ── Text + TruncatedText + Box samples ──
+        let samples = Div::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]))
+        .child(Box::new(Text::new("Text component:", 0, 0)))
+        .child(Box::new(Text::new("  Indented content here", 2, 0)))
+        .child(Box::new(Text::new(
             "TruncatedText (narrow terminal will ellipsis):",
             0,
             0,
-        )));
-        self.tui.mount(std::boxed::Box::new(TruncatedText::new(
+        )))
+        .child(Box::new(TruncatedText::new(
             "This is a very long line that will be truncated with an ellipsis if the terminal is not wide enough to display it all",
             2,
             0,
-        )));
-        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
-
-        self.tui.mount(std::boxed::Box::new(Text::new(
-            "Box with blue background:",
-            0,
-            0,
-        )));
-        self.tui.mount(std::boxed::Box::new(
-            BoxComponent::new(2).with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
+        )))
+        .child(Box::new(
+            BoxComponent::new(1).with_background(|line, _w| format!("\x1b[44m{}\x1b[0m", line)),
         ));
-        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
-        self.tui
-            .mount(std::boxed::Box::new(Text::new("Markdown rendering:", 0, 0)));
-        self.tui
-            .mount(std::boxed::Box::new(Markdown::new(DEMO_MARKDOWN)));
-        self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
+        self.tui.mount(Box::new(samples));
 
-        self.tui.mount(std::boxed::Box::new(Text::new(
+        // ── Layout primitives demo ──
+        self.tui.mount(Box::new(Text::new(
             "Layout Primitives — blit_into_rect demo:",
             0,
             0,
         )));
-        self.tui.mount(std::boxed::Box::new(LayoutDemo));
+        self.tui.mount(Box::new(LayoutDemo));
     }
 
     fn load_page_input_and_lists(&mut self) {
@@ -1346,14 +1401,30 @@ fn main() -> std::io::Result<()> {
     let tui = TUI::new(std::boxed::Box::new(term));
     let mut app = DemoApp::new(tui);
 
-    // Initial render
-    app.render()?;
+    /// Drain any pending input events that arrived immediately after a render.
+    ///
+    /// Kitty graphics commands can be echoed back (or responded to) by the
+    /// terminal as raw bytes. crossterm may interpret those bytes as spurious
+    /// key events, causing rapid page switching. A short post-render drain
+    /// catches these echoes before they reach the main input handler.
+    ///
+    /// This workaround can be removed once crossterm parses APC sequences
+    /// instead of emitting them as key events:
+    /// <https://github.com/crossterm-rs/crossterm/pull/992>
+    fn drain_graphics_echo() -> std::io::Result<()> {
+        const DRAIN_TIMEOUT: Duration = Duration::from_millis(10);
+        while crossterm::event::poll(DRAIN_TIMEOUT)? {
+            let _event = crossterm::event::read()?;
+        }
+        Ok(())
+    }
 
     // Event loop
     loop {
         // Tick animations at ~10 fps
         app.tick();
         app.render()?;
+        drain_graphics_echo()?;
 
         if crossterm::event::poll(Duration::from_millis(100))? {
             let event = match crossterm::event::read()? {
@@ -1369,6 +1440,7 @@ fn main() -> std::io::Result<()> {
                 break;
             }
             app.render()?;
+            drain_graphics_echo()?;
         }
     }
 
