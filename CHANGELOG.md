@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-26
+
+### Added
+
+- **Custom theme support** — implement the `Palette` trait and install a palette globally with `Theme::set_palette(Arc::new(...))`. Components resolve colors through the active palette instead of the built-in Light/Dark colors.
+- `PaletteHandle` type alias exported from `photon_ui::theme`.
+- Unit tests for `theme::palette`, `keybindings`, `SettingsList`, and `Spacer`.
+- Integration tests for custom palette activation and `Theme::with` isolation.
+
+### Changed
+
+- Redesigned the `Palette` trait around real theme-design roles: `background`, `surface`, `field`, `text`, `text_muted`, `text_on_accent`, `accent`, `accent_hover`, `border`, `border_muted`, `focus`, `success`, `warning`, `error`, `info`.
+- All components now resolve colors via `Theme::palette()`.
+- `examples/demo.rs` displays `"Custom"` when a custom palette is active and clears it when toggling with `t`.
+
+### Fixed
+
+- Raised unit-test line coverage above 90%.
+
 ## [0.3.0] - 2026-06-25
 
 ### Added
