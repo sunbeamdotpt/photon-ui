@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-06-26
+
+### Fixed
+
+- `AnsiCodeTracker` now preserves full 24-bit truecolor (`38;2;R;G;B` /
+  `48;2;R;G;B`) and 256-color (`38;5;N` / `48;5;N`) SGR parameters. Previously
+  it only stored the leading `38` / `48`, which made the compositor and text
+  wrapper drop the actual color values and caused buttons and other styled
+  components to render with the wrong colors after v0.2.0.
+
 ## [0.4.2] - 2026-06-26
 
 ### Fixed
