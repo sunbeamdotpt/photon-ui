@@ -804,9 +804,13 @@ impl DemoApp {
                 .mount(Box::new(ColoredPanel::new("Bottom panel (Length 4)", 41)));
         } else {
             // ── Buttons ──
-            let theme_name = match Theme::current() {
-                | Theme::Light => "Light",
-                | Theme::Dark => "Dark",
+            let theme_name = if Theme::has_palette() {
+                "Custom"
+            } else {
+                match Theme::current() {
+                    | Theme::Light => "Light",
+                    | Theme::Dark => "Dark",
+                }
             };
             self.tui.mount(Box::new(Text::new(
                 format!(
@@ -1235,6 +1239,7 @@ impl DemoApp {
             let Event::Key(key) = event
         {
             if key.code == KeyCode::Char('t') && key.modifiers.is_empty() {
+                Theme::clear_palette();
                 let next = match Theme::current() {
                     | Theme::Light => Theme::Dark,
                     | Theme::Dark => Theme::Light,
