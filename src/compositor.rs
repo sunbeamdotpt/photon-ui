@@ -844,4 +844,36 @@ mod tests {
         let out = comp.finalize();
         assert!(out.lines[0].len() <= 11);
     }
+
+    /// Regression: the compositor must preserve 24-bit truecolor codes.
+    /// Previously AnsiCodeTracker only stored "38" / "48", so encoded output
+    /// dropped the RGB parameters and buttons rendered with the wrong colors.
+    #[test]
+    fn compositor_preserves_truecolor_roundtrip() {
+        let orange = "\x1b[48;2;250;82;15m";
+        let line = format!("{}hello\x1b[0m", orange);
+        let mut comp = Compositor::new(10, 1);
+        comp.add_layer(&rendered_from(&[&line]), &Shadow::None);
+        let out = comp.finalize();
+        assert!(
+            out.lines[0].contains(orange),
+            "truecolor bg code lost: {}",
+            out.lines[0]
+        );
+    }
+
+    /// Regression: the compositor must preserve 256-color codes.
+    #[test]
+    fn compositor_preserves_256_color_roundtrip() {
+        let color = "\x1b[38;5;196m";
+        let line = format!("{}hello\x1b[0m", color);
+        let mut comp = Compositor::new(10, 1);
+        comp.add_layer(&rendered_from(&[&line]), &Shadow::None);
+        let out = comp.finalize();
+        assert!(
+            out.lines[0].contains(color),
+            "256-color fg code lost: {}",
+            out.lines[0]
+        );
+    }
 }

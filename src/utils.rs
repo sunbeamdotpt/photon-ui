@@ -283,7 +283,9 @@ impl AnsiCodeTracker {
     ///
     /// Supports:
     /// - OSC 8 hyperlink open / close (`\x1b]8;;URL\x1b\\`, `\x1b]8;;\x1b\\`)
-    /// - SGR codes (`\x1b[…m`) for bold, italic, underline, and colors
+    /// - SGR codes (`\x1b[…m`) for bold, italic, underline, and colors,
+    ///   including 256-color (`38;5;N` / `48;5;N`) and 24-bit truecolor
+    ///   (`38;2;R;G;B` / `48;2;R;G;B`) forms.
     pub fn process(&mut self, seq: &str) {
         if let Some(parsed) = Self::parse_osc8(seq) {
             self.hyperlink = parsed;
@@ -292,7 +294,10 @@ impl AnsiCodeTracker {
 
         let body = seq.strip_prefix("\x1b[").unwrap_or(seq);
         let body = body.strip_suffix('m').unwrap_or(body);
-        for code in body.split(';') {
+        let codes: Vec<&str> = body.split(';').collect();
+        let mut i = 0;
+        while i < codes.len() {
+            let code = codes[i];
             match code {
                 | "1" => self.bold = true,
                 | "2" => self.faint = true,
@@ -308,10 +313,55 @@ impl AnsiCodeTracker {
                 | "27" => self.reverse = false,
                 | "39" => self.fg_color = None,
                 | "49" => self.bg_color = None,
+                | "38" => {
+                    self.fg_color = Self::parse_extended_color(&codes, &mut i, "38");
+                    continue;
+                },
+                | "48" => {
+                    self.bg_color = Self::parse_extended_color(&codes, &mut i, "48");
+                    continue;
+                },
                 | c if c.starts_with('3') && c.len() >= 2 => self.fg_color = Some(c.to_string()),
                 | c if c.starts_with('4') && c.len() >= 2 => self.bg_color = Some(c.to_string()),
                 | _ => {},
             }
+            i += 1;
+        }
+    }
+
+    /// Parse an extended color specification that follows `38` or `48`.
+    ///
+    /// The `prefix` is `"38"` for foreground or `"48"` for background. The
+    /// returned string includes the prefix so it can be emitted directly as an
+    /// SGR parameter (e.g. `"38;2;250;82;15"`). `i` is advanced past the
+    /// consumed codes; incomplete specifications return `None`.
+    fn parse_extended_color(codes: &[&str], i: &mut usize, prefix: &str) -> Option<String> {
+        *i += 1;
+        if *i >= codes.len() {
+            return None;
+        }
+        match codes[*i] {
+            | "5" => {
+                *i += 1;
+                if *i >= codes.len() {
+                    return None;
+                }
+                let idx = codes[*i];
+                *i += 1;
+                Some(format!("{};5;{}", prefix, idx))
+            },
+            | "2" => {
+                *i += 1;
+                if *i + 2 >= codes.len() {
+                    return None;
+                }
+                let r = codes[*i];
+                let g = codes[*i + 1];
+                let b = codes[*i + 2];
+                *i += 3;
+                Some(format!("{};2;{};{};{}", prefix, r, g, b))
+            },
+            | _ => None,
         }
     }
 
@@ -613,6 +663,53 @@ mod tests {
         let mut tracker = AnsiCodeTracker::new();
         tracker.process("\x1b[1m");
         assert!(tracker.has_active_codes());
+    }
+
+    /// Regression: 24-bit truecolor foreground must be preserved in full.
+    #[test]
+    fn tracker_preserves_truecolor_foreground() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[38;2;250;82;15m");
+        assert_eq!(tracker.fg_color, Some("38;2;250;82;15".to_string()));
+        assert_eq!(tracker.current_codes(), "\x1b[38;2;250;82;15m");
+    }
+
+    /// Regression: 24-bit truecolor background must be preserved in full.
+    #[test]
+    fn tracker_preserves_truecolor_background() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[48;2;42;42;42m");
+        assert_eq!(tracker.bg_color, Some("48;2;42;42;42".to_string()));
+        assert_eq!(tracker.current_codes(), "\x1b[48;2;42;42;42m");
+    }
+
+    /// Regression: 256-color foreground must be preserved.
+    #[test]
+    fn tracker_preserves_256_foreground() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[38;5;196m");
+        assert_eq!(tracker.fg_color, Some("38;5;196".to_string()));
+    }
+
+    /// Regression: mixed truecolor and attribute codes must all be tracked.
+    #[test]
+    fn tracker_mixed_truecolor_and_attributes() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[1;38;2;250;82;15;48;2;0;0;0m");
+        assert!(tracker.bold);
+        assert_eq!(tracker.fg_color, Some("38;2;250;82;15".to_string()));
+        assert_eq!(tracker.bg_color, Some("48;2;0;0;0".to_string()));
+        assert_eq!(tracker.current_codes(), "\x1b[1;38;2;250;82;15;48;2;0;0;0m");
+    }
+
+    /// Regression: default foreground/background codes must still clear state.
+    #[test]
+    fn tracker_default_colors_clear_state() {
+        let mut tracker = AnsiCodeTracker::new();
+        tracker.process("\x1b[38;2;250;82;15;48;2;0;0;0m");
+        tracker.process("\x1b[39;49m");
+        assert!(tracker.fg_color.is_none());
+        assert!(tracker.bg_color.is_none());
     }
 
     #[test]
