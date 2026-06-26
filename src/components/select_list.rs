@@ -8,7 +8,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -70,10 +69,10 @@ impl Focusable for SelectList {
 
 impl Component for SelectList {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let accent_style = Style::new().fg(theme.accent()).bold();
-        let primary_style = Style::new().fg(theme.text_primary());
-        let dim_style = Style::new().fg(theme.text_secondary());
+        let primary_style = Style::new().fg(theme.text());
+        let dim_style = Style::new().fg(theme.text_muted());
 
         let mut lines = Vec::new();
         let visible_end = (self.scroll + self.max_visible).min(self.items.len());

@@ -10,7 +10,6 @@ use crate::{
     layout::Border,
     theme::{
         ColorMode,
-        Palette,
         Style,
         Theme,
     },
@@ -76,7 +75,7 @@ impl Panel {
 
     /// Build the border style from the current theme.
     fn border_style(&self) -> Style {
-        Style::new().fg(Theme::current().border_default())
+        Style::new().fg(Theme::palette().border())
     }
 }
 
@@ -88,7 +87,6 @@ impl Default for Panel {
 
 impl Component for Panel {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let _theme = Theme::current();
         let border_style = self.border_style();
         let (border_w, _border_h) = self.border.size();
         let pad = self.pad as usize;

@@ -13,7 +13,6 @@ use crate::{
     layout::Rect,
     theme::{
         Color,
-        Palette,
         Style,
         Theme,
         stylize_padded,
@@ -89,17 +88,24 @@ impl Button {
 
     /// Build the ANSI style for this button given the active theme.
     fn build_style(&self) -> Style {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         match self.variant {
             | ButtonVariant::Primary => Style::new().fg(Color::WHITE).bg(theme.accent()).bold(),
             // Dark is a fixed visual style: near-black bg, white text.
             // In dark mode use CARD_DARK so it's visible against the black page.
-            | ButtonVariant::Dark => match theme {
-                | Theme::Light => Style::new()
-                    .fg(Color::WHITE)
-                    .bg(Color::SUNBEAM_BLACK)
-                    .bold(),
-                | Theme::Dark => Style::new().fg(Color::WHITE).bg(Color::CARD_DARK).bold(),
+            // Under a custom palette, use the elevated surface color.
+            | ButtonVariant::Dark => {
+                if Theme::has_palette() {
+                    Style::new().fg(Color::WHITE).bg(theme.surface()).bold()
+                } else {
+                    match Theme::current() {
+                        | Theme::Light => Style::new()
+                            .fg(Color::WHITE)
+                            .bg(Color::SUNBEAM_BLACK)
+                            .bold(),
+                        | Theme::Dark => Style::new().fg(Color::WHITE).bg(Color::CARD_DARK).bold(),
+                    }
+                }
             },
             // Cream is always cream bg + dark text, regardless of theme.
             | ButtonVariant::Cream => Style::new()
@@ -119,8 +125,8 @@ impl Component for Button {
         let line = match self.variant {
             | ButtonVariant::Ghost => {
                 // Ghost: [ label ] with brackets in muted color
-                let theme = Theme::current();
-                let bracket_style = Style::new().fg(theme.border_default());
+                let theme = Theme::palette();
+                let bracket_style = Style::new().fg(theme.border());
                 let bracket_open = crate::theme::stylize("[", &bracket_style);
                 let bracket_close = crate::theme::stylize("]", &bracket_style);
                 let inner = stylize_padded(&self.label, &style, self.pad);
@@ -240,7 +246,7 @@ mod tests {
     // ── Regression: dark-mode visibility ─────────────────────────────
 
     /// Regression: Dark button must not use white background in dark mode.
-    /// Previously `bg(text_primary())` produced white-on-white.
+    /// Previously `bg(text())` produced white-on-white.
     #[test]
     fn dark_button_not_white_on_white_in_dark_mode() {
         let line = Theme::with(Theme::Dark, || {
@@ -276,7 +282,7 @@ mod tests {
     }
 
     /// Regression: Cream button must always use cream bg + dark text.
-    /// Previously in dark mode it used bg_card() which was nearly invisible.
+    /// Previously in dark mode it used surface() which was nearly invisible.
     #[test]
     fn cream_button_always_cream_colored() {
         let light_line = Theme::with(Theme::Light, || {

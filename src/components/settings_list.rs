@@ -11,7 +11,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -72,10 +71,10 @@ impl Focusable for SettingsList {
 
 impl Component for SettingsList {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let accent_style = Style::new().fg(theme.accent()).bold();
-        let primary_style = Style::new().fg(theme.text_primary());
-        let dim_style = Style::new().fg(theme.text_secondary());
+        let primary_style = Style::new().fg(theme.text());
+        let dim_style = Style::new().fg(theme.text_muted());
 
         let mut lines = Vec::new();
         for (i, (name, value)) in self.items.iter().enumerate() {
@@ -149,5 +148,58 @@ impl Component for SettingsList {
 
     fn as_focusable_mut(&mut self) -> Option<&mut dyn Focusable> {
         Some(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn renders_items() {
+        let list = SettingsList::new(vec![("A".into(), true), ("B".into(), false)]);
+        let rendered = list.render(80).unwrap();
+        assert_eq!(rendered.lines.len(), 2);
+        assert!(rendered.lines[0].contains("[x]"));
+        assert!(rendered.lines[1].contains("[ ]"));
+    }
+
+    #[test]
+    fn navigation_down_and_up() {
+        let mut list = SettingsList::new(vec![("A".into(), false), ("B".into(), false)]);
+        list.set_focused(true);
+        list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Down,
+            crossterm::event::KeyModifiers::empty(),
+        )));
+        let rendered = list.render(80).unwrap();
+        assert!(rendered.lines[1].contains("> "));
+
+        list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Up,
+            crossterm::event::KeyModifiers::empty(),
+        )));
+        let rendered = list.render(80).unwrap();
+        assert!(rendered.lines[0].contains("> "));
+    }
+
+    #[test]
+    fn toggle_with_enter() {
+        let mut list = SettingsList::new(vec![("A".into(), false)]);
+        list.set_focused(true);
+        list.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+            KeyCode::Enter,
+            crossterm::event::KeyModifiers::empty(),
+        )));
+        let rendered = list.render(80).unwrap();
+        assert!(rendered.lines[0].contains("[x]"));
+        assert_eq!(list.values(), vec![true]);
+    }
+
+    #[test]
+    fn ignored_input() {
+        let mut list = SettingsList::new(vec![("A".into(), false)]);
+        let result = list.handle_input(&Event::Resize(80, 24));
+        assert!(matches!(result, InputResult::Ignored));
     }
 }

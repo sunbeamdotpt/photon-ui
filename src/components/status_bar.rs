@@ -9,7 +9,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -109,8 +108,8 @@ fn join_zone(segments: &[Segment], default_style: Style) -> String {
 
 impl Component for StatusBar {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
-        let default_style = Style::new().fg(theme.text_secondary());
+        let theme = Theme::palette();
+        let default_style = Style::new().fg(theme.text_muted());
 
         let left_str = join_zone(&self.left, default_style);
         let center_str = join_zone(&self.center, default_style);
@@ -331,7 +330,7 @@ mod tests {
     #[test]
     fn custom_style_overrides_default() {
         Theme::with(Theme::Light, || {
-            let accent_style = Style::new().fg(Theme::current().accent());
+            let accent_style = Style::new().fg(Theme::palette().accent());
             let bar = StatusBar::new().left(Segment::new("x").styled(accent_style));
             let rendered = bar.render(20).unwrap();
             let line = &rendered.lines[0];

@@ -7,7 +7,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -48,9 +47,9 @@ impl Header {
 
 impl Component for Header {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
-        let primary_style = Style::new().fg(theme.text_primary()).bold();
-        let secondary_style = Style::new().fg(theme.text_secondary());
+        let theme = Theme::palette();
+        let primary_style = Style::new().fg(theme.text()).bold();
+        let secondary_style = Style::new().fg(theme.text_muted());
 
         let action_labels: Vec<String> = self.actions.iter().map(|a| format!("[{}]", a)).collect();
         let actions_plain = action_labels.join(" ");

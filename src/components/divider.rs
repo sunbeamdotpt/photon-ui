@@ -6,7 +6,6 @@ use crate::{
     Rendered,
     layout::Direction,
     theme::{
-        Palette,
         Style,
         Theme,
     },
@@ -57,9 +56,9 @@ impl Divider {
 
 impl Component for Divider {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let style = if self.style == Style::new() {
-            Style::new().fg(theme.border_default())
+            Style::new().fg(theme.border())
         } else {
             self.style
         };
@@ -101,9 +100,9 @@ impl Component for Divider {
 
     fn render_rect(&self, rect: crate::layout::Rect) -> Result<Rendered, RenderError> {
         if self.direction == Direction::Vertical && rect.height > 1 {
-            let theme = Theme::current();
+            let theme = Theme::palette();
             let style = if self.style == Style::new() {
-                Style::new().fg(theme.border_default())
+                Style::new().fg(theme.border())
             } else {
                 self.style
             };

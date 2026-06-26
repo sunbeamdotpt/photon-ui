@@ -25,3 +25,23 @@ impl Component for Spacer {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spacer_renders_requested_lines() {
+        let spacer = Spacer::new(3);
+        let rendered = spacer.render(80).unwrap();
+        assert_eq!(rendered.lines.len(), 3);
+        assert!(rendered.lines.iter().all(|line| line.is_empty()));
+    }
+
+    #[test]
+    fn spacer_zero_lines() {
+        let spacer = Spacer::new(0);
+        let rendered = spacer.render(80).unwrap();
+        assert!(rendered.lines.is_empty());
+    }
+}

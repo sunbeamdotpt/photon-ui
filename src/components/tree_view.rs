@@ -8,7 +8,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -166,9 +165,9 @@ impl Focusable for TreeView {
 
 impl Component for TreeView {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let accent_style = Style::new().fg(theme.accent()).bold();
-        let normal_style = Style::new().fg(theme.text_primary());
+        let normal_style = Style::new().fg(theme.text());
 
         let flat = self.flatten();
         let selected_index = self.selected_flat_index(&flat);

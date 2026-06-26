@@ -11,7 +11,6 @@ use crate::{
     },
     theme::{
         ColorMode,
-        Palette,
         Style,
         Theme,
         stylize,
@@ -93,9 +92,9 @@ impl Component for Modal {
     }
 
     fn render_rect(&self, rect: Rect) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let mode = ColorMode::detect();
-        let border_style = Style::new().fg(theme.border_default());
+        let border_style = Style::new().fg(theme.border());
         let border_prefix = border_style.prefix(mode);
         let suffix = Style::suffix();
 
@@ -133,7 +132,7 @@ impl Component for Modal {
                     title
                 };
                 let label = format!(" {}{} ", indicator, t);
-                let label_styled = stylize(&label, &Style::new().fg(theme.text_primary()).bold());
+                let label_styled = stylize(&label, &Style::new().fg(theme.text()).bold());
                 let t_visible = crate::utils::visible_width(&label_styled);
                 let fill_count = fill_w.saturating_sub(t_visible);
 

@@ -7,7 +7,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -42,10 +41,10 @@ impl Breadcrumbs {
 
 impl Component for Breadcrumbs {
     fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
-        let primary_style = Style::new().fg(theme.text_primary()).bold();
-        let secondary_style = Style::new().fg(theme.text_secondary());
-        let separator_style = Style::new().fg(theme.border_default());
+        let theme = Theme::palette();
+        let primary_style = Style::new().fg(theme.text()).bold();
+        let secondary_style = Style::new().fg(theme.text_muted());
+        let separator_style = Style::new().fg(theme.border());
 
         let mut parts: Vec<String> = Vec::new();
         let count = self.items.len();

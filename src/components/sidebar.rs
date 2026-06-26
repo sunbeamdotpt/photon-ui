@@ -9,7 +9,6 @@ use crate::{
     Rendered,
     theme::{
         ColorMode,
-        Palette,
         Style,
         Theme,
         stylize,
@@ -89,7 +88,7 @@ impl Focusable for Sidebar {
 
 impl Component for Sidebar {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let mut lines = Vec::new();
 
         let content_width = if self.show_border {
@@ -103,7 +102,7 @@ impl Component for Sidebar {
             let style = if is_selected {
                 Style::new().fg(theme.accent()).bold()
             } else {
-                Style::new().fg(theme.text_secondary())
+                Style::new().fg(theme.text_muted())
             };
 
             let prefix = if is_selected { "> " } else { "  " };
@@ -118,7 +117,7 @@ impl Component for Sidebar {
         }
 
         if self.show_border && width > 0 {
-            let border_style = Style::new().fg(theme.border_default());
+            let border_style = Style::new().fg(theme.border());
             let mode = ColorMode::detect();
             let border_prefix = border_style.prefix(mode);
             let border_suffix = Style::suffix();

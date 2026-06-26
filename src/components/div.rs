@@ -42,7 +42,6 @@ use crate::{
         Rect,
     },
     theme::{
-        Palette,
         Style,
         Theme,
     },
@@ -270,7 +269,7 @@ impl Component for Div {
     }
 
     fn render_rect(&self, rect: Rect) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let mut screen = Rendered::empty();
 
         // ── Collapsed state: render only a single-line header ──
@@ -284,7 +283,7 @@ impl Component for Div {
             let header_style = if self.focused {
                 Style::new().fg(theme.accent()).bold()
             } else {
-                Style::new().fg(theme.text_secondary())
+                Style::new().fg(theme.text_muted())
             };
             let mut header = crate::theme::stylize(&title_text, &header_style);
             header = crate::utils::truncate_to_width(&header, rect.width, "…");
@@ -344,7 +343,7 @@ impl Component for Div {
         // Draw border if requested
         if let Some(ref border) = self.border {
             let border_style = if self.border_style == Style::new() {
-                Style::new().fg(theme.border_default())
+                Style::new().fg(theme.border())
             } else {
                 self.border_style
             };
@@ -361,7 +360,7 @@ impl Component for Div {
                 !screen.lines.is_empty()
             {
                 let title_style = if self.title_style == Style::new() {
-                    Style::new().fg(theme.text_primary()).bold()
+                    Style::new().fg(theme.text()).bold()
                 } else {
                     self.title_style
                 };

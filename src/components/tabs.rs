@@ -8,7 +8,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -59,9 +58,9 @@ impl Focusable for Tabs {
 
 impl Component for Tabs {
     fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let accent_style = Style::new().fg(theme.accent()).bold();
-        let inactive_style = Style::new().fg(theme.text_secondary());
+        let inactive_style = Style::new().fg(theme.text_muted());
 
         let mut line = String::new();
         if self.focused {

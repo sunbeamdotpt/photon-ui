@@ -8,7 +8,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -55,9 +54,9 @@ impl ProgressBar {
 
 impl Component for ProgressBar {
     fn render(&self, _width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
         let accent_style = Style::new().fg(theme.accent());
-        let empty_style = Style::new().fg(theme.border_default());
+        let empty_style = Style::new().fg(theme.border());
 
         let inner_width = self.width.saturating_sub(2) as usize;
         let filled = (self.value * inner_width as f32).round() as usize;

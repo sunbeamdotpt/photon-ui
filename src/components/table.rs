@@ -10,7 +10,6 @@ use crate::{
     RenderError,
     Rendered,
     theme::{
-        Palette,
         Style,
         Theme,
         stylize,
@@ -421,7 +420,7 @@ impl Focusable for Table {
 
 impl Component for Table {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let theme = Theme::current();
+        let theme = Theme::palette();
 
         if self.columns.is_empty() {
             return Ok(Rendered {
@@ -446,14 +445,14 @@ impl Component for Table {
 
         // Filter input line (when in interactive filter mode)
         if self.in_filter_mode {
-            let filter_style = Style::new().fg(theme.text_secondary());
+            let filter_style = Style::new().fg(theme.text_muted());
             let filter_text = format!("/{}", self.filter_buffer);
             let filter_line = crate::utils::truncate_to_width(&filter_text, width, "…");
             lines.push(stylize(&filter_line, &filter_style));
         }
 
         // Header row
-        let header_style = Style::new().fg(theme.text_primary()).bold();
+        let header_style = Style::new().fg(theme.text()).bold();
         let mut header_parts = vec![stylize("  ", &header_style)];
         for (i, col) in self.columns.iter().enumerate() {
             let mut label = col.label.clone();
@@ -486,12 +485,12 @@ impl Component for Table {
 
         // Separator line
         let sep_line = "─".repeat(width as usize);
-        let sep_style = Style::new().fg(theme.border_default());
+        let sep_style = Style::new().fg(theme.border());
         lines.push(stylize(&sep_line, &sep_style));
 
         // Data rows
         let accent_style = Style::new().fg(theme.accent()).bold();
-        let text_style = Style::new().fg(theme.text_primary());
+        let text_style = Style::new().fg(theme.text());
 
         for (visible_idx, &row_idx) in self.display_indices.iter().enumerate() {
             let is_selected = visible_idx == self.selected;
