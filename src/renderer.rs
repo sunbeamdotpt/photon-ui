@@ -194,9 +194,6 @@ fn append_images(
     transmitted: &mut HashMap<u32, String>,
 ) {
     for image in images {
-        // Reset any active SGR attributes before positioning so lingering
-        // colors do not affect the image placement or subsequent output.
-        buffer.push_str("\x1b[0m");
         // Kitty's a=p command places the image at the current cursor position.
         // Move the cursor to the cell where the component requested the image
         // so placement stays stable across diff renders.
