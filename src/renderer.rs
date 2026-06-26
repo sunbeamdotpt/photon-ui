@@ -162,7 +162,10 @@ impl Rendered {
     }
 }
 
-use std::io;
+use std::{
+    collections::HashMap,
+    io,
+};
 
 macro_rules! try_io {
     ($expr:expr) => {
@@ -178,13 +181,37 @@ use crate::{
     terminal::Terminal,
 };
 
-fn append_images(buffer: &mut String, images: &[ImageCommand]) {
+/// Extract the Kitty placement APC sequence from a full transmit-and-place
+/// payload. The placement command is always appended last by `encode_kitty`.
+fn extract_placement(data: &str) -> Option<String> {
+    data.rfind("\x1b_Ga=p")
+        .map(|start| data[start..].to_string())
+}
+
+fn append_images(
+    buffer: &mut String,
+    images: &[ImageCommand],
+    transmitted: &mut HashMap<u32, String>,
+) {
     for image in images {
+        // Reset any active SGR attributes before positioning so lingering
+        // colors do not affect the image placement or subsequent output.
+        buffer.push_str("\x1b[0m");
         // Kitty's a=p command places the image at the current cursor position.
         // Move the cursor to the cell where the component requested the image
         // so placement stays stable across diff renders.
         buffer.push_str(&format!("\x1b[{};{}H", image.row + 1, image.col + 1));
-        buffer.push_str(&image.data);
+        // Only transmit the payload once per id; subsequent frames just place
+        // the existing image. This avoids re-compositing artifacts that can
+        // make the display look washed out.
+        if let Some(placement) = transmitted.get(&image.id) {
+            buffer.push_str(placement);
+        } else {
+            buffer.push_str(&image.data);
+            if let Some(placement) = extract_placement(&image.data) {
+                transmitted.insert(image.id, placement);
+            }
+        }
     }
 }
 
@@ -208,11 +235,14 @@ impl Renderer {
                     }
                     buffer.push_str(line);
                 }
-                append_images(&mut buffer, &rendered.images);
+                append_images(&mut buffer, &rendered.images, &mut self.transmitted_images);
                 buffer.push_str("\x1b[?2026l");
                 try_io!(term.write(&buffer));
             },
             | RenderStrategy::FullRedraw => {
+                // After a full redraw the terminal may have cleared image
+                // placements, so re-transmit on the next appearance.
+                self.transmitted_images.clear();
                 let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H\x1b[3J");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
@@ -220,7 +250,7 @@ impl Renderer {
                     }
                     buffer.push_str(line);
                 }
-                append_images(&mut buffer, &rendered.images);
+                append_images(&mut buffer, &rendered.images, &mut self.transmitted_images);
                 buffer.push_str("\x1b[?2026l");
                 try_io!(term.write(&buffer));
             },
@@ -263,7 +293,11 @@ impl Renderer {
                             if extra > 0 {
                                 buffer.push_str(&format!("\x1b[{}A", extra));
                             }
-                            append_images(&mut buffer, &rendered.images);
+                            append_images(
+                                &mut buffer,
+                                &rendered.images,
+                                &mut self.transmitted_images,
+                            );
                             buffer.push_str("\x1b[?2026l");
                             try_io!(term.write(&buffer));
                         }
@@ -295,12 +329,12 @@ impl Renderer {
                             }
                         }
 
-                        append_images(&mut buffer, &rendered.images);
+                        append_images(&mut buffer, &rendered.images, &mut self.transmitted_images);
                         buffer.push_str("\x1b[?2026l");
                         try_io!(term.write(&buffer));
                     } else if images_changed {
                         let mut buffer = String::from("\x1b[?2026h");
-                        append_images(&mut buffer, &rendered.images);
+                        append_images(&mut buffer, &rendered.images, &mut self.transmitted_images);
                         buffer.push_str("\x1b[?2026l");
                         try_io!(term.write(&buffer));
                     }
@@ -313,7 +347,7 @@ impl Renderer {
                         }
                         buffer.push_str(line);
                     }
-                    append_images(&mut buffer, &rendered.images);
+                    append_images(&mut buffer, &rendered.images, &mut self.transmitted_images);
                     buffer.push_str("\x1b[?2026l");
                     try_io!(term.write(&buffer));
                 }
@@ -351,6 +385,7 @@ pub enum RenderStrategy {
 pub struct Renderer {
     previous: Option<Rendered>,
     strategy: RenderStrategy,
+    transmitted_images: HashMap<u32, String>,
 }
 
 impl Renderer {
@@ -360,6 +395,7 @@ impl Renderer {
         Self {
             previous: None,
             strategy: RenderStrategy::FirstRender,
+            transmitted_images: HashMap::new(),
         }
     }
 
@@ -371,6 +407,14 @@ impl Renderer {
     /// Access the previously rendered frame, if any.
     pub fn previous(&self) -> Option<&Rendered> {
         self.previous.as_ref()
+    }
+
+    /// Forget a previously-transmitted image id.
+    ///
+    /// Call this when the image is deleted from the terminal so that a future
+    /// image with the same id will be re-transmitted.
+    pub fn forget_image(&mut self, id: u32) {
+        self.transmitted_images.remove(&id);
     }
 }
 
@@ -558,6 +602,50 @@ mod tests {
 
         let written = term.written().join("");
         assert!(written.contains("img"), "diff must emit image commands");
+    }
+
+    #[test]
+    fn diff_reuses_transmitted_image_without_payload() {
+        let mut term = TestTerminal::new(80, 24);
+        let mut renderer = Renderer::new();
+
+        let payload = "\x1b_Ga=t,f=100,i=9,q=1,m=0;DATA\x1b\\\x1b_Ga=p,i=9,c=2,r=1,q=1\x1b\\";
+        let frame1 = Rendered {
+            lines: vec!["a".into()],
+            cursor: None,
+            images: vec![ImageCommand {
+                id: 9,
+                data: payload.into(),
+                row: 0,
+                col: 0,
+            }],
+        };
+        renderer.render(&mut term, &frame1).unwrap();
+        let first = term.written().last().map(String::as_str).unwrap_or("");
+        assert!(first.contains("a=t"));
+        assert!(first.contains("a=p"));
+
+        renderer.set_strategy(RenderStrategy::Diff);
+        let frame2 = Rendered {
+            lines: vec!["b".into()],
+            cursor: None,
+            images: vec![ImageCommand {
+                id: 9,
+                data: payload.into(),
+                row: 0,
+                col: 0,
+            }],
+        };
+        renderer.render(&mut term, &frame2).unwrap();
+        let second = term.written().last().map(String::as_str).unwrap_or("");
+        assert!(
+            !second.contains("a=t"),
+            "image payload should not be re-transmitted on subsequent frames"
+        );
+        assert!(
+            second.contains("a=p"),
+            "image placement should still be emitted"
+        );
     }
 
     #[test]

@@ -471,6 +471,7 @@ impl TUI {
         for id in &self.previous_image_ids {
             if !current_ids.contains(id) {
                 try_io!(self.terminal.write(&delete_kitty_image(*id)));
+                self.renderer.forget_image(*id);
             }
         }
         self.previous_image_ids = current_ids;
