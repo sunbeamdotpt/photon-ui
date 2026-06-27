@@ -94,8 +94,17 @@ impl Style {
     }
 
     /// The ANSI reset suffix.
-    pub const fn suffix() -> &'static str {
-        ansi::RESET
+    ///
+    /// When the style includes bold or faint, the suffix emits `\x1b[22m`
+    /// before `\x1b[0m`. Some macOS terminals do not reliably clear bold on a
+    /// full reset alone, so the explicit intensity reset prevents bold from
+    /// leaking into subsequent text.
+    pub fn suffix(&self) -> &'static str {
+        if self.bold || self.dim {
+            "\x1b[22m\x1b[0m"
+        } else {
+            ansi::RESET
+        }
     }
 }
 
@@ -103,7 +112,7 @@ impl Style {
 /// at the end. Respects the active color mode.
 pub fn stylize(text: &str, style: &Style) -> String {
     let mode = ColorMode::detect();
-    format!("{}{}{}", style.prefix(mode), text, Style::suffix())
+    format!("{}{}{}", style.prefix(mode), text, style.suffix())
 }
 
 /// Like [`stylize`], but pads `text` with `pad` spaces on each side.
@@ -138,5 +147,23 @@ mod tests {
         let s = Style::new().fg(Color::WHITE);
         let out = stylize_padded("ok", &s, 2);
         assert!(out.contains("  ok  "));
+    }
+
+    /// Regression: bold styles must emit an explicit intensity reset before the
+    /// full reset to prevent bold from leaking on macOS terminals.
+    #[test]
+    fn stylize_bold_emits_bold_off() {
+        let s = Style::new().bold();
+        let out = stylize("hi", &s);
+        assert!(out.ends_with("\x1b[22m\x1b[0m"));
+    }
+
+    /// Non-bold styles should keep the plain reset suffix.
+    #[test]
+    fn stylize_non_bold_uses_plain_reset() {
+        let s = Style::new().fg(Color::WHITE);
+        let out = stylize("hi", &s);
+        assert!(out.ends_with("\x1b[0m"));
+        assert!(!out.contains("\x1b[22m"));
     }
 }

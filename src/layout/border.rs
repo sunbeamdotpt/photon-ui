@@ -153,7 +153,7 @@ pub fn draw_border(target: &mut Rendered, rect: Rect, border: &Border, style: &S
 
     let mode = ColorMode::detect();
     let prefix = style.prefix(mode);
-    let suffix = Style::suffix();
+    let suffix = style.suffix();
 
     let needed_rows = rect.y as usize + rect.height as usize;
     while target.lines.len() < needed_rows {

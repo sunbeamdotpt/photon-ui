@@ -120,7 +120,7 @@ impl Component for Sidebar {
             let border_style = Style::new().fg(theme.border());
             let mode = ColorMode::detect();
             let border_prefix = border_style.prefix(mode);
-            let border_suffix = Style::suffix();
+            let border_suffix = border_style.suffix();
             let border = format!("{}{}{}", border_prefix, '▐', border_suffix);
 
             for line in &mut lines {

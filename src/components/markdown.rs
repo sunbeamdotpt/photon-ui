@@ -89,7 +89,8 @@ impl Component for Markdown {
                         | TagEnd::Heading(_) => {
                             if !current_line.is_empty() {
                                 // Headings: bold + underline, no Markdown # prefix
-                                let styled = format!("\x1b[1m\x1b[4m{}\x1b[0m", current_line);
+                                let styled =
+                                    format!("\x1b[1m\x1b[4m{}\x1b[22m\x1b[0m", current_line);
                                 if pending_bullet {
                                     lines.push(format!("- {}", styled));
                                     pending_bullet = false;
@@ -115,7 +116,7 @@ impl Component for Markdown {
                     let mut styled = text.to_string();
                     if in_bold {
                         // Bold: bright white for visibility
-                        styled = format!("\x1b[1m\x1b[97m{}\x1b[0m", styled);
+                        styled = format!("\x1b[1m\x1b[97m{}\x1b[22m\x1b[0m", styled);
                     }
                     if in_italic {
                         styled = format!("\x1b[3m{}\x1b[23m", styled);

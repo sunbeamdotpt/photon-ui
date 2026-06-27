@@ -225,7 +225,7 @@ impl Renderer {
     pub fn render(&mut self, term: &mut dyn Terminal, rendered: &Rendered) -> io::Result<()> {
         match self.strategy {
             | RenderStrategy::FirstRender => {
-                let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H");
+                let mut buffer = String::from("\x1b[?2026h\x1b[22m\x1b[0m\x1b[2J\x1b[H");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
                         buffer.push_str("\r\n");
@@ -240,7 +240,7 @@ impl Renderer {
                 // After a full redraw the terminal may have cleared image
                 // placements, so re-transmit on the next appearance.
                 self.transmitted_images.clear();
-                let mut buffer = String::from("\x1b[?2026h\x1b[0m\x1b[2J\x1b[H\x1b[3J");
+                let mut buffer = String::from("\x1b[?2026h\x1b[22m\x1b[0m\x1b[2J\x1b[H\x1b[3J");
                 for (i, line) in rendered.lines.iter().enumerate() {
                     if i > 0 {
                         buffer.push_str("\r\n");
@@ -282,7 +282,7 @@ impl Renderer {
                                 buffer.push_str("\x1b[1B");
                             }
                             for i in 0..extra {
-                                buffer.push_str("\r\x1b[0m\x1b[2K");
+                                buffer.push_str("\r\x1b[22m\x1b[0m\x1b[2K");
                                 if i < extra - 1 {
                                     buffer.push_str("\x1b[1B");
                                 }
@@ -310,7 +310,7 @@ impl Renderer {
                             if i > start {
                                 buffer.push_str("\r\n");
                             }
-                            buffer.push_str("\x1b[0m\x1b[2K");
+                            buffer.push_str("\x1b[22m\x1b[0m\x1b[2K");
                             buffer.push_str(&rendered.lines[i]);
                         }
 
@@ -318,7 +318,7 @@ impl Renderer {
                         if prev.lines.len() > rendered.lines.len() {
                             let extra = prev.lines.len() - rendered.lines.len();
                             for _ in 0..extra {
-                                buffer.push_str("\r\n\x1b[0m\x1b[2K");
+                                buffer.push_str("\r\n\x1b[22m\x1b[0m\x1b[2K");
                             }
                             // Move cursor back to end of new content
                             if extra > 0 {
@@ -519,7 +519,7 @@ mod tests {
         );
         // Should use \r (not \r\n) after positioning
         assert!(
-            written.contains("\x1b[2;1H\r\x1b[0m\x1b[2K"),
+            written.contains("\x1b[2;1H\r\x1b[22m\x1b[0m\x1b[2K"),
             "should use \\r after positioning"
         );
         // Should NOT rewrite line 3 (unchanged)
@@ -855,11 +855,11 @@ mod tests {
         renderer.render(&mut term, &frame2).unwrap();
 
         let written = term.written().join("");
-        // Every \x1b[2K must be preceded by \x1b[0m
+        // Every \x1b[2K must be preceded by \x1b[22m\x1b[0m
         for chunk in written.split("\x1b[2K") {
             if !chunk.is_empty() && chunk.contains("\x1b[") {
                 assert!(
-                    chunk.ends_with("\x1b[0m") || !chunk.contains("\x1b[2K"),
+                    chunk.ends_with("\x1b[22m\x1b[0m") || !chunk.contains("\x1b[2K"),
                     "clear must be preceded by reset: {}",
                     chunk
                 );
@@ -880,7 +880,7 @@ mod tests {
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
         assert!(
-            written.contains("\x1b[0m\x1b[2J"),
+            written.contains("\x1b[22m\x1b[0m\x1b[2J"),
             "reset must precede screen clear"
         );
     }
@@ -899,7 +899,7 @@ mod tests {
         renderer.render(&mut term, &rendered).unwrap();
         let written = term.written().join("");
         assert!(
-            written.contains("\x1b[0m\x1b[2J"),
+            written.contains("\x1b[22m\x1b[0m\x1b[2J"),
             "reset must precede screen clear"
         );
     }

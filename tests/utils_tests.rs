@@ -39,6 +39,24 @@ fn tracker_tracks_bold() {
     assert!(!tracker.bold);
 }
 
+/// Regression: `\x1b[0m` must reset all tracked SGR state.
+#[test]
+fn tracker_reset_clears_all_sgr() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[1;3;4;31;43m");
+    assert!(tracker.bold);
+    assert!(tracker.italic);
+    assert!(tracker.underline);
+    assert!(tracker.fg_color.is_some());
+    assert!(tracker.bg_color.is_some());
+    tracker.process("\x1b[0m");
+    assert!(!tracker.bold);
+    assert!(!tracker.italic);
+    assert!(!tracker.underline);
+    assert!(tracker.fg_color.is_none());
+    assert!(tracker.bg_color.is_none());
+}
+
 #[test]
 fn tracker_tracks_color() {
     let mut tracker = AnsiCodeTracker::new();
@@ -73,4 +91,32 @@ fn truncate_to_width_with_emoji() {
     assert_eq!(visible_width(s), 13);
     let truncated = truncate_to_width(s, 10, "…");
     assert_eq!(visible_width(&truncated), 10);
+}
+
+/// Regression: truncating bold text must emit an explicit bold-off before the
+/// full reset so macOS terminals don't leave bold active.
+#[test]
+fn truncate_to_width_emits_bold_off_for_bold_text() {
+    let s = "\x1b[1mhello world\x1b[0m";
+    let truncated = truncate_to_width(s, 8, "…");
+    assert!(truncated.ends_with("\x1b[22m\x1b[0m"));
+}
+
+/// Non-bold text should keep the plain reset suffix.
+#[test]
+fn truncate_to_width_uses_plain_reset_for_non_bold() {
+    let s = "\x1b[31mhello world\x1b[0m";
+    let truncated = truncate_to_width(s, 8, "…");
+    assert!(truncated.ends_with("\x1b[0m"));
+    assert!(!truncated.contains("\x1b[22m"));
+}
+
+/// Regression: wrapping bold text must close each line with an explicit
+/// bold-off so the terminal doesn't leak bold into the next line.
+#[test]
+fn wrap_text_with_ansi_emits_bold_off_for_bold_text() {
+    let lines = wrap_text_with_ansi("\x1b[1mhello world\x1b[0m", 6);
+    assert_eq!(lines.len(), 2);
+    assert!(lines[0].ends_with("\x1b[22m\x1b[0m"));
+    assert!(lines[1].starts_with("\x1b[1m"));
 }

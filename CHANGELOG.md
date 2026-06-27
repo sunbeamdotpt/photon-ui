@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-06-27
+
+### Fixed
+
+- `AnsiCodeTracker` now recognizes SGR reset (`\x1b[0m`) and clears all tracked
+  attributes. Previously it ignored reset, so the compositor and text wrapper
+  would reopen bold, color, and other styles for cells after an explicit reset,
+  causing the first characters of subsequent components or lines to appear
+  highlighted.
+- Bold and faint text now emits an explicit intensity reset (`\x1b[22m`) before
+  the full SGR reset (`\x1b[0m`) when closing styled spans, wrapping text,
+  truncating text, compositing cells, and at renderer frame/line boundaries.
+  This works around macOS terminals (Ghostty, Terminal.app) that do not always
+  drop bold on `\x1b[0m` alone.
+- `Loader` and `Markdown` now emit the bold-aware reset sequence for their
+  color-styled output.
+
+### Changed
+
+- `Style::suffix()` is now an instance method so it can return `\x1b[22m\x1b[0m`
+  for bold/dim styles. Callers in `Panel`, `Modal`, `Sidebar`, `Div`, and
+  `layout/border` were updated to use `style.suffix()`.
+
 ## [0.4.3] - 2026-06-26
 
 ### Fixed

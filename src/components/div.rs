@@ -302,7 +302,7 @@ impl Component for Div {
         // Fill background if requested
         if let Some(ref bg) = self.background {
             let prefix = bg.prefix(crate::theme::ColorMode::detect());
-            let suffix = Style::suffix();
+            let suffix = bg.suffix();
             for _ in 0..rect.height {
                 let line = format!(
                     "{}{:width$}{}",

@@ -107,6 +107,20 @@ pub fn byte_index_at_visual_pos(s: &str, target_pos: usize) -> usize {
     byte_idx
 }
 
+/// Return the ANSI reset sequence, with an explicit intensity reset prefix
+/// when bold or faint was active.
+///
+/// Some macOS terminals (Ghostty, Terminal.app) do not reliably drop the bold
+/// attribute on `\x1b[0m` alone. Emitting `\x1b[22m` first turns off bold and
+/// faint explicitly before the full reset.
+fn sgr_reset(bold_or_faint: bool) -> &'static str {
+    if bold_or_faint {
+        "\x1b[22m\x1b[0m"
+    } else {
+        "\x1b[0m"
+    }
+}
+
 /// Truncate a string so its visible width does not exceed `max_width`.
 ///
 /// If truncation is necessary, `ellipsis` is appended at the end. The result
@@ -131,6 +145,7 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
     let mut result = String::new();
     let mut w = 0;
     let mut chars = s.chars().peekable();
+    let mut tracker = AnsiCodeTracker::new();
     while let Some(ch) = chars.next() {
         // Skip ANSI escape sequences (CSI and OSC) — they contribute 0 width.
         if ch == '\x1b' {
@@ -139,13 +154,16 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
                     result.push(ch);
                     chars.next(); // consume '['
                     result.push('[');
+                    let mut seq = String::from("\x1b[");
                     while let Some(&c) = chars.peek() {
                         chars.next();
                         result.push(c);
+                        seq.push(c);
                         if c.is_alphabetic() {
                             break;
                         }
                     }
+                    tracker.process(&seq);
                     continue;
                 },
                 | Some(&']') => {
@@ -181,9 +199,10 @@ pub fn truncate_to_width(s: &str, max_width: u16, ellipsis: &str) -> String {
     result.push_str(ellipsis);
     // If the original string contained ANSI codes, append a reset so that
     // truncated strings don't leave active attributes (e.g. background colours)
-    // dangling.
+    // dangling. When bold or faint is active, emit an explicit intensity reset
+    // first to work around terminals that don't clear bold on `\x1b[0m` alone.
     if s.contains('\x1b') {
-        result.push_str("\x1b[0m");
+        result.push_str(sgr_reset(tracker.bold || tracker.faint));
     }
     result
 }
@@ -299,6 +318,7 @@ impl AnsiCodeTracker {
         while i < codes.len() {
             let code = codes[i];
             match code {
+                | "0" => *self = Self::default(),
                 | "1" => self.bold = true,
                 | "2" => self.faint = true,
                 | "3" => self.italic = true,
@@ -503,12 +523,13 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
 
         if ch == '\n' {
             if tracker.bold ||
+                tracker.faint ||
                 tracker.italic ||
                 tracker.underline ||
                 tracker.fg_color.is_some() ||
                 tracker.bg_color.is_some()
             {
-                current.push_str("\x1b[0m");
+                current.push_str(sgr_reset(tracker.bold || tracker.faint));
             }
             let reset = tracker.line_end_reset();
             if !reset.is_empty() {
@@ -523,12 +544,13 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
         let cw = ch.width().unwrap_or(0);
         if current_width + cw > w && !current.is_empty() {
             if tracker.bold ||
+                tracker.faint ||
                 tracker.italic ||
                 tracker.underline ||
                 tracker.fg_color.is_some() ||
                 tracker.bg_color.is_some()
             {
-                current.push_str("\x1b[0m");
+                current.push_str(sgr_reset(tracker.bold || tracker.faint));
             }
             let reset = tracker.line_end_reset();
             if !reset.is_empty() {

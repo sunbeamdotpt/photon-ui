@@ -576,7 +576,12 @@ fn encode_cells_to_line(cells: &[Cell]) -> String {
                 line.push_str(&format!("\x1b]8;;{}", link.terminator));
             }
             // Reset SGR when any parsed SGR attribute is currently active.
+            // Emit an explicit intensity reset first to work around macOS
+            // terminals that do not reliably clear bold on `\x1b[0m` alone.
             if current.has_sgr() {
+                if current.bold || current.faint {
+                    line.push_str("\x1b[22m");
+                }
                 line.push_str("\x1b[0m");
             }
             // Apply new SGR.
@@ -607,6 +612,9 @@ fn encode_cells_to_line(cells: &[Cell]) -> String {
         line.push_str(&format!("\x1b]8;;{}", link.terminator));
     }
     if current.has_sgr() {
+        if current.bold || current.faint {
+            line.push_str("\x1b[22m");
+        }
         line.push_str("\x1b[0m");
     }
 
@@ -648,6 +656,18 @@ mod tests {
         assert!(cells[0].style.bold);
         // The reset comes after 'i', so 'i' is still bold at parse time.
         assert!(cells[1].style.bold);
+    }
+
+    /// Regression: `\x1b[0m` must reset active SGR state so subsequent cells
+    /// are not incorrectly styled.
+    #[test]
+    fn cell_parse_ansi_reset_clears_state() {
+        let cells = parse_line_to_cells("\x1b[1m\x1b[31mA\x1b[0mB", 10);
+        assert_eq!(cells.len(), 2);
+        assert!(cells[0].style.bold);
+        assert_eq!(cells[0].style.fg_color, Some("31".to_string()));
+        assert!(!cells[1].style.bold);
+        assert!(cells[1].style.fg_color.is_none());
     }
 
     #[test]
@@ -701,6 +721,15 @@ mod tests {
         let cells = parse_line_to_cells("\x1b[31mred", 10);
         let line = encode_cells_to_line(&cells);
         assert!(line.ends_with("\x1b[0m"));
+    }
+
+    /// Regression: bold cells must emit an explicit bold-off before the full
+    /// reset so macOS terminals don't leak bold weight.
+    #[test]
+    fn cell_encode_bold_emits_bold_off() {
+        let cells = parse_line_to_cells("\x1b[1mbold\x1b[0m", 10);
+        let line = encode_cells_to_line(&cells);
+        assert!(line.contains("\x1b[22m\x1b[0m"));
     }
 
     #[test]

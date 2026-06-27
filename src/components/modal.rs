@@ -96,7 +96,7 @@ impl Component for Modal {
         let mode = ColorMode::detect();
         let border_style = Style::new().fg(theme.border());
         let border_prefix = border_style.prefix(mode);
-        let suffix = Style::suffix();
+        let suffix = border_style.suffix();
 
         let inner_w = rect.width.saturating_sub(2);
         let inner_h = rect.height.saturating_sub(2);

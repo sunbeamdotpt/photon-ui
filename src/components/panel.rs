@@ -93,7 +93,7 @@ impl Component for Panel {
 
         let mode = ColorMode::detect();
         let prefix = border_style.prefix(mode);
-        let suffix = Style::suffix();
+        let suffix = border_style.suffix();
 
         let mut rendered = Rendered::empty();
 
