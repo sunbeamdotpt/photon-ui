@@ -1,5 +1,11 @@
 use unicode_width::UnicodeWidthChar;
 
+use crate::theme::{
+    Palette,
+    Style,
+    stylize,
+};
+
 /// Compute the visible display width of a string.
 ///
 /// ANSI escape sequences (CSI `\x1b[…` and OSC `\x1b]…`) do not contribute to
@@ -570,6 +576,112 @@ pub fn wrap_text_with_ansi(text: &str, width: u16) -> Vec<String> {
     lines
 }
 
+/// The full-block character used to draw the editable cursor.
+pub const EDIT_CURSOR: char = '█';
+
+/// Right-pad `s` with spaces so its visible width equals `width`.
+///
+/// ANSI escape sequences are ignored when measuring width.
+pub fn pad_to_width(s: &str, width: u16) -> String {
+    let w = width as usize;
+    let vw = visible_width(s);
+    match vw.cmp(&w) {
+        | std::cmp::Ordering::Less => format!("{}{}", s, " ".repeat(w - vw)),
+        | _ => s.to_string(),
+    }
+}
+
+/// Render a single line of text with a full-block cursor at `cursor_col`.
+///
+/// The grapheme at the visual column `cursor_col` is replaced by `EDIT_CURSOR`.
+/// If `cursor_col` is at or past the end of the line, the cursor is appended.
+/// The result is padded to `width` and styled: text with `edit_style`, cursor
+/// with `cursor_style`.
+pub fn render_line_with_cursor(
+    line: &str,
+    cursor_col: usize,
+    width: u16,
+    edit_style: &Style,
+    cursor_style: &Style,
+) -> String {
+    let before_idx = byte_index_at_visual_pos(line, cursor_col);
+    let before = &line[..before_idx];
+
+    let after_idx = if before_idx >= line.len() {
+        before_idx
+    } else {
+        let mut chars = line[before_idx..].chars();
+        match chars.next() {
+            | Some(ch) => before_idx + ch.len_utf8(),
+            | None => before_idx,
+        }
+    };
+    let after = &line[after_idx..];
+
+    let inner = format!("{}{}{}", before, EDIT_CURSOR, after);
+    let inner_width = visible_width(&inner);
+    let w = width as usize;
+    let pad = w.saturating_sub(inner_width);
+    let padded = format!("{}{}", inner, " ".repeat(pad));
+
+    let cursor_byte_len = EDIT_CURSOR.len_utf8();
+    let before_part = &padded[..before_idx];
+    let cursor_end = before_idx + cursor_byte_len;
+    let cursor_part = &padded[before_idx..cursor_end];
+    let rest_part = &padded[cursor_end..];
+
+    format!(
+        "{}{}{}",
+        stylize(before_part, edit_style),
+        stylize(cursor_part, cursor_style),
+        stylize(rest_part, edit_style)
+    )
+}
+
+/// Render a single-line editable field with a visible block cursor.
+///
+/// `prefix` is rendered with the muted text colour, the editable `buffer` on a
+/// surface background, and the cursor in the configured cursor colour. The
+/// result spans `width` columns and the cursor is always visible, even when
+/// `buffer` is empty.
+pub fn render_editable_line(prefix: &str, buffer: &str, width: u16, theme: &dyn Palette) -> String {
+    let prefix_style = Style::new().fg(theme.text_muted());
+    let edit_style = Style::new().fg(theme.text()).bg(theme.surface());
+    let cursor_style = Style::new().fg(theme.cursor()).bg(theme.surface());
+
+    let prefix_styled = stylize(prefix, &prefix_style);
+    let prefix_width = visible_width(prefix);
+    let available = (width as usize).saturating_sub(prefix_width);
+    if available == 0 {
+        return prefix_styled;
+    }
+
+    let buffer_width = visible_width(buffer);
+    let (buffer_display, pad) = if buffer_width < available {
+        (buffer.to_string(), available - buffer_width - 1)
+    } else {
+        let truncated = truncate_to_width(buffer, (available - 1) as u16, "");
+        let truncated_width = visible_width(&truncated);
+        (truncated, available - truncated_width - 1)
+    };
+
+    let content = format!("{}{}{}", buffer_display, EDIT_CURSOR, " ".repeat(pad));
+    let buffer_end = buffer_display.len();
+    let cursor_end = buffer_end + EDIT_CURSOR.len_utf8();
+
+    let buffer_part = &content[..buffer_end];
+    let cursor_part = &content[buffer_end..cursor_end];
+    let pad_part = &content[cursor_end..];
+
+    format!(
+        "{}{}{}{}",
+        prefix_styled,
+        stylize(buffer_part, &edit_style),
+        stylize(cursor_part, &cursor_style),
+        stylize(pad_part, &edit_style)
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -813,5 +925,165 @@ mod tests {
         // OSC hyperlink is 25 bytes, visible width 0
         assert_eq!(byte_index_at_visual_pos(s, 0), 25);
         assert_eq!(byte_index_at_visual_pos(s, 3), 28);
+    }
+
+    #[test]
+    fn pad_to_width_adds_spaces() {
+        assert_eq!(pad_to_width("hi", 5), "hi   ");
+    }
+
+    #[test]
+    fn pad_to_width_ignores_ansi() {
+        let s = "\x1b[31mhi\x1b[0m";
+        assert_eq!(pad_to_width(s, 5), "\x1b[31mhi\x1b[0m   ");
+    }
+
+    #[test]
+    fn render_line_with_cursor_inserts_block() {
+        use crate::theme::{
+            Style,
+            Theme,
+        };
+        Theme::with(Theme::Light, || {
+            let theme = Theme::palette();
+            let edit = Style::new().fg(theme.text()).bg(theme.surface());
+            let cursor = Style::new().fg(theme.cursor()).bg(theme.surface());
+            let line = render_line_with_cursor("hello", 2, 8, &edit, &cursor);
+            assert!(line.contains(EDIT_CURSOR));
+            assert!(line.contains("he"));
+            assert!(line.contains("lo"));
+            assert!(line.contains("\x1b[48;"));
+            assert!(line.contains("\x1b[38;"));
+            assert_eq!(visible_width(&line), 8);
+        });
+    }
+
+    #[test]
+    fn render_line_with_cursor_at_end() {
+        use crate::theme::{
+            Style,
+            Theme,
+        };
+        Theme::with(Theme::Light, || {
+            let theme = Theme::palette();
+            let edit = Style::new().fg(theme.text()).bg(theme.surface());
+            let cursor = Style::new().fg(theme.cursor()).bg(theme.surface());
+            let line = render_line_with_cursor("hi", 5, 6, &edit, &cursor);
+            assert!(line.contains("hi"));
+            assert!(line.contains(EDIT_CURSOR));
+            assert_eq!(visible_width(&line), 6);
+        });
+    }
+
+    #[test]
+    fn render_editable_line_shows_prefix_buffer_and_cursor() {
+        use crate::theme::Theme;
+        Theme::with(Theme::Light, || {
+            let theme = Theme::palette();
+            let line = render_editable_line("/", "abc", 10, &*theme);
+            assert!(line.contains('/'));
+            assert!(line.contains("abc"));
+            assert!(line.contains(EDIT_CURSOR));
+            assert!(line.contains("\x1b[48;"));
+            assert_eq!(visible_width(&line), 10);
+        });
+    }
+
+    #[test]
+    fn render_editable_line_cursor_visible_when_empty() {
+        use crate::theme::Theme;
+        Theme::with(Theme::Light, || {
+            let theme = Theme::palette();
+            let line = render_editable_line("/", "", 10, &*theme);
+            assert!(line.contains('/'));
+            assert!(line.contains(EDIT_CURSOR));
+            assert_eq!(visible_width(&line), 10);
+        });
+    }
+
+    #[test]
+    fn render_editable_line_respects_custom_cursor_colour() {
+        use std::sync::Arc;
+
+        use crate::theme::{
+            Color,
+            Palette,
+            Theme,
+        };
+
+        struct CyanCursor;
+        impl Palette for CyanCursor {
+            fn background(&self) -> Color {
+                Color::SUNBEAM_BLACK
+            }
+
+            fn surface(&self) -> Color {
+                Color::CARD_DARK
+            }
+
+            fn field(&self) -> Color {
+                Color::CARD_DARK
+            }
+
+            fn text(&self) -> Color {
+                Color::WHITE
+            }
+
+            fn text_muted(&self) -> Color {
+                Color(0xbb, 0xbb, 0xbb)
+            }
+
+            fn text_on_accent(&self) -> Color {
+                Color::WHITE
+            }
+
+            fn accent(&self) -> Color {
+                Color::SUNBEAM_ORANGE
+            }
+
+            fn accent_hover(&self) -> Color {
+                Color::SUNBEAM_FLAME
+            }
+
+            fn border(&self) -> Color {
+                Color(0x55, 0x55, 0x55)
+            }
+
+            fn border_muted(&self) -> Color {
+                Color(0x44, 0x44, 0x44)
+            }
+
+            fn focus(&self) -> Color {
+                Color::BEAM_ORANGE
+            }
+
+            fn success(&self) -> Color {
+                Color(0x22, 0x99, 0x55)
+            }
+
+            fn warning(&self) -> Color {
+                Color::SUNSHINE_900
+            }
+
+            fn error(&self) -> Color {
+                Color(0xdd, 0x33, 0x33)
+            }
+
+            fn info(&self) -> Color {
+                Color(0x33, 0x77, 0xcc)
+            }
+
+            fn cursor(&self) -> Color {
+                Color(0x00, 0xff, 0xff)
+            }
+        }
+
+        Theme::set_palette(Arc::new(CyanCursor));
+        let theme = Theme::palette();
+        let line = render_editable_line("/", "x", 10, &*theme);
+        Theme::clear_palette();
+        assert!(line.contains(EDIT_CURSOR));
+        // Cyan truecolor foreground
+        assert!(line.contains("\x1b[38;2;0;255;255m"));
     }
 }
