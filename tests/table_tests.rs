@@ -363,3 +363,99 @@ fn table_hooks_fire_from_user_input() {
     table.set_filter("a");
     assert!(filter_called.get());
 }
+
+#[test]
+fn table_filter_mode_cursor_uses_configured_colour() {
+    use std::sync::Arc;
+
+    use photon_ui::theme::{
+        Color,
+        Palette,
+        Theme,
+    };
+
+    struct CyanCursor;
+    impl Palette for CyanCursor {
+        fn background(&self) -> Color {
+            Color::SUNBEAM_BLACK
+        }
+
+        fn surface(&self) -> Color {
+            Color::CARD_DARK
+        }
+
+        fn field(&self) -> Color {
+            Color::CARD_DARK
+        }
+
+        fn text(&self) -> Color {
+            Color::WHITE
+        }
+
+        fn text_muted(&self) -> Color {
+            Color(0xbb, 0xbb, 0xbb)
+        }
+
+        fn text_on_accent(&self) -> Color {
+            Color::WHITE
+        }
+
+        fn accent(&self) -> Color {
+            Color::SUNBEAM_ORANGE
+        }
+
+        fn accent_hover(&self) -> Color {
+            Color::SUNBEAM_FLAME
+        }
+
+        fn border(&self) -> Color {
+            Color(0x55, 0x55, 0x55)
+        }
+
+        fn border_muted(&self) -> Color {
+            Color(0x44, 0x44, 0x44)
+        }
+
+        fn focus(&self) -> Color {
+            Color::BEAM_ORANGE
+        }
+
+        fn success(&self) -> Color {
+            Color(0x22, 0x99, 0x55)
+        }
+
+        fn warning(&self) -> Color {
+            Color::SUNSHINE_900
+        }
+
+        fn error(&self) -> Color {
+            Color(0xdd, 0x33, 0x33)
+        }
+
+        fn info(&self) -> Color {
+            Color(0x33, 0x77, 0xcc)
+        }
+
+        fn cursor(&self) -> Color {
+            Color(0x00, 0xff, 0xff)
+        }
+    }
+
+    Theme::set_palette(Arc::new(CyanCursor));
+    let result = {
+        let cols = vec![Column::new("name", "Name").width(10)];
+        let rows = vec![
+            Row::new(HashMap::from([("name".to_string(), "Alice".to_string())])),
+            Row::new(HashMap::from([("name".to_string(), "Bob".to_string())])),
+        ];
+        let mut table = Table::new(cols, rows);
+        table.set_focused(true);
+        table.handle_input(&Event::Key(KeyCode::Char('/').into()));
+        table.handle_input(&Event::Key(KeyCode::Char('a').into()));
+        let rendered = table.render(40).unwrap();
+        Theme::clear_palette();
+        rendered
+    };
+    assert!(result.lines[0].contains('█'));
+    assert!(result.lines[0].contains("\x1b[38;2;0;255;255m"));
+}

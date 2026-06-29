@@ -445,10 +445,12 @@ impl Component for Table {
 
         // Filter input line (when in interactive filter mode)
         if self.in_filter_mode {
-            let filter_style = Style::new().fg(theme.text_muted());
-            let filter_text = format!("/{}", self.filter_buffer);
-            let filter_line = crate::utils::truncate_to_width(&filter_text, width, "…");
-            lines.push(stylize(&filter_line, &filter_style));
+            lines.push(crate::utils::render_editable_line(
+                "/",
+                &self.filter_buffer,
+                width,
+                &*theme,
+            ));
         }
 
         // Header row
@@ -1020,7 +1022,56 @@ mod tests {
             let rendered = table.render(40).unwrap();
             // Filter line + header + sep + 1 row = 4 lines
             assert_eq!(rendered.lines.len(), 4);
-            assert!(rendered.lines[0].contains("/a"));
+            assert!(rendered.lines[0].contains('/'));
+            assert!(rendered.lines[0].contains('a'));
+            assert!(rendered.lines[0].contains(crate::utils::EDIT_CURSOR));
+            assert!(rendered.lines[0].contains("\x1b[48;"));
+            assert_eq!(rendered.cursor, None);
+        });
+    }
+
+    #[test]
+    fn table_filter_mode_cursor_visible_when_empty() {
+        Theme::with(Theme::Light, || {
+            let cols = vec![Column::new("name", "Name").width(10)];
+            let rows = vec![Row::new(HashMap::from([(
+                "name".to_string(),
+                "Alice".to_string(),
+            )]))];
+            let mut table = Table::new(cols, rows);
+            table.set_focused(true);
+            table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+                KeyCode::Char('/'),
+                crossterm::event::KeyModifiers::empty(),
+            )));
+            let rendered = table.render(40).unwrap();
+            assert!(rendered.lines[0].contains(crate::utils::EDIT_CURSOR));
+            assert!(rendered.lines[0].contains("\x1b[48;"));
+            assert_eq!(rendered.cursor, None);
+        });
+    }
+
+    #[test]
+    fn table_filter_mode_cursor_uses_accent_colour() {
+        Theme::with(Theme::Light, || {
+            let cols = vec![Column::new("name", "Name").width(10)];
+            let rows = vec![Row::new(HashMap::from([(
+                "name".to_string(),
+                "Alice".to_string(),
+            )]))];
+            let mut table = Table::new(cols, rows);
+            table.set_focused(true);
+            table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+                KeyCode::Char('/'),
+                crossterm::event::KeyModifiers::empty(),
+            )));
+            table.handle_input(&Event::Key(crossterm::event::KeyEvent::new(
+                KeyCode::Char('a'),
+                crossterm::event::KeyModifiers::empty(),
+            )));
+            let rendered = table.render(40).unwrap();
+            // Light theme accent is SUNBEAM_ORANGE (250, 82, 15)
+            assert!(rendered.lines[0].contains("\x1b[38;2;250;82;15m"));
         });
     }
 
