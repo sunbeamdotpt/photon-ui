@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-06-29
+
+### Added
+
+- New configurable `Palette::cursor()` colour role; it defaults to the accent
+  colour so existing custom palettes keep working, but can be overridden to
+  change the editable block cursor independently.
+- Shared editable cursor helpers in `utils`: `EDIT_CURSOR`, `pad_to_width`,
+  `render_line_with_cursor`, and `render_editable_line`.
+- `Input`, `Editor`, and `Table` filter input now render a visible full-block
+  cursor on a subtle surface edit highlight when focused.
+- Demo example updated with pre-filled `Input` text and labels highlighting the
+  block cursor.
+
+### Fixed
+
+- `TUI::mount` no longer auto-focuses non-focusable components such as `Text`,
+  so the first `Input`, `Editor`, or `Table` on a page receives focus on load.
+
 ## [0.4.4] - 2026-06-27
 
 ### Fixed
