@@ -125,6 +125,13 @@ pub trait Palette {
     fn accent(&self) -> Color;
     /// Accent color when hovered.
     fn accent_hover(&self) -> Color;
+    /// Rendered block cursor / caret colour in editable fields.
+    ///
+    /// Defaults to the accent colour so existing custom palettes do not need to
+    /// be updated, but can be overridden to configure the cursor independently.
+    fn cursor(&self) -> Color {
+        self.accent()
+    }
 
     /// Default border color.
     fn border(&self) -> Color;
@@ -380,6 +387,7 @@ mod tests {
         assert_eq!(t.text_on_accent(), Color::WHITE);
         assert_eq!(t.accent(), Color::SUNBEAM_ORANGE);
         assert_eq!(t.accent_hover(), Color::SUNBEAM_FLAME);
+        assert_eq!(t.cursor(), Color::SUNBEAM_ORANGE);
         assert_eq!(t.border(), Color(0x7f, 0x63, 0x15));
         assert_eq!(t.border_muted(), Color(0xdd, 0xcc, 0xaa));
         assert_eq!(t.focus(), Color::BEAM_ORANGE);
@@ -400,6 +408,7 @@ mod tests {
         assert_eq!(t.text_on_accent(), Color::WHITE);
         assert_eq!(t.accent(), Color::SUNBEAM_ORANGE);
         assert_eq!(t.accent_hover(), Color::SUNBEAM_FLAME);
+        assert_eq!(t.cursor(), Color::SUNBEAM_ORANGE);
         assert_eq!(t.border(), Color(0x55, 0x55, 0x55));
         assert_eq!(t.border_muted(), Color(0x44, 0x44, 0x44));
         assert_eq!(t.focus(), Color::BEAM_ORANGE);
@@ -422,6 +431,7 @@ mod tests {
         assert_eq!(p.text_on_accent(), Color::from_hex("#666666").unwrap());
         assert_eq!(p.accent(), Color::from_hex("#ff00ff").unwrap());
         assert_eq!(p.accent_hover(), Color::from_hex("#ff11ff").unwrap());
+        assert_eq!(p.cursor(), Color::from_hex("#ff00ff").unwrap());
         assert_eq!(p.border(), Color::from_hex("#777777").unwrap());
         assert_eq!(p.border_muted(), Color::from_hex("#888888").unwrap());
         assert_eq!(p.focus(), Color::from_hex("#999999").unwrap());
