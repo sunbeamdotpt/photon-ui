@@ -226,8 +226,9 @@ impl TUI {
     /// currently has focus, the new component receives focus automatically.
     pub fn mount(&mut self, component: Box<dyn Component>) {
         let idx = self.layers[0].components.len();
+        let is_focusable = component.as_focusable().is_some();
         self.layers[0].mount(component);
-        if self.layer_focus[0].is_none() {
+        if self.layer_focus[0].is_none() && is_focusable {
             self.set_focus(idx);
         }
     }
@@ -751,14 +752,8 @@ mod tests {
         let input = crate::components::Input::new();
         tui.mount(Box::new(input));
 
-        // First mounted component gets focus (Text at index 0)
-        assert_eq!(tui.layer_focus[0], Some(0));
-
-        // Tab moves to first focusable (SelectList at index 1)
-        tui.handle_input(&crate::events::Event::Key(crossterm::event::KeyEvent::new(
-            crossterm::event::KeyCode::Tab,
-            crossterm::event::KeyModifiers::empty(),
-        )));
+        // Text is not focusable, so the first focusable component (SelectList at
+        // index 1) receives focus automatically.
         assert_eq!(tui.layer_focus[0], Some(1));
 
         // Tab moves to next focusable (Input at index 2)
@@ -785,10 +780,11 @@ mod tests {
         let input = crate::components::Input::new();
         tui.mount(Box::new(input));
 
-        // Start on SelectList (index 0)
+        // Only focusable components are auto-focused, so SelectList (index 0)
+        // starts focused.
         assert_eq!(tui.layer_focus[0], Some(0));
 
-        // BackTab moves to previous focusable (wraps to Input)
+        // BackTab moves to previous focusable (wraps to Input at index 1)
         tui.handle_input(&crate::events::Event::Key(crossterm::event::KeyEvent::new(
             crossterm::event::KeyCode::BackTab,
             crossterm::event::KeyModifiers::empty(),
