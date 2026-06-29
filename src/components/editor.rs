@@ -10,6 +10,10 @@ use crate::{
     RenderError,
     Rendered,
     kill_ring::KillRing,
+    theme::{
+        Style,
+        Theme,
+    },
     undo_stack::UndoStack,
     word_navigation::{
         find_word_backward,
@@ -791,20 +795,42 @@ impl Editor {
 
 impl Component for Editor {
     fn render(&self, width: u16) -> Result<Rendered, RenderError> {
-        let editor = self.clone();
-        let (cursor_line, cursor_col) = editor.cursor_line_col();
-        let lines = if width == self.cache_width && !self.lines_cache.is_empty() {
+        let (cursor_line, cursor_col) = self.cursor_line_col();
+        let wrapped = if width == self.cache_width && !self.lines_cache.is_empty() {
             self.lines_cache.clone()
         } else {
             crate::utils::wrap_text_with_ansi(&self.text, width)
         };
+
+        let mut lines = Vec::new();
+        if self.focused {
+            let theme = Theme::palette();
+            let edit_style = Style::new().fg(theme.text()).bg(theme.surface());
+            let cursor_style = Style::new().fg(theme.cursor()).bg(theme.surface());
+            for (i, line) in wrapped.into_iter().enumerate() {
+                let padded = crate::utils::pad_to_width(&line, width);
+                let rendered = if i == cursor_line {
+                    crate::utils::render_line_with_cursor(
+                        &padded,
+                        cursor_col,
+                        width,
+                        &edit_style,
+                        &cursor_style,
+                    )
+                } else {
+                    crate::theme::stylize(&padded, &edit_style)
+                };
+                lines.push(rendered);
+            }
+        } else {
+            for line in wrapped {
+                lines.push(crate::utils::pad_to_width(&line, width));
+            }
+        }
+
         Ok(Rendered {
             lines,
-            cursor: if self.focused {
-                Some((cursor_line, cursor_col))
-            } else {
-                None
-            },
+            cursor: None,
             images: Vec::new(),
         })
     }
@@ -1349,15 +1375,48 @@ mod tests {
 
     #[test]
     fn render_uses_cache_when_width_matches() {
-        let mut editor = Editor::new();
-        editor.text = "cached".to_string();
-        editor.lines_cache = vec!["cached".to_string()];
-        editor.cache_width = 80;
-        editor.cursor = 6;
-        editor.focused = true;
-        let rendered = editor.render(80).unwrap();
-        assert_eq!(rendered.lines, vec!["cached".to_string()]);
-        assert_eq!(rendered.cursor, Some((0, 6)));
+        Theme::with(Theme::Light, || {
+            let mut editor = Editor::new();
+            editor.text = "cached".to_string();
+            editor.lines_cache = vec!["cached".to_string()];
+            editor.cache_width = 80;
+            editor.cursor = 6;
+            editor.focused = true;
+            let rendered = editor.render(80).unwrap();
+            assert!(rendered.lines[0].contains("cached"));
+            assert!(rendered.lines[0].contains(crate::utils::EDIT_CURSOR));
+            assert!(rendered.lines[0].contains("\x1b[48;"));
+            assert_eq!(crate::utils::visible_width(&rendered.lines[0]), 80);
+            assert_eq!(rendered.cursor, None);
+        });
+    }
+
+    #[test]
+    fn render_focused_shows_block_cursor() {
+        Theme::with(Theme::Light, || {
+            let mut editor = Editor::new();
+            editor.set_focused(true);
+            editor.insert_str("hello");
+            let rendered = editor.render(80).unwrap();
+            assert!(rendered.lines[0].contains("hello"));
+            assert!(rendered.lines[0].contains(crate::utils::EDIT_CURSOR));
+            assert!(rendered.lines[0].contains("\x1b[48;"));
+            assert_eq!(rendered.cursor, None);
+        });
+    }
+
+    #[test]
+    fn render_unfocused_no_cursor_or_highlight() {
+        Theme::with(Theme::Light, || {
+            let mut editor = Editor::new();
+            editor.set_focused(false);
+            editor.insert_str("hello");
+            let rendered = editor.render(80).unwrap();
+            assert_eq!(rendered.cursor, None);
+            assert!(rendered.lines[0].contains("hello"));
+            assert!(!rendered.lines[0].contains(crate::utils::EDIT_CURSOR));
+            assert!(!rendered.lines[0].contains("\x1b[48;"));
+        });
     }
 
     #[test]

@@ -12,6 +12,10 @@ use crate::{
     RenderError,
     Rendered,
     kill_ring::KillRing,
+    theme::{
+        Style,
+        Theme,
+    },
     undo_stack::UndoStack,
 };
 
@@ -361,18 +365,29 @@ impl Component for Input {
             line.push_str(g);
             display_vw += gw;
         }
-        if display_vw < w {
-            line.push_str(&" ".repeat(w - display_vw));
-        }
 
         let cursor_col = cursor_vw.saturating_sub(cum_vw[scroll]);
+        let rendered_line = if self.focused {
+            let theme = Theme::palette();
+            let edit_style = Style::new().fg(theme.text()).bg(theme.surface());
+            let cursor_style = Style::new().fg(theme.cursor()).bg(theme.surface());
+            crate::utils::render_line_with_cursor(
+                &line,
+                cursor_col,
+                width,
+                &edit_style,
+                &cursor_style,
+            )
+        } else {
+            if display_vw < w {
+                line.push_str(&" ".repeat(w - display_vw));
+            }
+            line
+        };
+
         Ok(Rendered {
-            lines: vec![line],
-            cursor: if self.focused {
-                Some((0, cursor_col))
-            } else {
-                None
-            },
+            lines: vec![rendered_line],
+            cursor: None,
             images: Vec::new(),
         })
     }
@@ -437,10 +452,11 @@ mod tests {
             input.handle_input(&key_event(KeyCode::Char('x')));
         }
         let r = input.render(10).unwrap();
-        assert_eq!(r.lines[0].len(), 10);
-        assert!(r.cursor.is_some());
+        assert_eq!(crate::utils::visible_width(&r.lines[0]), 10);
+        assert!(r.cursor.is_none());
         assert_eq!(input.scroll(), 11);
-        assert_eq!(r.cursor, Some((0, 9)));
+        assert!(r.lines[0].contains(crate::utils::EDIT_CURSOR));
+        assert!(r.lines[0].contains("\x1b[48;"));
     }
 
     #[test]
@@ -457,7 +473,9 @@ mod tests {
         input.handle_input(&ctrl_event('a'));
         let r = input.render(10).unwrap();
         assert_eq!(input.scroll(), 0);
-        assert_eq!(r.cursor, Some((0, 0)));
+        assert!(r.cursor.is_none());
+        assert!(r.lines[0].starts_with('\x1b'));
+        assert!(r.lines[0].contains(crate::utils::EDIT_CURSOR));
     }
 
     #[test]
@@ -545,7 +563,20 @@ mod tests {
         input.set_focused(true);
         input.insert_char('a');
         let r = input.render(10).unwrap();
-        assert_eq!(r.lines[0].len(), 10);
+        assert_eq!(crate::utils::visible_width(&r.lines[0]), 10);
+        assert!(r.lines[0].contains(crate::utils::EDIT_CURSOR));
+        assert!(r.lines[0].contains("\x1b[48;"));
+    }
+
+    #[test]
+    fn input_render_focused_cursor_uses_accent_colour() {
+        Theme::with(Theme::Light, || {
+            let mut input = Input::new();
+            input.set_focused(true);
+            input.insert_char('a');
+            let r = input.render(10).unwrap();
+            assert!(r.lines[0].contains("\x1b[38;2;250;82;15m"));
+        });
     }
 
     // -- Vim mode tests --
