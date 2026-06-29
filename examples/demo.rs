@@ -521,7 +521,7 @@ impl DemoApp {
         let mut app = Self {
             tui,
             page: 1,
-            input_text: String::new(),
+            input_text: "Photon UI demo".into(),
             editor_text: "Hello, Photon UI!\nThis is the multi-line editor.".into(),
             input_vim: false,
             editor_vim: false,
@@ -668,9 +668,9 @@ impl DemoApp {
     fn load_page_input_and_lists(&mut self) {
         // ── Input ──
         let help = if self.input_vim {
-            "Input: vim mode (i=insert, Esc=normal, h/l=move, x=delete) | v=toggle mode"
+            "Input: vim mode, orange block cursor (i=insert, Esc=normal, h/l=move, x=delete) | v=toggle mode"
         } else {
-            "Input: Emacs mode (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill, Ctrl+Y=yank) | v=toggle mode"
+            "Input: Emacs mode, orange block cursor (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill, Ctrl+Y=yank) | v=toggle mode"
         };
         self.tui.mount(std::boxed::Box::new(Text::new(help, 0, 0)));
 
@@ -683,9 +683,9 @@ impl DemoApp {
         self.tui.mount(std::boxed::Box::new(Spacer::new(1)));
 
         let editor_help = if self.editor_vim {
-            "Editor: vim mode (i=insert, Esc=normal, dd=delete line, yy=yank line) | V=toggle mode"
+            "Editor: vim mode, block cursor on current line (i=insert, Esc=normal, dd=delete line, yy=yank line) | V=toggle mode"
         } else {
-            "Editor: Emacs mode (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill line) | V=toggle mode"
+            "Editor: Emacs mode, block cursor on current line (Ctrl+A=start, Ctrl+E=end, Ctrl+K=kill line) | V=toggle mode"
         };
         self.tui
             .mount(std::boxed::Box::new(Text::new(editor_help, 0, 0)));
@@ -942,7 +942,9 @@ impl DemoApp {
         progress_row.push(Box::new(ProgressBar::new("CPU", 0.45).width(15)));
         progress_row.push(Box::new(ProgressBar::new("RAM", 1.0).width(15)));
         main_content.push(Box::new(progress_row));
-        main_content.push(Box::new(Divider::horizontal().labeled("Data")));
+        main_content.push(Box::new(
+            Divider::horizontal().labeled("Data — Tab→Table, '/' for filter cursor"),
+        ));
 
         // DataRow: Table + TreeView
         let mut data_row = Div::new(Layout::horizontal([
