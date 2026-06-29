@@ -711,4 +711,157 @@ mod tests {
             assert!(matches!(result, crate::InputResult::Ignored));
         });
     }
+
+    #[test]
+    fn div_push_and_builders() {
+        let mut div = Div::new(Layout::vertical([Constraint::Length(1)]));
+        div.push(Box::new(Text::new("hi", 0, 0)));
+        let div = div
+            .border(Border::ROUNDED)
+            .border_styled(Style::new().bold())
+            .padding(Margin::new(1, 1))
+            .title("T")
+            .title_styled(Style::new().italic())
+            .background(Style::new().bg(crate::theme::Color::WHITE))
+            .collapsible(true)
+            .collapsed(true);
+        assert!(div.border.is_some());
+        assert!(div.background.is_some());
+        assert!(div.collapsed);
+    }
+
+    #[test]
+    fn div_toggle_collapsed() {
+        let mut div = Div::new(Layout::vertical([Constraint::Length(1)])).collapsed(true);
+        div.toggle_collapsed();
+        assert!(!div.collapsed);
+        div.toggle_collapsed();
+        assert!(div.collapsed);
+    }
+
+    #[test]
+    fn div_collapsed_non_collapsible_indicator() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .border(Border::ROUNDED)
+                .title("Panel")
+                .collapsed(true)
+                .child(Box::new(Text::new("hidden", 0, 0)));
+
+            let rendered = div.render_rect(Rect::new(0, 0, 20, 1)).unwrap();
+            assert!(rendered.lines[0].contains("Panel"));
+            assert!(!rendered.lines[0].contains("▶"));
+        });
+    }
+
+    #[test]
+    fn div_collapsed_unfocused_style() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .title("Panel")
+                .collapsible(true)
+                .collapsed(true)
+                .child(Box::new(Text::new("hidden", 0, 0)));
+
+            let rendered = div.render_rect(Rect::new(0, 0, 20, 1)).unwrap();
+            assert!(rendered.lines[0].contains("Panel"));
+        });
+    }
+
+    #[test]
+    fn div_background_fill() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .background(Style::new().bg(crate::theme::Color::WHITE))
+                .child(Box::new(Text::new("hi", 0, 0)));
+
+            let rendered = div.render_rect(Rect::new(0, 0, 5, 2)).unwrap();
+            assert!(rendered.lines.iter().all(|l| l.contains("\x1b[48")));
+        });
+    }
+
+    #[test]
+    fn div_border_with_custom_style_and_title() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .border(Border::ROUNDED)
+                .border_styled(Style::new().fg(crate::theme::Color::SUNBEAM_ORANGE))
+                .title("Box")
+                .child(Box::new(Text::new("hi", 0, 0)));
+
+            let rendered = div.render_rect(Rect::new(0, 0, 10, 3)).unwrap();
+            assert!(rendered.lines[0].contains("Box"));
+        });
+    }
+
+    #[test]
+    fn div_handle_input_space_toggles() {
+        Theme::with(Theme::Light, || {
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .collapsible(true)
+                .collapsed(true)
+                .child(Box::new(Text::new("hi", 0, 0)));
+
+            let space = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Char(' '),
+                crossterm::event::KeyModifiers::empty(),
+            ));
+            let result = div.handle_input(&space);
+            assert!(matches!(result, crate::InputResult::Handled));
+            assert!(!div.collapsed);
+        });
+    }
+
+    #[test]
+    fn div_handle_input_falls_through_children() {
+        Theme::with(Theme::Light, || {
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .child(Box::new(Text::new("hi", 0, 0)));
+
+            let a_key = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Char('a'),
+                crossterm::event::KeyModifiers::empty(),
+            ));
+            let result = div.handle_input(&a_key);
+            assert!(matches!(result, crate::InputResult::Ignored));
+        });
+    }
+
+    #[test]
+    fn div_focusable_trait_objects() {
+        let div = Div::new(Layout::vertical([Constraint::Length(1)]));
+        assert!(div.as_focusable().is_some());
+        let mut div = Div::new(Layout::vertical([Constraint::Length(1)]));
+        assert!(div.as_focusable_mut().is_some());
+    }
+
+    #[test]
+    fn div_cycle_child_focus_no_focusable_children() {
+        Theme::with(Theme::Light, || {
+            let mut div = Div::new(Layout::vertical([Constraint::Length(1)]))
+                .child(Box::new(Text::new("hi", 0, 0)));
+
+            let tab = crate::events::Event::Key(crossterm::event::KeyEvent::new(
+                crossterm::event::KeyCode::Tab,
+                crossterm::event::KeyModifiers::empty(),
+            ));
+            let result = div.handle_input(&tab);
+            assert!(matches!(result, crate::InputResult::Ignored));
+        });
+    }
+
+    #[test]
+    fn div_render_uses_computed_height() {
+        Theme::with(Theme::Light, || {
+            let div = Div::new(Layout::vertical([
+                Constraint::Length(1),
+                Constraint::Length(1),
+            ]))
+            .child(Box::new(Text::new("a", 0, 0)))
+            .child(Box::new(Text::new("b", 0, 0)));
+
+            let rendered = div.render(10).unwrap();
+            assert_eq!(rendered.lines.len(), 6);
+        });
+    }
 }

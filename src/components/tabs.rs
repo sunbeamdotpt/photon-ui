@@ -226,4 +226,26 @@ mod tests {
         assert_eq!(result, InputResult::Handled);
         assert_eq!(tabs.active(), 0); // clamped
     }
+
+    #[test]
+    fn tabs_handle_input_ignores_unmapped_keys() {
+        let mut tabs = Tabs::new(vec!["a", "b"]);
+        let result = tabs.handle_input(&Event::Key(KeyCode::Char('x').into()));
+        assert_eq!(result, InputResult::Ignored);
+    }
+
+    #[test]
+    fn tabs_handle_input_ignores_non_key_events() {
+        let mut tabs = Tabs::new(vec!["a", "b"]);
+        let result = tabs.handle_input(&Event::Resize(80, 24));
+        assert_eq!(result, InputResult::Ignored);
+    }
+
+    #[test]
+    fn tabs_focusable_trait_objects() {
+        let mut tabs = Tabs::new(vec!["a"]);
+        tabs.set_focused(true);
+        assert!(tabs.as_focusable().is_some());
+        assert!(tabs.as_focusable_mut().is_some());
+    }
 }

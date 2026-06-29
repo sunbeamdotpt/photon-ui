@@ -254,4 +254,49 @@ mod tests {
             assert!(modal.focused());
         });
     }
+
+    #[test]
+    fn modal_builder_methods() {
+        let modal = Modal::new(Box::new(Text::new("hi", 0, 0)))
+            .border(Border::DOUBLE)
+            .width(80)
+            .title("T");
+        assert_eq!(modal.width, 80);
+    }
+
+    #[test]
+    fn modal_render_uses_self_width() {
+        Theme::with(Theme::Light, || {
+            let modal = Modal::new(Box::new(Text::new("hi", 0, 0))).width(12);
+            let rendered = modal.render(100).unwrap();
+            assert_eq!(crate::utils::visible_width(&rendered.lines[0]), 12);
+        });
+    }
+
+    #[test]
+    fn modal_focused_title_indicator() {
+        Theme::with(Theme::Light, || {
+            let mut modal = Modal::new(Box::new(Text::new("hi", 0, 0))).title("A");
+            modal.set_focused(true);
+            let rendered = modal.render_rect(Rect::new(0, 0, 20, 5)).unwrap();
+            assert!(rendered.lines[0].contains("▼"));
+        });
+    }
+
+    #[test]
+    fn modal_handle_input_forwards_to_content() {
+        Theme::with(Theme::Light, || {
+            let mut modal = Modal::new(Box::new(Text::new("hi", 0, 0)));
+            let result = modal.handle_input(&Event::Resize(80, 24));
+            assert_eq!(result, InputResult::Ignored);
+        });
+    }
+
+    #[test]
+    fn modal_focusable_trait_objects() {
+        let modal = Modal::new(Box::new(Text::new("hi", 0, 0)));
+        assert!(modal.as_focusable().is_some());
+        let mut modal = Modal::new(Box::new(Text::new("hi", 0, 0)));
+        assert!(modal.as_focusable_mut().is_some());
+    }
 }

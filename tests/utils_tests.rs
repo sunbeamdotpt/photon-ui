@@ -1,5 +1,6 @@
 use photon_ui::utils::{
     AnsiCodeTracker,
+    byte_index_at_visual_pos,
     truncate_to_width,
     visible_width,
     wrap_text_with_ansi,
@@ -119,4 +120,143 @@ fn wrap_text_with_ansi_emits_bold_off_for_bold_text() {
     assert_eq!(lines.len(), 2);
     assert!(lines[0].ends_with("\x1b[22m\x1b[0m"));
     assert!(lines[1].starts_with("\x1b[1m"));
+}
+
+#[test]
+fn visible_width_osc8_escape_slash_terminator() {
+    assert_eq!(visible_width("\x1b]8;;https://example.com\x1b\\hello"), 5);
+}
+
+#[test]
+fn visible_width_osc8_bel_terminator() {
+    assert_eq!(visible_width("\x1b]8;;https://example.com\x07hello"), 5);
+}
+
+#[test]
+fn visible_width_lone_escape_falls_through() {
+    assert_eq!(visible_width("\x1bhello"), 5);
+    assert_eq!(visible_width("\x1bXhello"), 6);
+}
+
+#[test]
+fn byte_index_at_visual_pos_with_osc8_escape_slash() {
+    let s = "\x1b]8;;https://example.com\x1b\\hello";
+    assert_eq!(byte_index_at_visual_pos(s, 0), 26);
+    assert_eq!(byte_index_at_visual_pos(s, 3), 29);
+}
+
+#[test]
+fn byte_index_at_visual_pos_lone_escape_falls_through() {
+    assert_eq!(byte_index_at_visual_pos("\x1bhello", 0), 1);
+}
+
+#[test]
+fn truncate_to_width_preserves_osc8_hyperlink() {
+    let s = "\x1b]8;;https://example.com\x1b\\hello world\x1b]8;;\x1b\\";
+    let truncated = truncate_to_width(s, 8, "…");
+    assert!(truncated.starts_with("\x1b]8;;https://example.com\x1b\\"));
+    assert!(truncated.contains("hello w…"));
+    assert!(truncated.ends_with("\x1b[0m"));
+    assert_eq!(visible_width(&truncated), 8);
+}
+
+#[test]
+fn truncate_to_width_preserves_osc8_hyperlink_bel() {
+    let s = "\x1b]8;;https://example.com\x07hello world\x1b]8;;\x07";
+    let truncated = truncate_to_width(s, 8, "…");
+    assert!(truncated.starts_with("\x1b]8;;https://example.com\x07"));
+    assert!(truncated.contains("hello w…"));
+    assert_eq!(visible_width(&truncated), 8);
+}
+
+#[test]
+fn tracker_osc8_missing_semicolon_ignored() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b]8;params\x1b\\");
+    assert!(tracker.hyperlink.is_none());
+}
+
+#[test]
+fn tracker_extended_color_incomplete_prefix_only() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[38m");
+    assert!(tracker.fg_color.is_none());
+}
+
+#[test]
+fn tracker_extended_color_incomplete_256() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[38;5m");
+    assert!(tracker.fg_color.is_none());
+}
+
+#[test]
+fn tracker_extended_color_incomplete_truecolor() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[38;2;1;2m");
+    assert!(tracker.fg_color.is_none());
+}
+
+#[test]
+fn tracker_extended_color_unknown_subtype() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[38;9;1m");
+    assert!(tracker.fg_color.is_none());
+}
+
+#[test]
+fn tracker_current_codes_includes_faint() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[2m");
+    assert_eq!(tracker.current_codes(), "\x1b[2m");
+}
+
+#[test]
+fn tracker_current_codes_includes_italic() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[3m");
+    assert_eq!(tracker.current_codes(), "\x1b[3m");
+}
+
+#[test]
+fn tracker_current_codes_includes_underline() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[4m");
+    assert_eq!(tracker.current_codes(), "\x1b[4m");
+}
+
+#[test]
+fn tracker_current_codes_includes_reverse() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[7m");
+    assert_eq!(tracker.current_codes(), "\x1b[7m");
+}
+
+#[test]
+fn tracker_line_end_reset_closes_reverse() {
+    let mut tracker = AnsiCodeTracker::new();
+    tracker.process("\x1b[7m");
+    let reset = tracker.line_end_reset();
+    assert!(reset.contains("\x1b[27m"));
+}
+
+#[test]
+fn wrap_text_with_ansi_lone_escape_treated_as_text() {
+    let lines = wrap_text_with_ansi("\x1bhello world", 6);
+    assert_eq!(lines, vec!["\x1bhello ", "world"]);
+}
+
+#[test]
+fn wrap_text_with_ansi_newline_with_underline_reset() {
+    let lines = wrap_text_with_ansi("\x1b[4mhello\nworld\x1b[0m", 20);
+    assert_eq!(lines.len(), 2);
+    assert!(lines[0].contains("\x1b[24m"));
+    assert!(lines[1].starts_with("\x1b[4m"));
+}
+
+#[test]
+fn truncate_to_width_lone_escape_falls_through() {
+    let truncated = truncate_to_width("\x1bhello world", 8, "…");
+    assert_eq!(visible_width(&truncated), 8);
+    assert!(truncated.contains("hello w…"));
 }

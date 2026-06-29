@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drop bold on `\x1b[0m` alone.
 - `Loader` and `Markdown` now emit the bold-aware reset sequence for their
   color-styled output.
+- Test suite expanded to bring every source module above 90% line coverage
+  (overall coverage now 97.44%).
 
 ### Changed
 

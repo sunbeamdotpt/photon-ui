@@ -166,4 +166,38 @@ mod tests {
         assert!(out.ends_with("\x1b[0m"));
         assert!(!out.contains("\x1b[22m"));
     }
+
+    #[test]
+    fn style_italic_prefix_and_suffix() {
+        let s = Style::new().italic();
+        let out = stylize("hi", &s);
+        assert!(out.contains("\x1b[3m"));
+        assert!(out.ends_with("\x1b[0m"));
+    }
+
+    #[test]
+    fn style_dim_prefix_and_suffix() {
+        let s = Style::new().dim();
+        let out = stylize("hi", &s);
+        assert!(out.contains("\x1b[2m"));
+        assert!(out.ends_with("\x1b[22m\x1b[0m"));
+    }
+
+    #[test]
+    fn style_full_prefix() {
+        let s = Style::new()
+            .fg(Color::WHITE)
+            .bg(Color::BLACK)
+            .bold()
+            .italic()
+            .underline()
+            .dim();
+        let prefix = s.prefix(ColorMode::TrueColor);
+        assert!(prefix.contains("\x1b[38;2;255;255;255m"));
+        assert!(prefix.contains("\x1b[48;2;0;0;0m"));
+        assert!(prefix.contains("\x1b[1m"));
+        assert!(prefix.contains("\x1b[2m"));
+        assert!(prefix.contains("\x1b[3m"));
+        assert!(prefix.contains("\x1b[4m"));
+    }
 }

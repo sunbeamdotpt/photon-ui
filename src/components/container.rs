@@ -104,6 +104,55 @@ mod tests {
     }
 
     #[test]
+    fn container_with_child_builder() {
+        let container = Container::new(Layout::horizontal([
+            Constraint::Length(10),
+            Constraint::Length(10),
+        ]))
+        .with_child(Box::new(Text::new("left", 0, 0)))
+        .with_child(Box::new(Text::new("right", 0, 0)));
+
+        let rendered = container.render_rect(Rect::new(0, 0, 20, 1)).unwrap();
+        assert!(rendered.lines[0].contains("left"));
+        assert!(rendered.lines[0].contains("right"));
+    }
+
+    #[test]
+    fn container_render_uses_child_count_height() {
+        let mut container = Container::new(Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ]));
+        container.push(Box::new(Text::new("top", 0, 0)));
+        container.push(Box::new(Text::new("bottom", 0, 0)));
+
+        let rendered = container.render(10).unwrap();
+        assert_eq!(rendered.lines.len(), 2);
+    }
+
+    #[test]
+    fn container_handle_input_falls_through() {
+        use crossterm::event::{
+            KeyCode,
+            KeyEvent,
+            KeyEventKind,
+            KeyModifiers,
+        };
+
+        let mut container = Container::new(Layout::horizontal([Constraint::Length(10)]));
+        container.push(Box::new(Text::new("text", 0, 0)));
+
+        let event = Event::Key(KeyEvent {
+            code: KeyCode::Char('x'),
+            modifiers: KeyModifiers::empty(),
+            kind: KeyEventKind::Press,
+            state: crossterm::event::KeyEventState::empty(),
+        });
+        let result = container.handle_input(&event);
+        assert_eq!(result, InputResult::Ignored);
+    }
+
+    #[test]
     fn container_vertical_split() {
         let mut container = Container::new(Layout::vertical([
             Constraint::Length(1),

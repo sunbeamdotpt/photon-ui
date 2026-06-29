@@ -76,10 +76,16 @@ mod tests {
         assert_eq!(Color::from_hex("#fa520f"), Some(Color::SUNBEAM_ORANGE));
         assert_eq!(Color::from_hex("fa520f"), Some(Color::SUNBEAM_ORANGE));
         assert_eq!(Color::from_hex("fff"), None);
+        assert_eq!(Color::from_hex("#gg0000"), None);
+        assert_eq!(Color::from_hex("#00zz00"), None);
+        assert_eq!(Color::from_hex("#0000aa1"), None);
+        assert_eq!(Color::from_hex("#0000zz"), None);
     }
 
     #[test]
     fn color_to_hex() {
         assert_eq!(Color::SUNBEAM_ORANGE.to_hex(), "#fa520f");
+        assert_eq!(Color::WHITE.to_hex(), "#ffffff");
+        assert_eq!(Color::BLACK.to_hex(), "#000000");
     }
 }

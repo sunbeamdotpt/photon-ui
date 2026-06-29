@@ -1346,4 +1346,35 @@ mod tests {
         editor.handle_input(&key_event(KeyCode::Left));
         assert_eq!(editor.cursor_grapheme(), 1);
     }
+
+    #[test]
+    fn render_uses_cache_when_width_matches() {
+        let mut editor = Editor::new();
+        editor.text = "cached".to_string();
+        editor.lines_cache = vec!["cached".to_string()];
+        editor.cache_width = 80;
+        editor.cursor = 6;
+        editor.focused = true;
+        let rendered = editor.render(80).unwrap();
+        assert_eq!(rendered.lines, vec!["cached".to_string()]);
+        assert_eq!(rendered.cursor, Some((0, 6)));
+    }
+
+    #[test]
+    fn redo_restores_state() {
+        let mut editor = Editor::new();
+        editor.undo_stack.push(EditorAction {
+            text: "first".to_string(),
+            cursor: 5,
+        });
+        editor.undo_stack.push(EditorAction {
+            text: "second".to_string(),
+            cursor: 6,
+        });
+        // Move the undo pointer back so redo has somewhere to go.
+        editor.undo_stack.undo();
+        editor.redo();
+        assert_eq!(editor.text(), "second");
+        assert_eq!(editor.cursor_grapheme(), 6);
+    }
 }

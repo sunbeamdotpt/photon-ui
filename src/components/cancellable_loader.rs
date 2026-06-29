@@ -93,4 +93,24 @@ mod tests {
         assert!(matches!(result, InputResult::Ignored));
         assert!(!cl.is_cancelled());
     }
+
+    #[test]
+    fn ctrl_c_cancels() {
+        let mut cl = CancellableLoader::new("test", None, None);
+        let result = cl.handle_input(&Event::Key(KeyEvent::new(
+            KeyCode::Char('c'),
+            KeyModifiers::CONTROL,
+        )));
+        assert!(matches!(result, InputResult::Handled));
+        assert!(cl.is_cancelled());
+    }
+
+    #[test]
+    fn tick_advances_spinner() {
+        let mut cl = CancellableLoader::new("test", None, None);
+        let before = cl.render(80).unwrap().lines[0].clone();
+        cl.tick();
+        let after = cl.render(80).unwrap().lines[0].clone();
+        assert_ne!(before, after);
+    }
 }

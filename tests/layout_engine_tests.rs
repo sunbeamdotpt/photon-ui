@@ -1,9 +1,18 @@
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{
+        Hash,
+        Hasher,
+    },
+};
+
 use photon_ui::layout::{
     Constraint,
     Direction,
     Flex,
     Layout,
     Rect,
+    Spacing,
 };
 
 #[test]
@@ -165,4 +174,143 @@ fn layout_min_only_fills_area() {
         rects[0].height, 40,
         "single Min(3) should fill entire 40-row area"
     );
+}
+
+#[test]
+fn layout_horizontal_margin_builder() {
+    let layout = Layout::vertical([Constraint::Length(5)])
+        .horizontal_margin(2)
+        .vertical_margin(1);
+    let rects = layout.split(Rect::new(0, 0, 10, 10));
+    assert_eq!(rects[0].x, 2);
+    assert_eq!(rects[0].y, 1);
+    assert_eq!(rects[0].width, 6);
+}
+
+#[test]
+fn layout_vertical_margin_builder() {
+    let layout = Layout::horizontal([Constraint::Length(5)])
+        .vertical_margin(2)
+        .horizontal_margin(1);
+    let rects = layout.split(Rect::new(0, 0, 10, 10));
+    assert_eq!(rects[0].x, 1);
+    assert_eq!(rects[0].y, 2);
+    assert_eq!(rects[0].height, 6);
+}
+
+#[test]
+fn layout_hash_equal_layouts_match() {
+    fn hash_layout(layout: &Layout) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        layout.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    let a = Layout::vertical([Constraint::Length(5), Constraint::Length(5)])
+        .margin(1)
+        .flex(Flex::Center)
+        .spacing(1);
+    let b = Layout::vertical([Constraint::Length(5), Constraint::Length(5)])
+        .margin(1)
+        .flex(Flex::Center)
+        .spacing(1);
+    assert_eq!(hash_layout(&a), hash_layout(&b));
+}
+
+#[test]
+fn layout_hash_different_layouts_differ() {
+    fn hash_layout(layout: &Layout) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        layout.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    let a = Layout::vertical([Constraint::Length(5)]);
+    let b = Layout::horizontal([Constraint::Length(5)]);
+    assert_ne!(hash_layout(&a), hash_layout(&b));
+}
+
+#[test]
+fn layout_areas_const_generic_fills_zeros() {
+    let layout = Layout::vertical([Constraint::Length(5), Constraint::Length(5)]);
+    let areas: [Rect; 3] = layout.areas(Rect::new(0, 0, 10, 10));
+    assert_eq!(areas[0].height, 5);
+    assert_eq!(areas[1].height, 5);
+    assert_eq!(areas[2], Rect::ZERO);
+}
+
+#[test]
+fn layout_flex_legacy_excess_goes_to_last() {
+    let layout = Layout::horizontal([Constraint::Length(3)]).flex(Flex::Legacy);
+    let rects = layout.split(Rect::new(0, 0, 10, 1));
+    assert_eq!(rects.len(), 1);
+    assert_eq!(rects[0].x, 0);
+    assert_eq!(rects[0].width, 10);
+}
+
+#[test]
+fn layout_flex_end_aligns_to_end() {
+    let layout = Layout::horizontal([Constraint::Length(3), Constraint::Length(3)])
+        .flex(Flex::End)
+        .spacing(0);
+    let rects = layout.split(Rect::new(0, 0, 10, 1));
+    assert_eq!(rects.len(), 2);
+    assert_eq!(rects[1].x + rects[1].width, 10);
+    assert!(rects[0].x > 0);
+}
+
+#[test]
+fn layout_flex_space_between_with_three_segments() {
+    let layout = Layout::horizontal([
+        Constraint::Length(2),
+        Constraint::Length(2),
+        Constraint::Length(2),
+    ])
+    .flex(Flex::SpaceBetween)
+    .spacing(0);
+    let rects = layout.split(Rect::new(0, 0, 12, 1));
+    assert_eq!(rects.len(), 3);
+    assert_eq!(rects[0].x, 0);
+    assert_eq!(rects[1].x, 5);
+    assert_eq!(rects[2].x, 10);
+}
+
+#[test]
+fn layout_flex_space_around() {
+    let layout = Layout::horizontal([
+        Constraint::Length(2),
+        Constraint::Length(2),
+        Constraint::Length(2),
+    ])
+    .flex(Flex::SpaceAround)
+    .spacing(0);
+    let rects = layout.split(Rect::new(0, 0, 12, 1));
+    assert_eq!(rects.len(), 3);
+    assert_eq!(rects[0].x, 1);
+    assert_eq!(rects[1].x, 5);
+    assert_eq!(rects[2].x, 9);
+}
+
+#[test]
+fn layout_flex_space_evenly() {
+    let layout = Layout::horizontal([
+        Constraint::Length(2),
+        Constraint::Length(2),
+        Constraint::Length(2),
+    ])
+    .flex(Flex::SpaceEvenly)
+    .spacing(0);
+    let rects = layout.split(Rect::new(0, 0, 14, 1));
+    assert_eq!(rects.len(), 3);
+    assert_eq!(rects[0].x, 2);
+    assert_eq!(rects[1].x, 6);
+    assert_eq!(rects[2].x, 10);
+}
+
+#[test]
+fn layout_spacing_overlap() {
+    let layout = Layout::horizontal([Constraint::Length(3), Constraint::Length(3)])
+        .spacing(Spacing::Overlap(2));
+    let rects = layout.split(Rect::new(0, 0, 10, 1));
+    assert_eq!(rects.len(), 2);
 }

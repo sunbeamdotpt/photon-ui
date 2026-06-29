@@ -905,4 +905,131 @@ mod tests {
             out.lines[0]
         );
     }
+
+    #[test]
+    fn sgr_sequence_includes_all_attributes() {
+        let style = CellStyle {
+            bold: true,
+            faint: true,
+            italic: true,
+            underline: true,
+            reverse: true,
+            fg_color: Some("31".into()),
+            bg_color: Some("44".into()),
+            ..CellStyle::default()
+        };
+        let seq = style.sgr_sequence();
+        assert!(seq.contains('1'));
+        assert!(seq.contains('2'));
+        assert!(seq.contains('3'));
+        assert!(seq.contains('4'));
+        assert!(seq.contains('7'));
+        assert!(seq.contains("31"));
+        assert!(seq.contains("44"));
+    }
+
+    #[test]
+    fn sgr_sequence_empty_when_no_attributes() {
+        let style = CellStyle::default();
+        assert!(style.sgr_sequence().is_empty());
+    }
+
+    #[test]
+    fn shadow_region_complement_out_of_bounds() {
+        let covered = vec![vec![true, false]];
+        let mask = ShadowMask {
+            region: ShadowRegion::Complement(covered),
+            style: CellStyle::default(),
+        };
+        assert!(!mask.covers(5, 0));
+        assert!(!mask.covers(0, 5));
+    }
+
+    #[test]
+    fn drop_shadow_negative_offsets() {
+        let mut comp = Compositor::new(6, 3);
+        comp.add_layer(
+            &rendered_from(&["", " AB ", ""]),
+            &Shadow::Drop {
+                style: "\x1b[2m".into(),
+                offset_x: -1,
+                offset_y: -1,
+            },
+        );
+        comp.add_layer(
+            &rendered_from(&["XXXXXX", "XXXXXX", "XXXXXX"]),
+            &Shadow::None,
+        );
+        let out = comp.finalize();
+        assert!(out.lines[0].contains("\x1b[2m"));
+    }
+
+    #[test]
+    fn compute_bbox_empty_returns_none() {
+        assert!(compute_bbox(&[vec![false, false]]).is_none());
+    }
+
+    #[test]
+    fn parse_rendered_truncates_tall_layers() {
+        let rendered = rendered_from(&["a", "b", "c", "d", "e"]);
+        let grid = parse_rendered(&rendered, 1, 2);
+        assert_eq!(grid.len(), 2);
+    }
+
+    #[test]
+    fn parse_line_to_cells_width_zero_continuation() {
+        let cells = parse_line_to_cells("a\u{0300}b", 10);
+        assert!(cells.len() >= 2);
+    }
+
+    #[test]
+    fn extract_sequence_malformed_returns_none() {
+        let mut chars = "\x1b[".chars().peekable();
+        assert!(extract_sequence(&mut chars).is_none());
+    }
+
+    #[test]
+    fn encode_cells_with_hyperlink_roundtrip() {
+        let open = "\x1b]8;;https://example.com\x1b\\";
+        let close = "\x1b]8;;\x1b\\";
+        let line = format!("{}link{}", open, close);
+        let cells = parse_line_to_cells(&line, 10);
+        let encoded = encode_cells_to_line(&cells);
+        assert!(encoded.contains("\x1b]8;;https://example.com"));
+        assert!(encoded.contains("\x1b]8;;"));
+    }
+
+    #[test]
+    fn merge_style_combines_attributes() {
+        let a = CellStyle {
+            bold: true,
+            fg_color: Some("31".into()),
+            ..CellStyle::default()
+        };
+        let b = CellStyle {
+            faint: true,
+            bg_color: Some("44".into()),
+            hyperlink: Some(crate::utils::ActiveHyperlink {
+                params: "".into(),
+                url: "https://x".into(),
+                terminator: "\x1b\\".into(),
+            }),
+            prefix: "\x1b[?25l".into(),
+            ..CellStyle::default()
+        };
+        let merged = merge_style(a, &b);
+        assert!(merged.bold);
+        assert!(merged.faint);
+        assert_eq!(merged.fg_color, Some("31".into()));
+        assert_eq!(merged.bg_color, Some("44".into()));
+        assert!(merged.hyperlink.is_some());
+        assert!(merged.prefix.contains("\x1b[?25l"));
+    }
+
+    #[test]
+    fn parse_style_string_preserves_unrecognized_prefix() {
+        let style = parse_style_string("\x1b[?25l\x1b[31m");
+        assert!(style.prefix.contains("\x1b[?25l"));
+        assert_eq!(style.fg_color, Some("31".into()));
+    }
 }

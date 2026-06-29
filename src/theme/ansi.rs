@@ -152,7 +152,43 @@ fn rgb_to_16_index(color: Color) -> u8 {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        env,
+        sync::Mutex,
+    };
+
     use super::*;
+
+    // Environment variables are process-wide, so env-mutating tests must be
+    // serialized even when cargo runs other tests in parallel.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    fn with_envs<F>(vars: &[(&str, Option<&str>)], f: F)
+    where
+        F: FnOnce(), {
+        let _guard = ENV_LOCK.lock().unwrap();
+        let originals: Vec<(String, Option<String>)> = vars
+            .iter()
+            .map(|(key, _)| ((*key).to_string(), env::var(key).ok()))
+            .collect();
+        for (key, value) in vars {
+            match value {
+                // SAFETY: tests that mutate env vars are serialized via ENV_LOCK.
+                | Some(v) => unsafe { env::set_var(key, v) },
+                // SAFETY: same as above — serialized env mutation.
+                | None => unsafe { env::remove_var(key) },
+            }
+        }
+        f();
+        for (key, original) in originals {
+            match original {
+                // SAFETY: serialized env mutation.
+                | Some(v) => unsafe { env::set_var(&key, v) },
+                // SAFETY: serialized env mutation.
+                | None => unsafe { env::remove_var(&key) },
+            }
+        }
+    }
 
     #[test]
     fn truecolor_fg() {
@@ -174,9 +210,153 @@ mod tests {
     }
 
     #[test]
+    fn color256_bg_produces_valid_codes() {
+        let s = bg(Color::SUNBEAM_ORANGE, ColorMode::Color256);
+        assert!(s.starts_with("\x1b[48;5;"));
+        assert!(s.ends_with('m'));
+    }
+
+    #[test]
     fn basic16_produces_valid_codes() {
         let s = fg(Color::WHITE, ColorMode::Basic16);
         assert!(s.starts_with("\x1b["));
         assert!(s.ends_with('m'));
+    }
+
+    #[test]
+    fn basic16_bg_produces_valid_codes() {
+        let s = bg(Color::WHITE, ColorMode::Basic16);
+        assert!(s.starts_with("\x1b["));
+        assert!(s.ends_with('m'));
+    }
+
+    #[test]
+    fn detect_respects_photon_color_mode() {
+        with_envs(&[("PHOTON_COLOR_MODE", Some("256"))], || {
+            assert_eq!(ColorMode::detect(), ColorMode::Color256);
+        });
+        with_envs(&[("PHOTON_COLOR_MODE", Some("basic"))], || {
+            assert_eq!(ColorMode::detect(), ColorMode::Basic16);
+        });
+        with_envs(&[("PHOTON_COLOR_MODE", Some("truecolor"))], || {
+            assert_eq!(ColorMode::detect(), ColorMode::TrueColor);
+        });
+        with_envs(
+            &[
+                ("PHOTON_COLOR_MODE", Some("unknown")),
+                ("COLORTERM", None),
+                ("TERM", None),
+            ],
+            || {
+                assert_eq!(ColorMode::detect(), ColorMode::TrueColor);
+            },
+        );
+    }
+
+    #[test]
+    fn detect_respects_colorterm() {
+        with_envs(
+            &[
+                ("PHOTON_COLOR_MODE", None),
+                ("COLORTERM", Some("truecolor")),
+                ("TERM", None),
+            ],
+            || {
+                assert_eq!(ColorMode::detect(), ColorMode::TrueColor);
+            },
+        );
+        with_envs(
+            &[
+                ("PHOTON_COLOR_MODE", None),
+                ("COLORTERM", Some("24bit")),
+                ("TERM", None),
+            ],
+            || {
+                assert_eq!(ColorMode::detect(), ColorMode::TrueColor);
+            },
+        );
+    }
+
+    #[test]
+    fn detect_respects_term() {
+        with_envs(
+            &[
+                ("PHOTON_COLOR_MODE", None),
+                ("COLORTERM", None),
+                ("TERM", Some("xterm-256color")),
+            ],
+            || {
+                assert_eq!(ColorMode::detect(), ColorMode::Color256);
+            },
+        );
+        with_envs(
+            &[
+                ("PHOTON_COLOR_MODE", None),
+                ("COLORTERM", None),
+                ("TERM", Some("xterm")),
+            ],
+            || {
+                assert_eq!(ColorMode::detect(), ColorMode::TrueColor);
+            },
+        );
+    }
+
+    #[test]
+    fn rgb_to_256_grayscale() {
+        assert_eq!(rgb_to_256(Color(0, 0, 0)), 16);
+        assert_eq!(rgb_to_256(Color(255, 255, 255)), 231);
+        assert_eq!(rgb_to_256(Color(128, 128, 128)), 232 + ((128 - 8) / 10));
+    }
+
+    #[test]
+    fn rgb_to_256_color_cube() {
+        // SUNBEAM_ORANGE is not grayscale, so it should map into the 6x6x6 cube.
+        let idx = rgb_to_256(Color::SUNBEAM_ORANGE);
+        assert!((16..=231).contains(&idx));
+    }
+
+    #[test]
+    fn closest_cube_level_branches() {
+        assert_eq!(closest_cube_level(0), 0);
+        assert_eq!(closest_cube_level(47), 0);
+        assert_eq!(closest_cube_level(48), 1);
+        assert_eq!(closest_cube_level(114), 1);
+        assert_eq!(closest_cube_level(115), 2);
+        assert_eq!(closest_cube_level(154), 2);
+        assert_eq!(closest_cube_level(155), 3);
+        assert_eq!(closest_cube_level(194), 3);
+        assert_eq!(closest_cube_level(195), 4);
+        assert_eq!(closest_cube_level(234), 4);
+        assert_eq!(closest_cube_level(235), 5);
+        assert_eq!(closest_cube_level(255), 5);
+    }
+
+    #[test]
+    fn rgb_to_16_fg_and_bg() {
+        // White maps to bright white (7) for fg, so 37; for bg, 47.
+        assert_eq!(rgb_to_16_fg(Color::WHITE), 37);
+        assert_eq!(rgb_to_16_bg(Color::WHITE), 47);
+    }
+
+    #[test]
+    fn rgb_to_16_index_color_branches() {
+        // Red (average intensity 85, not bright -> idx 1)
+        assert_eq!(rgb_to_16_index(Color(255, 0, 0)), 1);
+        // Green (average intensity 85, not bright -> idx 2)
+        assert_eq!(rgb_to_16_index(Color(0, 255, 0)), 2);
+        // Yellow (average intensity 170, bright -> idx 3 + 60 = 63)
+        assert_eq!(rgb_to_16_index(Color(255, 255, 0)), 63);
+        // Blue (average intensity 85, not bright -> idx 4)
+        assert_eq!(rgb_to_16_index(Color(0, 0, 255)), 4);
+        // Magenta (average intensity 170, bright -> idx 5 + 60 = 65)
+        assert_eq!(rgb_to_16_index(Color(255, 0, 255)), 65);
+        // Cyan (average intensity 170, bright -> idx 6 + 60 = 66)
+        assert_eq!(rgb_to_16_index(Color(0, 255, 255)), 66);
+        // Black (low intensity -> index 0)
+        assert_eq!(rgb_to_16_index(Color(0, 0, 0)), 0);
+        // White (high intensity, idx 0 -> bright white 7)
+        assert_eq!(rgb_to_16_index(Color(255, 255, 255)), 7);
+        // Dim red (r > 128 but average intensity <= 128 -> idx 1)
+        assert_eq!(rgb_to_16_index(Color(192, 0, 0)), 1);
     }
 }

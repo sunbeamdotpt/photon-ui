@@ -418,4 +418,63 @@ mod tests {
         let result = view.handle_input(&Event::Key(KeyCode::Left.into()));
         assert_eq!(result, InputResult::Ignored);
     }
+
+    #[test]
+    fn tree_view_empty_ignores_input() {
+        let mut view = TreeView::new(Vec::new());
+        let result = view.handle_input(&Event::Key(KeyCode::Down.into()));
+        assert_eq!(result, InputResult::Ignored);
+    }
+
+    #[test]
+    fn tree_view_ignores_unmapped_keys_and_non_key_events() {
+        let mut view = TreeView::new(vec![TreeNode::new("a")]);
+        let result = view.handle_input(&Event::Key(KeyCode::Char('x').into()));
+        assert_eq!(result, InputResult::Ignored);
+        let result = view.handle_input(&Event::Resize(80, 24));
+        assert_eq!(result, InputResult::Ignored);
+    }
+
+    #[test]
+    fn tree_view_focusable_trait_objects() {
+        let view = TreeView::new(vec![TreeNode::new("a")]);
+        assert!(view.as_focusable().is_some());
+        let mut view = TreeView::new(vec![TreeNode::new("a")]);
+        assert!(view.as_focusable_mut().is_some());
+    }
+
+    #[test]
+    fn tree_view_render_last_child_glyphs() {
+        Theme::with(Theme::Light, || {
+            let view = TreeView::new(vec![
+                TreeNode::new("root")
+                    .child(TreeNode::new("first"))
+                    .child(TreeNode::new("last")),
+            ]);
+            let mut view = view;
+            view.set_focused(true);
+            view.handle_input(&Event::Key(KeyCode::Right.into()));
+            let rendered = view.render(80).unwrap();
+            assert_eq!(rendered.lines.len(), 3);
+            assert!(rendered.lines[2].contains("└─"));
+        });
+    }
+
+    #[test]
+    fn tree_view_node_at_path_mut_invalid_paths() {
+        let mut view = TreeView::new(vec![TreeNode::new("root").child(TreeNode::new("child"))]);
+        assert!(view.node_at_path_mut(&[]).is_none());
+        assert!(view.node_at_path_mut(&[5]).is_none());
+        assert!(view.node_at_path_mut(&[0, 5]).is_none());
+    }
+
+    #[test]
+    fn tree_view_navigation_clamps() {
+        let mut view = TreeView::new(vec![TreeNode::new("a")]);
+        view.set_focused(true);
+        view.handle_input(&Event::Key(KeyCode::Up.into()));
+        assert_eq!(view.selected, vec![0]);
+        view.handle_input(&Event::Key(KeyCode::Down.into()));
+        assert_eq!(view.selected, vec![0]);
+    }
 }
