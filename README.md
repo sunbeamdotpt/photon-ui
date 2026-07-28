@@ -1,5 +1,8 @@
 # photon-ui
 
+[![Matrix](https://img.shields.io/badge/chat-%23hello%3Asunbeam.pt-0dbd8b?logo=matrix)](https://matrix.to/#/#hello:sunbeam.pt)
+[![License](https://img.shields.io/github/license/sunbeamdotpt/photon-ui)](LICENSE)
+
 A blazing fast, minimal terminal UI framework for Rust.
 
 Photon UI is a lightweight, high-performance TUI library built on [`crossterm`](https://github.com/crossterm-rs/crossterm). It features a custom differential renderer that only redraws what changed, ANSI-aware text wrapping, OSC 8 hyperlink support, terminal image rendering (Kitty and iTerm2 protocols), a Cassowary constraint-based layout engine, and a component-based architecture.
